@@ -1,0 +1,45 @@
+---
+description: Commit and push Courtify work to GitHub for documentation
+alwaysApply: true
+---
+
+# Git & Documentation Workflow
+
+Courtify uses GitHub as the source of truth: https://github.com/andreduong/courtify
+
+## When to commit and push
+
+After completing a meaningful unit of work (feature, fix, config change, or docs update), **commit and push to origin** so progress is documented in the repo.
+
+Do this at the end of a session when changes are stable, not after every single edit.
+
+## Commit rules
+
+- Write clear commit messages (1–2 sentences, focus on *why*)
+- Stage only relevant files — never secrets or local artifacts
+- **Never commit**: `.env`, `.dev.vars`, API keys, `RAPID_API_KEY`, Cloudflare tokens, or credentials
+- Follow existing `.gitignore`; do not force-add ignored files
+
+## Push rules
+
+- Push to `origin` on the current branch after committing
+- If the branch has no upstream: `git push -u origin HEAD`
+- Do not force-push to `main` unless the user explicitly asks
+
+## Documentation
+
+- Update `AGENTS.md` when architecture, APIs, deployment steps, or agent workflows change
+- Keep Worker JSON schema docs in sync with `index.js` when the payload shape changes
+
+## Example end-of-task flow
+
+```bash
+git status
+git add <relevant files>
+git commit -m "$(cat <<'EOF'
+Add widget timeline provider wired to Worker API.
+
+EOF
+)"
+git push -u origin HEAD
+```

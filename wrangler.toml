@@ -1,0 +1,18 @@
+name = "courtify-tennis-worker"
+main = "index.js"
+compatibility_date = "2026-07-09"
+
+# No cron — RapidAPI is only called when a widget requests /api/widget-data (on-demand).
+# [[triggers]]
+# crons = []
+
+# Bind your KV namespace — replace IDs after running:
+#   wrangler kv namespace create TENNIS_DATA
+#   wrangler kv namespace create TENNIS_DATA --preview
+[[kv_namespaces]]
+binding = "TENNIS_DATA"
+id = "5b6589e03d7343a69a073536fceaf3af"
+preview_id = "c67610dcec524eea8a7fd05fab76d236"
+
+# Set your RapidAPI key as a secret (do NOT commit it):
+#   wrangler secret put RAPID_API_KEY

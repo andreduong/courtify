@@ -1,0 +1,708 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		01D693D58FAB405596E73D9B /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46D986A2E91404A881B39EC /* ThemeManager.swift */; };
+		C1D2E3F4056677F8193A4B5E /* CourtifyMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E3F4056677F8193A4B5C6F /* CourtifyMotion.swift */; };
+		036479E2F64D48149B7BA9DA /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDA4924FD9E485EA96190E2 /* SplashScreenView.swift */; };
+		15058A78D09646EB9EB7E3F9 /* CourtifyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B55AE6EDCA04B46BC79B005 /* CourtifyApp.swift */; };
+		1FBD11B2F8B5433EA870366C /* TourPreferenceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF5F523F402A409197FADC20 /* TourPreferenceView.swift */; };
+		42FDF065DDAF49F79D92E924 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4E0989DAC1B245ECA4E79614 /* Assets.xcassets */; };
+		4471071E5D4A4C65B4B00DC5 /* FavoriteGrandSlamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EED59CCBBFF4B529EF6ED6C /* FavoriteGrandSlamView.swift */; };
+		5D0F22A6A4714F61A53F732E /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6800E2553C7D45A9A8CBA4BF /* PaywallView.swift */; };
+		7127C0248BD94A6EB9B4B43D /* RevenueCatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B90A18254E0401DA5526364 /* RevenueCatManager.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* OfferNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6D /* OfferNotificationManager.swift */; };
+		F1E2D3C4B5A6978890A1B2C4 /* OnboardingReminderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E2D3C4B5A6978890A1B2C3 /* OnboardingReminderManager.swift */; };
+		A2B3C4D5E6F708293A4B5C6E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F60718293A4B5C6D7E /* AppDelegate.swift */; };
+		7FE6585444B849808BBE7848 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = F9A0B1C2D3E4F5A6B7C8D9E2 /* RevenueCat */; };
+		856F4D14688B4354A1A9D96E /* OnboardingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE78DDB0206F46168BA5AE16 /* OnboardingModels.swift */; };
+		8B8E4C67225E447FB313E291 /* FavoritePlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B730C2132E4B4C8C2479EA /* FavoritePlayersView.swift */; };
+		9E82673EB24A4F018D2F3AC4 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 999441123B4E49889D87FCB9 /* HomeView.swift */; };
+		9FB4D1CE237D4B8BBC8990CD /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC2498726254A049F313895 /* OnboardingFlowView.swift */; };
+		C1D2E3F4056677F8193A4B5F /* OnboardingChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */; };
+		D2E3F4056677F8193A4B5D0 /* ReferralCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */; };
+		E3F4056677F8193A4B5C6D8 /* NotificationPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F4056677F8193A4B5C6D7 /* NotificationPermissionView.swift */; };
+		F2A3B4C5D6E7589901B2C3D4 /* AppGroupConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift */; };
+		F3A4B5C6D7E8690012C3D4E5 /* WidgetDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift */; };
+		F4A5B6C7D8E9701123D4E5F6 /* WidgetAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift */; };
+		F5A6B7C8D9E0812234E5F607 /* WidgetImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift */; };
+		F6A7B8C9D0E1923345F60718 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift */; };
+		F7A8B9C0D1E2934456F70829 /* FavoritePlayerResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */; };
+		F8A9B0C1D2E3045567F81990 /* WidgetMockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */; };
+		F9C0D1E2F3045567F8193A5D /* WidgetTimelineRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */; };
+		W7F8A9B0C1D2E3045567F819 /* WidgetMockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */; };
+		W8A9B0C1D2E3F4056677F81A /* WidgetTimelineRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */; };
+		W0D1E2F3045567F8193A4B5D /* OrderOfPlayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1E2F3045567F8193A4B5C6D /* OrderOfPlayWidget.swift */; };
+		W1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift */; };
+		W2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift */; };
+		W2E3F4056677F8193A4B5C6D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = W3F4056677F8193A4B5C6D7E /* Assets.xcassets */; };
+		W3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift */; };
+		W4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift */; };
+		W4F5067788F8193A4B5C6D7E /* CourtifyWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = W5F6078899F8193A4B5C6D7E /* CourtifyWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		W5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift */; };
+		W6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */; };
+		W7A8B9C0D1E2934456F70829 /* OnboardingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE78DDB0206F46168BA5AE16 /* OnboardingModels.swift */; };
+		W8B9C0D1E2F3045567F8193A /* CourtifyWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = W9C0D1E2F3045567F8193A4B /* CourtifyWidgetBundle.swift */; };
+		W9C0D1E2F3045567F8193A4C /* PlayerTrackerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = W0D1E2F3045567F8193A4B5C /* PlayerTrackerWidget.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		WAF81990A1B2C3D4E5F6071B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA93A2421182426F99A453EB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = W3FA8B2C14E5D46A9B8C7D6E5;
+			remoteInfo = CourtifyWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		W8F81990A1B2C3D4E5F60719 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				W4F5067788F8193A4B5C6D7E /* CourtifyWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0B55AE6EDCA04B46BC79B005 /* CourtifyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyApp.swift; sourceTree = "<group>"; };
+		15B730C2132E4B4C8C2479EA /* FavoritePlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayersView.swift; sourceTree = "<group>"; };
+		4E0989DAC1B245ECA4E79614 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5AC2498726254A049F313895 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChrome.swift; sourceTree = "<group>"; };
+		B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferralCodeView.swift; sourceTree = "<group>"; };
+		E3F4056677F8193A4B5C6D7 /* NotificationPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionView.swift; sourceTree = "<group>"; };
+		5B90A18254E0401DA5526364 /* RevenueCatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatManager.swift; sourceTree = "<group>"; };
+		B2C3D4E5F60718293A4B5C6D /* OfferNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferNotificationManager.swift; sourceTree = "<group>"; };
+		F1E2D3C4B5A6978890A1B2C3 /* OnboardingReminderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingReminderManager.swift; sourceTree = "<group>"; };
+		C3D4E5F60718293A4B5C6D7E /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		6800E2553C7D45A9A8CBA4BF /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		6EED59CCBBFF4B529EF6ED6C /* FavoriteGrandSlamView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoriteGrandSlamView.swift; sourceTree = "<group>"; };
+		7DDA4924FD9E485EA96190E2 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
+		999441123B4E49889D87FCB9 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		CF5F523F402A409197FADC20 /* TourPreferenceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourPreferenceView.swift; sourceTree = "<group>"; };
+		DE78DDB0206F46168BA5AE16 /* OnboardingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModels.swift; sourceTree = "<group>"; };
+		E62C7F8B3F8F4AAAAC154638 /* Courtify.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Courtify.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupConstants.swift; sourceTree = "<group>"; };
+		F2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataModels.swift; sourceTree = "<group>"; };
+		F3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetAPIService.swift; sourceTree = "<group>"; };
+		F46D986A2E91404A881B39EC /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		D2E3F4056677F8193A4B5C6F /* CourtifyMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyMotion.swift; sourceTree = "<group>"; };
+		F4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetImageCache.swift; sourceTree = "<group>"; };
+		F5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
+		F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerResolver.swift; sourceTree = "<group>"; };
+		F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetMockData.swift; sourceTree = "<group>"; };
+		F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTimelineRefresher.swift; sourceTree = "<group>"; };
+		W0D1E2F3045567F8193A4B5C /* PlayerTrackerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerTrackerWidget.swift; sourceTree = "<group>"; };
+		W1E2F3045567F8193A4B5C6D /* OrderOfPlayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderOfPlayWidget.swift; sourceTree = "<group>"; };
+		W3F4056677F8193A4B5C6D7E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		W5F6078899F8193A4B5C6D7E /* CourtifyWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CourtifyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		W6F7088990A1B2C3D4E5F607 /* Courtify.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Courtify.entitlements; sourceTree = "<group>"; };
+		W7F81990A1B2C3D4E5F60718 /* CourtifyWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CourtifyWidgetExtension.entitlements; sourceTree = "<group>"; };
+		W8F81990A1B2C3D4E5F60722 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		W9C0D1E2F3045567F8193A4B /* CourtifyWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyWidgetBundle.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		428DBC6E99894F6CB9DA48E8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7FE6585444B849808BBE7848 /* RevenueCat in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		W9F81990A1B2C3D4E5F6071A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1CBBCADDD2034E6887A514DE /* Paywall */ = {
+			isa = PBXGroup;
+			children = (
+				6800E2553C7D45A9A8CBA4BF /* PaywallView.swift */,
+			);
+			path = Paywall;
+			sourceTree = "<group>";
+		};
+		2BDD133FB3D445249390E382 = {
+			isa = PBXGroup;
+			children = (
+				A69BFB8D2D874941B2F1B099 /* Courtify */,
+				WA0B1C2D3E4F5067788990AB /* CourtifyWidget */,
+				3AC0907A02654EA5958C0827 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3AC0907A02654EA5958C0827 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E62C7F8B3F8F4AAAAC154638 /* Courtify.app */,
+				W5F6078899F8193A4B5C6D7E /* CourtifyWidgetExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		513D0585C2084B97A0189A60 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				DE78DDB0206F46168BA5AE16 /* OnboardingModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		7B3FCC8A2E164DE8952B65D7 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				F46D986A2E91404A881B39EC /* ThemeManager.swift */,
+				D2E3F4056677F8193A4B5C6F /* CourtifyMotion.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		8F0A30C1DC71421C8944AA3F /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				7DDA4924FD9E485EA96190E2 /* SplashScreenView.swift */,
+				CF5F523F402A409197FADC20 /* TourPreferenceView.swift */,
+				15B730C2132E4B4C8C2479EA /* FavoritePlayersView.swift */,
+		6EED59CCBBFF4B529EF6ED6C /* FavoriteGrandSlamView.swift */,
+		5AC2498726254A049F313895 /* OnboardingFlowView.swift */,
+		A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */,
+		B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */,
+		E3F4056677F8193A4B5C6D7 /* NotificationPermissionView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		A69BFB8D2D874941B2F1B099 /* Courtify */ = {
+			isa = PBXGroup;
+			children = (
+				0B55AE6EDCA04B46BC79B005 /* CourtifyApp.swift */,
+				W6F7088990A1B2C3D4E5F607 /* Courtify.entitlements */,
+				7B3FCC8A2E164DE8952B65D7 /* Theme */,
+				F0A1B2C3D4E5F60718293A4B /* Shared */,
+				513D0585C2084B97A0189A60 /* Models */,
+				E456FE40061F4698A2D855A4 /* Services */,
+				8F0A30C1DC71421C8944AA3F /* Onboarding */,
+				1CBBCADDD2034E6887A514DE /* Paywall */,
+				C9B3BDDDC00F4DEA879F90F4 /* Views */,
+				4E0989DAC1B245ECA4E79614 /* Assets.xcassets */,
+			);
+			path = Courtify;
+			sourceTree = "<group>";
+		};
+		C9B3BDDDC00F4DEA879F90F4 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				999441123B4E49889D87FCB9 /* HomeView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		E456FE40061F4698A2D855A4 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				5B90A18254E0401DA5526364 /* RevenueCatManager.swift */,
+		B2C3D4E5F60718293A4B5C6D /* OfferNotificationManager.swift */,
+		F1E2D3C4B5A6978890A1B2C3 /* OnboardingReminderManager.swift */,
+		C3D4E5F60718293A4B5C6D7E /* AppDelegate.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		F0A1B2C3D4E5F60718293A4B /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				F1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift */,
+				F2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift */,
+				F3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift */,
+				F4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift */,
+				F5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift */,
+				F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */,
+				F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */,
+				F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		WA0B1C2D3E4F5067788990AB /* CourtifyWidget */ = {
+			isa = PBXGroup;
+			children = (
+				W9C0D1E2F3045567F8193A4B /* CourtifyWidgetBundle.swift */,
+				W0D1E2F3045567F8193A4B5C /* PlayerTrackerWidget.swift */,
+				W1E2F3045567F8193A4B5C6D /* OrderOfPlayWidget.swift */,
+				W3F4056677F8193A4B5C6D7E /* Assets.xcassets */,
+				W8F81990A1B2C3D4E5F60722 /* Info.plist */,
+				W7F81990A1B2C3D4E5F60718 /* CourtifyWidgetExtension.entitlements */,
+			);
+			path = CourtifyWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D02A5A3C88A247F5AB6A078E /* Courtify */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA93A2421182426F99A453EA /* Build configuration list for PBXNativeTarget "Courtify" */;
+			buildPhases = (
+				F39CBA25CFD447A3AA87C458 /* Sources */,
+				428DBC6E99894F6CB9DA48E8 /* Frameworks */,
+				15058A78D09646EB9EB7E3FA /* Resources */,
+				W8F81990A1B2C3D4E5F60719 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				WBF81990A1B2C3D4E5F6071C /* PBXTargetDependency */,
+			);
+			name = Courtify;
+			packageProductDependencies = (
+				F9A0B1C2D3E4F5A6B7C8D9E2 /* RevenueCat */,
+			);
+			productName = Courtify;
+			productReference = E62C7F8B3F8F4AAAAC154638 /* Courtify.app */;
+			productType = "com.apple.product-type.application";
+		};
+		W3FA8B2C14E5D46A9B8C7D6E5 /* CourtifyWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = WCF81990A1B2C3D4E5F6071D /* Build configuration list for PBXNativeTarget "CourtifyWidgetExtension" */;
+			buildPhases = (
+				WDF81990A1B2C3D4E5F6071E /* Sources */,
+				W9F81990A1B2C3D4E5F6071A /* Frameworks */,
+				WEF81990A1B2C3D4E5F6071F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CourtifyWidgetExtension;
+			productName = CourtifyWidgetExtension;
+			productReference = W5F6078899F8193A4B5C6D7E /* CourtifyWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA93A2421182426F99A453EB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1620;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					D02A5A3C88A247F5AB6A078E = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					W3FA8B2C14E5D46A9B8C7D6E5 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+				};
+			};
+			buildConfigurationList = AA93A2421182426F99A453EC /* Build configuration list for PBXProject "Courtify" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 2BDD133FB3D445249390E382;
+			packageReferences = (
+				E8F9A0B1C2D3E4F5A6B7C8D1 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
+			productRefGroup = 3AC0907A02654EA5958C0827 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D02A5A3C88A247F5AB6A078E /* Courtify */,
+				W3FA8B2C14E5D46A9B8C7D6E5 /* CourtifyWidgetExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		15058A78D09646EB9EB7E3FA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				42FDF065DDAF49F79D92E924 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WEF81990A1B2C3D4E5F6071F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				W2E3F4056677F8193A4B5C6D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F39CBA25CFD447A3AA87C458 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15058A78D09646EB9EB7E3F9 /* CourtifyApp.swift in Sources */,
+				01D693D58FAB405596E73D9B /* ThemeManager.swift in Sources */,
+				C1D2E3F4056677F8193A4B5E /* CourtifyMotion.swift in Sources */,
+				856F4D14688B4354A1A9D96E /* OnboardingModels.swift in Sources */,
+				7127C0248BD94A6EB9B4B43D /* RevenueCatManager.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* OfferNotificationManager.swift in Sources */,
+				F1E2D3C4B5A6978890A1B2C4 /* OnboardingReminderManager.swift in Sources */,
+				A2B3C4D5E6F708293A4B5C6E /* AppDelegate.swift in Sources */,
+				036479E2F64D48149B7BA9DA /* SplashScreenView.swift in Sources */,
+				1FBD11B2F8B5433EA870366C /* TourPreferenceView.swift in Sources */,
+				8B8E4C67225E447FB313E291 /* FavoritePlayersView.swift in Sources */,
+				4471071E5D4A4C65B4B00DC5 /* FavoriteGrandSlamView.swift in Sources */,
+				9FB4D1CE237D4B8BBC8990CD /* OnboardingFlowView.swift in Sources */,
+		C1D2E3F4056677F8193A4B5F /* OnboardingChrome.swift in Sources */,
+		D2E3F4056677F8193A4B5D0 /* ReferralCodeView.swift in Sources */,
+		E3F4056677F8193A4B5C6D8 /* NotificationPermissionView.swift in Sources */,
+				5D0F22A6A4714F61A53F732E /* PaywallView.swift in Sources */,
+				9E82673EB24A4F018D2F3AC4 /* HomeView.swift in Sources */,
+				F2A3B4C5D6E7589901B2C3D4 /* AppGroupConstants.swift in Sources */,
+				F3A4B5C6D7E8690012C3D4E5 /* WidgetDataModels.swift in Sources */,
+				F4A5B6C7D8E9701123D4E5F6 /* WidgetAPIService.swift in Sources */,
+				F5A6B7C8D9E0812234E5F607 /* WidgetImageCache.swift in Sources */,
+				F6A7B8C9D0E1923345F60718 /* WidgetTheme.swift in Sources */,
+				F7A8B9C0D1E2934456F70829 /* FavoritePlayerResolver.swift in Sources */,
+				F8A9B0C1D2E3045567F81990 /* WidgetMockData.swift in Sources */,
+				F9C0D1E2F3045567F8193A5D /* WidgetTimelineRefresher.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WDF81990A1B2C3D4E5F6071E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				W8B9C0D1E2F3045567F8193A /* CourtifyWidgetBundle.swift in Sources */,
+				W9C0D1E2F3045567F8193A4C /* PlayerTrackerWidget.swift in Sources */,
+				W0D1E2F3045567F8193A4B5D /* OrderOfPlayWidget.swift in Sources */,
+				W1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift in Sources */,
+				W2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift in Sources */,
+				W3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift in Sources */,
+				W4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift in Sources */,
+				W5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift in Sources */,
+				W6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift in Sources */,
+				W7F8A9B0C1D2E3045567F819 /* WidgetMockData.swift in Sources */,
+				W8A9B0C1D2E3F4056677F81A /* WidgetTimelineRefresher.swift in Sources */,
+				W7A8B9C0D1E2934456F70829 /* OnboardingModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		WBF81990A1B2C3D4E5F6071C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = W3FA8B2C14E5D46A9B8C7D6E5 /* CourtifyWidgetExtension */;
+			targetProxy = WAF81990A1B2C3D4E5F6071B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AA93A2421182426F99A453EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA93A2421182426F99A453EF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AA93A2421182426F99A453F0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = B2P86X9N67;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Courtify;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.courtify.xyz;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA93A2421182426F99A453F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = B2P86X9N67;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Courtify;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.courtify.xyz;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		W0F81990A1B2C3D4E5F60721 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B2P86X9N67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CourtifyWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.courtify.xyz.CourtifyWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		WFF81990A1B2C3D4E5F60720 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B2P86X9N67;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CourtifyWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.courtify.xyz.CourtifyWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA93A2421182426F99A453EA /* Build configuration list for PBXNativeTarget "Courtify" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA93A2421182426F99A453F0 /* Debug */,
+				AA93A2421182426F99A453F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA93A2421182426F99A453EC /* Build configuration list for PBXProject "Courtify" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA93A2421182426F99A453EE /* Debug */,
+				AA93A2421182426F99A453EF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		WCF81990A1B2C3D4E5F6071D /* Build configuration list for PBXNativeTarget "CourtifyWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				WFF81990A1B2C3D4E5F60720 /* Debug */,
+				W0F81990A1B2C3D4E5F60721 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E8F9A0B1C2D3E4F5A6B7C8D1 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios.git";
+			requirement = {
+				kind = exactVersion;
+				version = 5.80.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F9A0B1C2D3E4F5A6B7C8D9E2 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8F9A0B1C2D3E4F5A6B7C8D1 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = AA93A2421182426F99A453EB /* Project object */;
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "XcodeBuildMCP": {
+      "command": "xcodebuildmcp",
+      "args": ["mcp"],
+      "env": {
+        "XCODEBUILDMCP_GROUP_IOS_SIMULATOR_WORKFLOW": "true",
+        "XCODEBUILDMCP_GROUP_UI_AUTOMATION": "true"
+      }
+    }
+  }
+}
