@@ -9,7 +9,7 @@ struct NotificationPermissionView: View {
     @State private var isRequesting = false
 
     private var playerName: String {
-        TennisPlayer.topPlayers.first { $0.id == favoritePlayerID }?.name ?? "your favorite player"
+        TennisPlayer.displayName(for: favoritePlayerID) ?? "your favorite player"
     }
 
     private var tournamentName: String {

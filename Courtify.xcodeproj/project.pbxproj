@@ -31,6 +31,7 @@
 		F3A4B5C6D7E8690012C3D4E5 /* WidgetDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift */; };
 		F4A5B6C7D8E9701123D4E5F6 /* WidgetAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift */; };
 		F5A6B7C8D9E0812234E5F607 /* WidgetImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift */; };
+		B1C2D3E4F5061728394A5B6D /* BundledImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B6E /* BundledImageCache.swift */; };
 		F6A7B8C9D0E1923345F60718 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift */; };
 		F7A8B9C0D1E2934456F70829 /* FavoritePlayerResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */; };
 		F8A9B0C1D2E3045567F81990 /* WidgetMockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */; };
@@ -100,6 +101,7 @@
 		F46D986A2E91404A881B39EC /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		D2E3F4056677F8193A4B5C6F /* CourtifyMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyMotion.swift; sourceTree = "<group>"; };
 		F4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetImageCache.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B6E /* BundledImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundledImageCache.swift; sourceTree = "<group>"; };
 		F5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
 		F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerResolver.swift; sourceTree = "<group>"; };
 		F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetMockData.swift; sourceTree = "<group>"; };
@@ -234,6 +236,7 @@
 				F2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift */,
 				F3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift */,
 				F4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift */,
+				A1B2C3D4E5F60718293A4B6E /* BundledImageCache.swift */,
 				F5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift */,
 				F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */,
 				F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */,
@@ -383,6 +386,7 @@
 				F3A4B5C6D7E8690012C3D4E5 /* WidgetDataModels.swift in Sources */,
 				F4A5B6C7D8E9701123D4E5F6 /* WidgetAPIService.swift in Sources */,
 				F5A6B7C8D9E0812234E5F607 /* WidgetImageCache.swift in Sources */,
+				B1C2D3E4F5061728394A5B6D /* BundledImageCache.swift in Sources */,
 				F6A7B8C9D0E1923345F60718 /* WidgetTheme.swift in Sources */,
 				F7A8B9C0D1E2934456F70829 /* FavoritePlayerResolver.swift in Sources */,
 				F8A9B0C1D2E3045567F81990 /* WidgetMockData.swift in Sources */,
@@ -555,6 +559,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -586,6 +591,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_BackgroundColor = LaunchBackground;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (

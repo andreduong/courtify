@@ -48,10 +48,11 @@ private struct AppRootView: View {
         }
         .animation(CourtifyMotion.screen, value: isBootstrapped)
         .animation(CourtifyMotion.screen, value: shouldShowHome)
-        .clipped()
+        .background(ThemeManager.midnightGreen.ignoresSafeArea())
         .task {
             await revenueCat.prepareForLaunch()
             await OfferNotificationManager.refreshAuthorizationState()
+            BundledImageCache.warmOnboardingAssets()
             if !revenueCat.isProUser, !referralBypassActive {
                 #if DEBUG
                 if !shouldShowHome {

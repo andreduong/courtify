@@ -35,7 +35,6 @@ struct OnboardingFlowView: View {
                 SplashScreenView {
                     navigateForward(.tourPreference)
                 }
-                .padding(.top, 18)
             } destination: { step in
                 destinationView(for: step)
             }
@@ -47,6 +46,7 @@ struct OnboardingFlowView: View {
             )
         }
         .courtifyBackground()
+        .ignoresSafeArea()
         .onAppear {
             openSpecialOfferPaywallIfNeeded()
             openPaywallIfNeeded()
@@ -124,8 +124,6 @@ struct OnboardingFlowView: View {
                 onSubscribed: completeOnboarding,
                 onClose: returnToJoinScreen
             )
-            .courtifyScreenContent()
-            .padding(.top, onboardingContentTopInset)
         }
     }
 

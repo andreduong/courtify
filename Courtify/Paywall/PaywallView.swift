@@ -51,7 +51,7 @@ struct PaywallView: View {
     let onClose: () -> Void
 
     private var favoritePlayer: TennisPlayer? {
-        TennisPlayer.topPlayers.first { $0.id == favoritePlayerID }
+        TennisPlayer.player(for: favoritePlayerID)
     }
 
     var body: some View {
@@ -62,7 +62,7 @@ struct PaywallView: View {
 
             ScrollView {
                 VStack(spacing: 28) {
-                    Spacer(minLength: 60)
+                    Spacer(minLength: 72)
 
                     VStack(spacing: 12) {
                         Text("Go Pro with Courtify")
@@ -126,11 +126,7 @@ struct PaywallView: View {
                         .padding(.bottom, 32)
                 }
                 .padding(24)
-            }
-            .background {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .ignoresSafeArea()
+                .padding(.bottom, 8)
             }
 
             if showCloseButton {
@@ -172,9 +168,11 @@ struct PaywallView: View {
                 .zIndex(2)
             }
         }
+        .ignoresSafeArea()
         .animation(CourtifyMotion.modal, value: showSpecialOffer)
         .navigationBarBackButtonHidden()
         .onAppear {
+            BundledImageCache.warmOnboardingAssets()
             scheduleCloseButton()
             if showSpecialOfferOnAppear {
                 showSpecialOffer = true
@@ -192,19 +190,8 @@ struct PaywallView: View {
     private var playerBackground: some View {
         GeometryReader { geo in
             Group {
-                if let player = favoritePlayer, let url = player.imageURL {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        default:
-                            fallbackBackground(for: player)
-                        }
-                    }
-                } else if let player = favoritePlayer {
-                    fallbackBackground(for: player)
+                if let player = favoritePlayer {
+                    CachedBundledImage(name: player.paywallImageName, contentMode: .fill)
                 } else {
                     ThemeManager.midnightGreen
                         .overlay {
@@ -216,22 +203,8 @@ struct PaywallView: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .clipped()
-            .blur(radius: 28)
         }
         .ignoresSafeArea()
-    }
-
-    private func fallbackBackground(for player: TennisPlayer) -> some View {
-        LinearGradient(
-            colors: [ThemeManager.emeraldGreen, ThemeManager.midnightGreen],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .overlay {
-            Text(player.name.prefix(1))
-                .font(ThemeManager.roundedFont(size: 180, weight: .bold))
-                .foregroundStyle(ThemeManager.opticYellow.opacity(0.15))
-        }
     }
 
     private func packagePrice(for plan: SubscriptionPlan) -> String? {

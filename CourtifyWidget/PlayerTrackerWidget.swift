@@ -217,7 +217,7 @@ struct PlayerTrackerWidgetView: View {
                     .foregroundStyle(.white)
                     .monospacedDigit()
             } else {
-                Text("—")
+                Text("-")
                     .font(WidgetTheme.roundedFont(size: 14, weight: .bold))
                     .foregroundStyle(.white.opacity(0.5))
             }

@@ -58,15 +58,13 @@ private struct GrandSlamRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(Color(hex: slam.accentColor).opacity(0.25))
-                        .frame(width: 48, height: 48)
-
-                    Image(systemName: slam.icon)
-                        .font(.system(size: 20, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color(hex: slam.accentColor))
-                }
+                CachedBundledImage(name: slam.logoImageName, contentMode: .fit)
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+                    }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(slam.rawValue)

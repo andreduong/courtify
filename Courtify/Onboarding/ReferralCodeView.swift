@@ -23,7 +23,7 @@ struct ReferralCodeView: View {
                     .font(ThemeManager.roundedFont(.title, weight: .bold))
                     .foregroundStyle(.white)
 
-                Text("Optional — you can skip this step.")
+                Text("Optional - you can skip this step.")
                     .font(ThemeManager.roundedFont(.subheadline))
                     .foregroundStyle(.white.opacity(0.65))
             }

@@ -4,18 +4,12 @@ struct FavoritePlayersView: View {
     let tourPreference: TourPreference
     @Binding var favoritePlayerID: String
     @State private var selectedPlayerIDs: Set<String> = []
+    @State private var showCustomPlayerSheet = false
 
     let onContinue: () -> Void
 
-    private var filteredPlayers: [TennisPlayer] {
-        switch tourPreference {
-        case .atp:
-            TennisPlayer.topPlayers.filter { $0.tour == .atp }
-        case .wta:
-            TennisPlayer.topPlayers.filter { $0.tour == .wta }
-        case .both:
-            TennisPlayer.topPlayers
-        }
+    private var featuredPlayers: [TennisPlayer] {
+        TennisPlayer.topFive(for: tourPreference)
     }
 
     var body: some View {
@@ -33,7 +27,7 @@ struct FavoritePlayersView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 20) {
-                    ForEach(filteredPlayers) { player in
+                    ForEach(featuredPlayers) { player in
                         PlayerAvatarCard(
                             player: player,
                             isSelected: selectedPlayerIDs.contains(player.id),
@@ -42,17 +36,24 @@ struct FavoritePlayersView: View {
                             togglePlayer(player)
                         }
                     }
+
+                    MorePlayerCard(
+                        isSelected: isCustomSelectionActive,
+                        isPrimary: isCustomSelectionActive && favoritePlayerID.hasPrefix("custom:")
+                    ) {
+                        showCustomPlayerSheet = true
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 8)
             }
 
             if !favoritePlayerID.isEmpty,
-               let primary = TennisPlayer.topPlayers.first(where: { $0.id == favoritePlayerID }) {
+               let primaryName = TennisPlayer.displayName(for: favoritePlayerID) {
                 HStack(spacing: 8) {
                     Image(systemName: "star.fill")
                         .foregroundStyle(ThemeManager.opticYellow)
-                    Text("\(primary.name) is your #1")
+                    Text("\(primaryName) is your #1")
                         .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
                         .foregroundStyle(.white.opacity(0.8))
                 }
@@ -70,9 +71,38 @@ struct FavoritePlayersView: View {
             .padding(.bottom, 24)
         }
         .onAppear {
+            BundledImageCache.warmOnboardingAssets()
             if !favoritePlayerID.isEmpty {
                 selectedPlayerIDs.insert(favoritePlayerID)
             }
+        }
+        .sheet(isPresented: $showCustomPlayerSheet) {
+            CustomPlayerSearchSheet(
+                tourPreference: tourPreference,
+                onSelect: { entry in
+                    let player = customPlayer(from: entry)
+                    selectCustomPlayer(player)
+                    showCustomPlayerSheet = false
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var isCustomSelectionActive: Bool {
+        selectedPlayerIDs.contains(where: { $0.hasPrefix("custom:") })
+    }
+
+    private func customPlayer(from entry: PlayerSearchCatalog.Entry) -> TennisPlayer {
+        let id = TennisPlayer.makeCustomID(name: entry.name, tour: entry.tour)
+        return TennisPlayer(id: id, name: entry.name, tour: entry.tour, imageName: nil, ranking: 0)
+    }
+
+    private func selectCustomPlayer(_ player: TennisPlayer) {
+        CourtifyMotion.animateSelection {
+            selectedPlayerIDs.insert(player.id)
+            favoritePlayerID = player.id
         }
     }
 
@@ -93,6 +123,66 @@ struct FavoritePlayersView: View {
     }
 }
 
+private struct MorePlayerCard: View {
+    let isSelected: Bool
+    let isPrimary: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 12) {
+                ZStack(alignment: .topTrailing) {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [ThemeManager.emeraldGreen.opacity(0.5), ThemeManager.midnightGreen],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 88, height: 88)
+                        .overlay {
+                            Image(systemName: "plus")
+                                .font(.system(size: 32, weight: .bold, design: .rounded))
+                                .foregroundStyle(ThemeManager.opticYellow)
+                        }
+                        .overlay {
+                            Circle()
+                                .strokeBorder(
+                                    isSelected ? ThemeManager.opticYellow : Color.white.opacity(0.15),
+                                    lineWidth: isSelected ? 3 : 1
+                                )
+                        }
+
+                    if isPrimary {
+                        Image(systemName: "star.fill")
+                            .font(.caption2)
+                            .foregroundStyle(ThemeManager.midnightGreen)
+                            .padding(5)
+                            .background(ThemeManager.opticYellow)
+                            .clipShape(Circle())
+                            .offset(x: 4, y: -4)
+                    }
+                }
+
+                VStack(spacing: 4) {
+                    Text("More")
+                        .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
+                        .foregroundStyle(.white)
+
+                    Text("Search name")
+                        .font(ThemeManager.roundedFont(.caption2))
+                        .foregroundStyle(ThemeManager.emeraldGreen)
+                }
+            }
+            .frame(width: 100)
+            .glassCard(cornerRadius: 16, padding: 12)
+            .courtifySelection(isSelected, scale: 1.04)
+        }
+        .courtifyButton(.card)
+    }
+}
+
 private struct PlayerAvatarCard: View {
     let player: TennisPlayer
     let isSelected: Bool
@@ -103,31 +193,16 @@ private struct PlayerAvatarCard: View {
         Button(action: onTap) {
             VStack(spacing: 12) {
                 ZStack(alignment: .topTrailing) {
-                    Group {
-                        if let url = player.imageURL {
-                            AsyncImage(url: url) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image.resizable().scaledToFill()
-                                case .failure:
-                                    placeholder
-                                default:
-                                    placeholder.overlay { ProgressView().tint(ThemeManager.opticYellow) }
-                                }
-                            }
-                        } else {
-                            placeholder
+                    CachedBundledImage(name: player.resolvedImageName, contentMode: .fill)
+                        .frame(width: 88, height: 88)
+                        .clipShape(Circle())
+                        .overlay {
+                            Circle()
+                                .strokeBorder(
+                                    isSelected ? ThemeManager.opticYellow : Color.white.opacity(0.15),
+                                    lineWidth: isSelected ? 3 : 1
+                                )
                         }
-                    }
-                    .frame(width: 88, height: 88)
-                    .clipShape(Circle())
-                    .overlay {
-                        Circle()
-                            .strokeBorder(
-                                isSelected ? ThemeManager.opticYellow : Color.white.opacity(0.15),
-                                lineWidth: isSelected ? 3 : 1
-                            )
-                    }
 
                     if isPrimary {
                         Image(systemName: "star.fill")
@@ -146,9 +221,15 @@ private struct PlayerAvatarCard: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
-                    Text("#\(player.ranking) \(player.tour.rawValue)")
-                        .font(ThemeManager.roundedFont(.caption2))
-                        .foregroundStyle(ThemeManager.emeraldGreen)
+                    if player.ranking > 0 {
+                        Text("#\(player.ranking) \(player.tour.rawValue)")
+                            .font(ThemeManager.roundedFont(.caption2))
+                            .foregroundStyle(ThemeManager.emeraldGreen)
+                    } else {
+                        Text(player.tour.rawValue)
+                            .font(ThemeManager.roundedFont(.caption2))
+                            .foregroundStyle(ThemeManager.emeraldGreen)
+                    }
                 }
             }
             .frame(width: 100)
@@ -157,21 +238,119 @@ private struct PlayerAvatarCard: View {
         }
         .courtifyButton(.card)
     }
+}
 
-    private var placeholder: some View {
-        Circle()
-            .fill(
-                LinearGradient(
-                    colors: [ThemeManager.emeraldGreen, ThemeManager.midnightGreen],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .overlay {
-                Text(player.name.prefix(1))
-                    .font(ThemeManager.roundedFont(size: 32, weight: .bold))
-                    .foregroundStyle(ThemeManager.opticYellow)
+private struct CustomPlayerSearchSheet: View {
+    let tourPreference: TourPreference
+    let onSelect: (PlayerSearchCatalog.Entry) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+    @State private var manualTour: TourPreference = .atp
+    @FocusState private var isFieldFocused: Bool
+
+    private var suggestions: [PlayerSearchCatalog.Entry] {
+        PlayerSearchCatalog.suggestions(query: query, tourPreference: tourPreference)
+    }
+
+    private var resolvedManualTour: TourPreference {
+        tourPreference == .both ? manualTour : (tourPreference == .wta ? .wta : .atp)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Find a player by name. We'll use a tour placeholder icon - no photo lookup needed.")
+                    .font(ThemeManager.roundedFont(.subheadline))
+                    .foregroundStyle(.white.opacity(0.65))
+
+                if tourPreference == .both {
+                    Picker("Tour", selection: $manualTour) {
+                        Text("ATP").tag(TourPreference.atp)
+                        Text("WTA").tag(TourPreference.wta)
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                TextField("Player name", text: $query)
+                    .font(ThemeManager.roundedFont(.body, weight: .medium))
+                    .foregroundStyle(.white)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .focused($isFieldFocused)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                if !suggestions.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(suggestions) { entry in
+                            Button {
+                                onSelect(entry)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    CachedBundledImage(name: entry.tour == .wta ? "placeholder-female" : "placeholder-male", contentMode: .fill)
+                                        .frame(width: 36, height: 36)
+                                        .clipShape(Circle())
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(entry.name)
+                                            .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                                            .foregroundStyle(.white)
+                                        Text(entry.tour.rawValue)
+                                            .font(ThemeManager.roundedFont(.caption))
+                                            .foregroundStyle(.white.opacity(0.5))
+                                    }
+
+                                    Spacer()
+                                }
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 4)
+                            }
+                            .courtifyButton(.ghost)
+
+                            if entry.id != suggestions.last?.id {
+                                Divider().overlay(Color.white.opacity(0.1))
+                            }
+                        }
+                    }
+                } else if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                        onSelect(PlayerSearchCatalog.Entry(name: trimmed, tour: resolvedManualTour))
+                    } label: {
+                        HStack(spacing: 12) {
+                            CachedBundledImage(name: resolvedManualTour == .wta ? "placeholder-female" : "placeholder-male", contentMode: .fill)
+                                .frame(width: 36, height: 36)
+                                .clipShape(Circle())
+
+                            Text("Add \"\(query.trimmingCharacters(in: .whitespacesAndNewlines))\"")
+                                .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                                .foregroundStyle(ThemeManager.opticYellow)
+
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    .courtifyButton(.ghost)
+                }
+
+                Spacer()
             }
+            .padding(24)
+            .courtifyBackground()
+            .navigationTitle("Add a player")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close") { dismiss() }
+                        .foregroundStyle(ThemeManager.opticYellow)
+                }
+            }
+            .onAppear { isFieldFocused = true }
+        }
+        .preferredColorScheme(.dark)
     }
 }
 

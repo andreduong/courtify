@@ -1,0 +1,13 @@
+{
+  "images": [
+    {
+      "filename": "placeholder-female.png",
+      "idiom": "universal",
+      "scale": "1x"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

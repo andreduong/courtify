@@ -3,45 +3,12 @@ import SwiftUI
 struct SplashScreenView: View {
     let onContinue: () -> Void
 
-    private let widgetImages = [
-        "chart.bar.fill",
-        "calendar",
-        "trophy.fill",
-        "tennisball.fill",
-        "bell.badge.fill",
-        "star.fill",
-    ]
-
     var body: some View {
         ZStack {
-            ThemeManager.midnightGreen.ignoresSafeArea()
+            ThemeManager.midnightGreen
 
-            // Blurred widget collage
-            GeometryReader { geo in
-                ForEach(Array(widgetImages.enumerated()), id: \.offset) { index, symbol in
-                    let positions: [(CGFloat, CGFloat, CGFloat)] = [
-                        (0.15, 0.12, 0.9),
-                        (0.72, 0.08, 1.1),
-                        (0.08, 0.38, 0.85),
-                        (0.78, 0.35, 1.0),
-                        (0.25, 0.62, 0.95),
-                        (0.68, 0.58, 1.05),
-                    ]
-                    let pos = positions[index % positions.count]
-
-                    WidgetPreviewCard(symbol: symbol)
-                        .frame(width: geo.size.width * 0.38, height: geo.size.width * 0.38)
-                        .rotationEffect(.degrees(Double(index % 2 == 0 ? -8 : 8)))
-                        .position(
-                            x: geo.size.width * pos.0,
-                            y: geo.size.height * pos.1
-                        )
-                        .scaleEffect(pos.2)
-                        .blur(radius: 6)
-                        .opacity(0.55)
-                }
-            }
-            .allowsHitTesting(false)
+            MarqueeWidgetBackground()
+                .allowsHitTesting(false)
 
             VStack(spacing: 32) {
                 Spacer()
@@ -74,34 +41,73 @@ struct SplashScreenView: View {
                 .padding(.bottom, 40)
             }
         }
+        .ignoresSafeArea()
+        .onAppear {
+            BundledImageCache.warmOnboardingAssets()
+        }
     }
 }
 
-private struct WidgetPreviewCard: View {
-    let symbol: String
+/// GPU-friendly infinite marquee: one pre-blurred sprite strip + transform-only animation.
+/// Avoids per-frame blur/material work that caused jank on the splash screen.
+private struct MarqueeWidgetBackground: View {
+    private let rowCount = 4
+    private let cardSize: CGFloat = 130
+    private let stripWidth: CGFloat = 1440
+    private let duration: Double = 28
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: symbol)
-                .font(.system(size: 28, weight: .semibold, design: .rounded))
-                .foregroundStyle(ThemeManager.opticYellow)
-
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.white.opacity(0.2))
-                .frame(height: 8)
-                .padding(.horizontal, 12)
-
-            RoundedRectangle(cornerRadius: 4)
-                .fill(.white.opacity(0.12))
-                .frame(height: 8)
-                .padding(.horizontal, 20)
+        GeometryReader { geo in
+            VStack(spacing: 24) {
+                ForEach(0..<rowCount, id: \.self) { row in
+                    MarqueeWidgetRow(
+                        cardSize: cardSize,
+                        stripWidth: stripWidth,
+                        duration: duration + Double(row) * 4,
+                        startOffset: CGFloat(row) * 72
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .offset(y: -geo.size.height * 0.05)
+            .opacity(0.55)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .glassCard(cornerRadius: 24, padding: 16)
+    }
+}
+
+private struct MarqueeWidgetRow: View {
+    let cardSize: CGFloat
+    let stripWidth: CGFloat
+    let duration: Double
+    let startOffset: CGFloat
+
+    @State private var animate = false
+
+    private var travelDistance: CGFloat { stripWidth }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            marqueeStrip
+            marqueeStrip
+        }
+        .offset(x: (animate ? -travelDistance : 0) + startOffset)
+        .onAppear {
+            animate = false
+            withAnimation(.linear(duration: duration).repeatForever(autoreverses: false)) {
+                animate = true
+            }
+        }
+        .frame(height: cardSize)
+        .clipped()
+    }
+
+    private var marqueeStrip: some View {
+        CachedBundledImage(name: "marquee-widget-strip", contentMode: .fill)
+            .frame(width: stripWidth, height: cardSize)
+            .clipped()
     }
 }
 
 #Preview {
     SplashScreenView(onContinue: {})
-        .courtifyBackground()
 }

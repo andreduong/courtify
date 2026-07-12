@@ -47,9 +47,11 @@ extension Color {
 
 struct CourtifyBackground: ViewModifier {
     func body(content: Content) -> some View {
-        content
-            .background(ThemeManager.midnightGreen.ignoresSafeArea())
-            .preferredColorScheme(.dark)
+        ZStack {
+            ThemeManager.midnightGreen.ignoresSafeArea()
+            content
+        }
+        .preferredColorScheme(.dark)
     }
 }
 

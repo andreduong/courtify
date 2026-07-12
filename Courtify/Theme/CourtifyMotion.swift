@@ -140,7 +140,6 @@ struct CourtifyScreenFlow<Step: Hashable, Root: View, Destination: View>: View {
             }
         }
         .animation(CourtifyMotion.screen, value: path)
-        .clipped()
     }
 }
 

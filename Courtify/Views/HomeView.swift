@@ -22,8 +22,8 @@ struct HomeView: View {
                     if let pref = TourPreference(rawValue: tourPreferenceRaw) {
                         Label("Following \(pref.rawValue)", systemImage: "checkmark.circle.fill")
                     }
-                    if let player = TennisPlayer.topPlayers.first(where: { $0.id == favoritePlayerID }) {
-                        Label("Favorite: \(player.name)", systemImage: "star.fill")
+                    if let name = TennisPlayer.displayName(for: favoritePlayerID) {
+                        Label("Favorite: \(name)", systemImage: "star.fill")
                     }
                     if !favoriteGrandSlam.isEmpty {
                         Label("Grand Slam: \(favoriteGrandSlam)", systemImage: "trophy.fill")
@@ -119,7 +119,7 @@ struct HomeView: View {
         favoriteGrandSlam = grandSlam
         AppGroupConstants.userDefaults.set(grandSlam, forKey: AppGroupConstants.Keys.favoriteGrandSlam)
         AppGroupConstants.updateFavoritePlayer(playerID)
-        let name = TennisPlayer.topPlayers.first(where: { $0.id == playerID })?.name ?? playerID
+        let name = TennisPlayer.displayName(for: playerID) ?? playerID
         widgetStatusMessage = "Widgets refreshed for \(name)."
     }
 

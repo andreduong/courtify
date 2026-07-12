@@ -6,8 +6,9 @@ enum FavoritePlayerResolver {
     }
 
     static func favoriteDisplayName() -> String? {
-        guard !favoriteSlug().isEmpty else { return nil }
-        return TennisPlayer.topPlayers.first(where: { $0.id == favoriteSlug() })?.name
+        let slug = favoriteSlug()
+        guard !slug.isEmpty else { return nil }
+        return TennisPlayer.displayName(for: slug)
     }
 
     static func ranking(for payload: WidgetDataPayload) -> (rank: Int, player: WidgetPlayer)? {
