@@ -12,5 +12,7 @@
 	<string>B2P86X9N67</string>
 	<key>uploadSymbols</key>
 	<true/>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
 </dict>
 </plist>
