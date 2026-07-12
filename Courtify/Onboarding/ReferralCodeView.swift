@@ -29,46 +29,32 @@ struct ReferralCodeView: View {
             }
             .padding(.top, 8)
 
-            HStack(spacing: 10) {
-                TextField("Referral code", text: $referralCode)
-                    .font(ThemeManager.roundedFont(.body, weight: .medium))
-                    .foregroundStyle(.white)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .focused($isFieldFocused)
-                    .submitLabel(.go)
-                    .onSubmit(submitCode)
-
-                Button(action: submitCode) {
-                    Image(systemName: "arrow.right.circle.fill")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                        .foregroundStyle(
-                            referralCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                ? ThemeManager.opticYellow.opacity(0.35)
-                                : ThemeManager.opticYellow
+            TextField("Referral code", text: $referralCode)
+                .font(ThemeManager.roundedFont(.body, weight: .medium))
+                .foregroundStyle(.white)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .focused($isFieldFocused)
+                .submitLabel(.go)
+                .onSubmit(submitCode)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(
+                            showInvalidHint ? Color.red.opacity(0.7) : Color.white.opacity(0.12),
+                            lineWidth: showInvalidHint ? 1.5 : 1
                         )
                 }
-                .courtifyButton(.icon)
-                .disabled(referralCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(.white.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(
-                        showInvalidHint ? Color.red.opacity(0.7) : Color.white.opacity(0.12),
-                        lineWidth: showInvalidHint ? 1.5 : 1
-                    )
-            }
-            .offset(x: showInvalidHint ? -6 : 0)
-            .animation(
-                showInvalidHint
-                    ? .default.repeatCount(3, autoreverses: true).speed(4)
-                    : CourtifyMotion.selection,
-                value: showInvalidHint
-            )
+                .offset(x: showInvalidHint ? -6 : 0)
+                .animation(
+                    showInvalidHint
+                        ? .default.repeatCount(3, autoreverses: true).speed(4)
+                        : CourtifyMotion.selection,
+                    value: showInvalidHint
+                )
 
             if showInvalidHint {
                 Text("That code isn't recognized. Try again or skip.")
@@ -78,6 +64,12 @@ struct ReferralCodeView: View {
             }
 
             Spacer()
+
+            Button(action: submitCode) {
+                Text("SUBMIT")
+                    .courtifyPrimaryButtonLabel(cornerRadius: 16)
+            }
+            .courtifyButton(.primary, enabled: !referralCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             Button(action: onSkip) {
                 Text("Skip")

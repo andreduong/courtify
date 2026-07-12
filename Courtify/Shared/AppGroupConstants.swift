@@ -4,8 +4,11 @@ enum AppGroupConstants {
     static let suiteName = "group.com.courtify.xyz"
 
     static var userDefaults: UserDefaults {
-        UserDefaults(suiteName: suiteName) ?? .standard
+        appGroupStorage
     }
+
+    /// Shared store for `@AppStorage` in SwiftUI views (must match `userDefaults`).
+    static let appGroupStorage = UserDefaults(suiteName: suiteName) ?? .standard
 
     static var containerURL: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: suiteName)

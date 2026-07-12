@@ -14,12 +14,15 @@ struct CourtifyApp: App {
 
 private struct AppRootView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage(AppGroupConstants.Keys.referralBypassActive, store: AppGroupConstants.appGroupStorage)
+    private var referralBypassActive = false
     @StateObject private var revenueCat = RevenueCatManager.shared
     @State private var isBootstrapped = false
 
     private var shouldShowHome: Bool {
         if revenueCat.isProUser { return true }
-        if AppGroupConstants.referralBypassActive { return true }
+        if referralBypassActive { return true }
+        if hasCompletedOnboarding, AppGroupConstants.referralBypassActive { return true }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-UITestHome") { return true }
         if AppGroupConstants.debugProUserEnabled { return true }
@@ -49,7 +52,7 @@ private struct AppRootView: View {
         .task {
             await revenueCat.prepareForLaunch()
             await OfferNotificationManager.refreshAuthorizationState()
-            if !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
+            if !revenueCat.isProUser, !referralBypassActive {
                 #if DEBUG
                 if !shouldShowHome {
                     hasCompletedOnboarding = false
