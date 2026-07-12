@@ -53,6 +53,10 @@ private struct AppRootView: View {
             await revenueCat.prepareForLaunch()
             await OfferNotificationManager.refreshAuthorizationState()
             BundledImageCache.warmOnboardingAssets()
+            AppGroupConstants.syncWidgetAccess(
+                isProUser: revenueCat.isProUser,
+                referralBypass: referralBypassActive
+            )
             if !revenueCat.isProUser, !referralBypassActive {
                 #if DEBUG
                 if !shouldShowHome {

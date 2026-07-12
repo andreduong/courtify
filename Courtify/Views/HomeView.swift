@@ -46,7 +46,7 @@ struct HomeView: View {
                 .font(ThemeManager.roundedFont(.headline, weight: .bold))
                 .foregroundStyle(.white)
 
-            Text("Add Courtify widgets from the iOS home screen widget gallery. Use the controls below to update what they show without calling the live API.")
+            Text("Add Courtify widgets from the iOS home screen after subscribing. Widgets stay locked until you have Courtify Pro.")
                 .font(ThemeManager.roundedFont(.footnote))
                 .foregroundStyle(.white.opacity(0.65))
 

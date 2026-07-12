@@ -9,6 +9,7 @@ struct OrderOfPlayEntry: TimelineEntry {
     let upcoming: [WidgetUpcomingMatch]
     let tournamentName: String?
     let isPlaceholder: Bool
+    let isLocked: Bool
 }
 
 // MARK: - Provider
@@ -20,7 +21,19 @@ struct OrderOfPlayProvider: TimelineProvider {
             centerCourtLive: sampleLiveMatch,
             upcoming: [sampleUpcoming, sampleUpcoming],
             tournamentName: "Wimbledon",
-            isPlaceholder: true
+            isPlaceholder: true,
+            isLocked: false
+        )
+    }
+
+    private func lockedEntry() -> OrderOfPlayEntry {
+        OrderOfPlayEntry(
+            date: .now,
+            centerCourtLive: nil,
+            upcoming: [],
+            tournamentName: nil,
+            isPlaceholder: false,
+            isLocked: true
         )
     }
 
@@ -43,6 +56,10 @@ struct OrderOfPlayProvider: TimelineProvider {
     }
 
     private func buildEntry() async -> OrderOfPlayEntry {
+        guard AppGroupConstants.widgetAccessEnabled else {
+            return lockedEntry()
+        }
+
         do {
             let payload = try await WidgetAPIService.fetchWidgetData()
 
@@ -61,7 +78,8 @@ struct OrderOfPlayProvider: TimelineProvider {
                 centerCourtLive: centerLive,
                 upcoming: upcoming,
                 tournamentName: tournament,
-                isPlaceholder: false
+                isPlaceholder: false,
+                isLocked: false
             )
         } catch {
             return OrderOfPlayEntry(
@@ -69,7 +87,8 @@ struct OrderOfPlayProvider: TimelineProvider {
                 centerCourtLive: nil,
                 upcoming: [],
                 tournamentName: nil,
-                isPlaceholder: false
+                isPlaceholder: false,
+                isLocked: false
             )
         }
     }
@@ -162,6 +181,17 @@ struct OrderOfPlayWidgetView: View {
     let entry: OrderOfPlayEntry
 
     var body: some View {
+        if entry.isLocked {
+            WidgetLockedView(
+                title: "Order of Play",
+                subtitle: "Subscribe in Courtify to unlock Centre Court live scores."
+            )
+        } else {
+            unlockedBody
+        }
+    }
+
+    private var unlockedBody: some View {
         ZStack {
             LinearGradient(
                 colors: [WidgetTheme.emeraldGreen.opacity(0.35), WidgetTheme.midnightGreen],
@@ -391,6 +421,7 @@ extension WidgetUpcomingMatch {
         ),
         upcoming: [],
         tournamentName: "Wimbledon",
-        isPlaceholder: true
+        isPlaceholder: true,
+        isLocked: false
     )
 }

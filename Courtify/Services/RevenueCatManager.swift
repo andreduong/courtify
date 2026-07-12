@@ -43,14 +43,19 @@ final class RevenueCatManager: ObservableObject {
         }
     }
 
+    private func applyCustomerInfo(_ info: CustomerInfo) {
+        isProUser = info.entitlements["pro"]?.isActive == true
+        AppGroupConstants.syncWidgetAccess(isProUser: isProUser)
+        if isProUser {
+            OfferNotificationManager.cancelOfferReminders()
+            OnboardingReminderManager.cancelAbandonmentReminders()
+        }
+    }
+
     func refreshCustomerInfo() async {
         do {
             let info = try await Purchases.shared.customerInfo()
-            isProUser = info.entitlements["pro"]?.isActive == true
-            if isProUser {
-                OfferNotificationManager.cancelOfferReminders()
-                OnboardingReminderManager.cancelAbandonmentReminders()
-            }
+            applyCustomerInfo(info)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -62,11 +67,7 @@ final class RevenueCatManager: ObservableObject {
 
         do {
             let result = try await Purchases.shared.purchase(package: package)
-            isProUser = result.customerInfo.entitlements["pro"]?.isActive == true
-            if isProUser {
-                OfferNotificationManager.cancelOfferReminders()
-                OnboardingReminderManager.cancelAbandonmentReminders()
-            }
+            applyCustomerInfo(result.customerInfo)
             return isProUser
         } catch {
             let rcError = error as NSError
@@ -84,11 +85,7 @@ final class RevenueCatManager: ObservableObject {
 
         do {
             let info = try await Purchases.shared.restorePurchases()
-            isProUser = info.entitlements["pro"]?.isActive == true
-            if isProUser {
-                OfferNotificationManager.cancelOfferReminders()
-                OnboardingReminderManager.cancelAbandonmentReminders()
-            }
+            applyCustomerInfo(info)
             return isProUser
         } catch {
             errorMessage = error.localizedDescription

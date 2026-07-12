@@ -24,6 +24,7 @@ enum AppGroupConstants {
         static let favoriteGrandSlam = "favoriteGrandSlam"
         static let useMockWidgetData = "useMockWidgetData"
         static let referralBypassActive = "referralBypassActive"
+        static let widgetAccessEnabled = "widgetAccessEnabled"
         static let notificationsEnabled = "notificationsEnabled"
         #if DEBUG
         static let debugProUser = "debugProUser"
@@ -36,6 +37,25 @@ enum AppGroupConstants {
 
     static func activateReferralBypass() {
         userDefaults.set(true, forKey: Keys.referralBypassActive)
+        setWidgetAccessEnabled(true)
+    }
+
+    /// Widgets only show live data for Pro subscribers or valid referral bypass.
+    static var widgetAccessEnabled: Bool {
+        userDefaults.bool(forKey: Keys.widgetAccessEnabled)
+    }
+
+    static func setWidgetAccessEnabled(_ enabled: Bool) {
+        let previous = widgetAccessEnabled
+        userDefaults.set(enabled, forKey: Keys.widgetAccessEnabled)
+        if previous != enabled {
+            WidgetTimelineRefresher.reloadAll()
+        }
+    }
+
+    static func syncWidgetAccess(isProUser: Bool, referralBypass: Bool? = nil) {
+        let bypass = referralBypass ?? referralBypassActive
+        setWidgetAccessEnabled(isProUser || bypass)
     }
 
     static var notificationsEnabled: Bool {
@@ -78,6 +98,7 @@ enum AppGroupConstants {
         userDefaults.set(tourPreference.rawValue, forKey: Keys.tourPreference)
         userDefaults.set(favoritePlayerID, forKey: Keys.favoritePlayerID)
         userDefaults.set(favoriteGrandSlam, forKey: Keys.favoriteGrandSlam)
+        setWidgetAccessEnabled(true)
         WidgetTimelineRefresher.reloadAll()
     }
 
@@ -87,6 +108,7 @@ enum AppGroupConstants {
         userDefaults.removeObject(forKey: Keys.favoriteGrandSlam)
         userDefaults.removeObject(forKey: Keys.referralBypassActive)
         userDefaults.removeObject(forKey: Keys.notificationsEnabled)
+        setWidgetAccessEnabled(false)
         WidgetTimelineRefresher.reloadAll()
     }
 

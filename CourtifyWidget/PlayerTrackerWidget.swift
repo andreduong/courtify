@@ -11,6 +11,7 @@ struct PlayerTrackerEntry: TimelineEntry {
     let liveMatch: WidgetLiveMatch?
     let nextMatchStart: Date?
     let isPlaceholder: Bool
+    let isLocked: Bool
 }
 
 // MARK: - Provider
@@ -24,7 +25,21 @@ struct PlayerTrackerProvider: TimelineProvider {
             backgroundImagePath: nil,
             liveMatch: nil,
             nextMatchStart: Date().addingTimeInterval(3600),
-            isPlaceholder: true
+            isPlaceholder: true,
+            isLocked: false
+        )
+    }
+
+    private func lockedEntry() -> PlayerTrackerEntry {
+        PlayerTrackerEntry(
+            date: .now,
+            playerName: "Courtify",
+            rank: nil,
+            backgroundImagePath: nil,
+            liveMatch: nil,
+            nextMatchStart: nil,
+            isPlaceholder: false,
+            isLocked: true
         )
     }
 
@@ -48,6 +63,10 @@ struct PlayerTrackerProvider: TimelineProvider {
     }
 
     private func buildEntry() async -> PlayerTrackerEntry {
+        guard AppGroupConstants.widgetAccessEnabled else {
+            return lockedEntry()
+        }
+
         do {
             let payload = try await WidgetAPIService.fetchWidgetData()
             let favoritePlayer = FavoritePlayerResolver.favoritePlayer(from: payload)
@@ -67,7 +86,8 @@ struct PlayerTrackerProvider: TimelineProvider {
                 backgroundImagePath: imagePath,
                 liveMatch: liveMatch,
                 nextMatchStart: upcoming?.startTime,
-                isPlaceholder: false
+                isPlaceholder: false,
+                isLocked: false
             )
         } catch {
             return PlayerTrackerEntry(
@@ -77,7 +97,8 @@ struct PlayerTrackerProvider: TimelineProvider {
                 backgroundImagePath: nil,
                 liveMatch: nil,
                 nextMatchStart: nil,
-                isPlaceholder: false
+                isPlaceholder: false,
+                isLocked: false
             )
         }
     }
@@ -107,6 +128,17 @@ struct PlayerTrackerWidgetView: View {
     let entry: PlayerTrackerEntry
 
     var body: some View {
+        if entry.isLocked {
+            WidgetLockedView(
+                title: "Player Tracker",
+                subtitle: "Go Pro to follow your favorite player on your home screen."
+            )
+        } else {
+            unlockedBody
+        }
+    }
+
+    private var unlockedBody: some View {
         ZStack {
             backgroundLayer
             LinearGradient(
@@ -246,6 +278,7 @@ struct PlayerTrackerWidgetView: View {
             player2: WidgetPlayer(id: 2, name: "Novak Djokovic", country: "SRB", imageUrl: nil)
         ),
         nextMatchStart: nil,
-        isPlaceholder: true
+        isPlaceholder: true,
+        isLocked: false
     )
 }
