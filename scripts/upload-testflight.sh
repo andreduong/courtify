@@ -2,22 +2,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=/dev/null
+source "$ROOT/scripts/xcode-env.sh"
+
 SCHEME="Courtify"
 TEAM_ID="B2P86X9N67"
 ARCHIVE_PATH="$ROOT/build/TestFlight/Courtify.xcarchive"
 EXPORT_PATH="$ROOT/build/TestFlight/export"
 EXPORT_PLIST="$ROOT/scripts/ExportOptions.plist"
-
-# Prefer Xcode 26 if installed alongside Xcode 16.2
-for candidate in \
-  "/Users/andreduong/Applications/Xcode-26.0.1.app/Contents/Developer" \
-  "/Users/andreduong/Applications/Xcode.app/Contents/Developer" \
-  "/Applications/Xcode.app/Contents/Developer"; do
-  if [[ -d "$candidate" ]]; then
-    export DEVELOPER_DIR="$candidate"
-    break
-  fi
-done
 
 log() { printf '==> %s\n' "$*"; }
 

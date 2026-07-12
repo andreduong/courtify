@@ -114,7 +114,8 @@ select_xcode_26() {
 
 upload_build() {
   log "Archiving and uploading Courtify to TestFlight ..."
-  DEVELOPER_DIR="$(xcode-select -p)" \
+  # shellcheck source=/dev/null
+  source "$ROOT/scripts/xcode-env.sh"
   "$ROOT/scripts/upload-testflight.sh"
 }
 
