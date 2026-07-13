@@ -29,7 +29,6 @@ struct OnboardingChrome: View {
     var body: some View {
         VStack(spacing: 0) {
             OnboardingProgressBar(progress: progress)
-                .ignoresSafeArea(edges: .top)
 
             if showsBackButton {
                 HStack {
@@ -53,6 +52,7 @@ struct OnboardingChrome: View {
                 .transition(.opacity.combined(with: .move(edge: .leading)))
             }
         }
+        .safeAreaPadding(.top, 8)
         .animation(CourtifyMotion.screen, value: showsBackButton)
         .animation(CourtifyMotion.screen, value: progress)
     }

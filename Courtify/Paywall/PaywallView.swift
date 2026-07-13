@@ -151,10 +151,10 @@ struct PaywallView: View {
                         .courtifyButton(.icon)
                         .opacity(closeButtonOpacity * 0.85)
                     }
-                    .padding(.top, 12)
                     .padding(.trailing, 20)
                     Spacer()
                 }
+                .safeAreaPadding(.top, 8)
             }
 
             if showSpecialOffer {

@@ -46,7 +46,6 @@ struct OnboardingFlowView: View {
             )
         }
         .courtifyBackground()
-        .ignoresSafeArea()
         .onAppear {
             openSpecialOfferPaywallIfNeeded()
             openPaywallIfNeeded()
