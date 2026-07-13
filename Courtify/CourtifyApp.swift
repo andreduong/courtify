@@ -25,6 +25,7 @@ private struct AppRootView: View {
         if hasCompletedOnboarding { return true }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-UITestHome") { return true }
+        if ProcessInfo.processInfo.arguments.contains("-UITestPaywall") { return false }
         if AppGroupConstants.debugProUserEnabled { return true }
         #endif
         return false
@@ -61,6 +62,10 @@ private struct AppRootView: View {
                 isProUser: revenueCat.isProUser,
                 referralBypass: referralBypassActive
             )
+            if ProcessInfo.processInfo.arguments.contains("-UITestPaywall") {
+                hasCompletedOnboarding = false
+                AppGroupConstants.clearOnboardingPreferences()
+            }
             isBootstrapped = true
         }
     }

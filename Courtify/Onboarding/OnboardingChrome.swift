@@ -25,13 +25,16 @@ struct OnboardingChrome: View {
     let progress: Double
     let showsBackButton: Bool
     let onBack: () -> Void
+    var showsCloseButton: Bool = false
+    var closeButtonOpacity: Double = 1
+    var onClose: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
             OnboardingProgressBar(progress: progress)
 
-            if showsBackButton {
-                HStack {
+            HStack(alignment: .center) {
+                if showsBackButton {
                     Button(action: onBack) {
                         HStack(spacing: 6) {
                             Image(systemName: "chevron.left")
@@ -42,17 +45,32 @@ struct OnboardingChrome: View {
                         .foregroundStyle(.white.opacity(0.85))
                         .padding(.horizontal, 4)
                         .padding(.vertical, 8)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                     }
                     .courtifyButton(.ghost)
-
-                    Spacer()
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 6)
-                .transition(.opacity.combined(with: .move(edge: .leading)))
+
+                Spacer()
+
+                if showsCloseButton, let onClose {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.32))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .courtifyButton(.icon)
+                    .opacity(closeButtonOpacity)
+                    .accessibilityLabel("Skip paywall")
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 6)
         }
         .animation(CourtifyMotion.screen, value: showsBackButton)
+        .animation(CourtifyMotion.screen, value: showsCloseButton)
         .animation(CourtifyMotion.screen, value: progress)
     }
 }
@@ -86,7 +104,14 @@ private struct OnboardingProgressBar: View {
     ZStack {
         ThemeManager.midnightGreen.ignoresSafeArea()
         VStack {
-            OnboardingChrome(progress: 0.6, showsBackButton: true, onBack: {})
+            OnboardingChrome(
+                progress: 1,
+                showsBackButton: true,
+                onBack: {},
+                showsCloseButton: true,
+                closeButtonOpacity: 1,
+                onClose: {}
+            )
             Spacer()
         }
     }

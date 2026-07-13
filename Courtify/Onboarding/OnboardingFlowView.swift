@@ -20,17 +20,23 @@ struct OnboardingFlowView: View {
     @State private var draftFavoritePlayerID = ""
     @State private var draftFavoriteGrandSlam = ""
     @State private var showSpecialOfferOnPaywall = false
+    @State private var showPaywallCloseButton = false
+    @State private var paywallCloseOpacity: Double = 0
 
     private var onboardingProgress: Double {
         OnboardingProgress.progress(for: path)
     }
 
     private var showsBackButton: Bool {
-        !path.isEmpty && path.last != .paywall
+        !path.isEmpty
     }
 
     private var showsOnboardingChrome: Bool {
-        path.last != .paywall
+        !path.isEmpty
+    }
+
+    private var isPaywallStep: Bool {
+        path.last == .paywall
     }
 
     var body: some View {
@@ -46,7 +52,10 @@ struct OnboardingFlowView: View {
                 OnboardingChrome(
                     progress: onboardingProgress,
                     showsBackButton: showsBackButton,
-                    onBack: navigateBackward
+                    onBack: navigateBackward,
+                    showsCloseButton: isPaywallStep && showPaywallCloseButton,
+                    closeButtonOpacity: paywallCloseOpacity,
+                    onClose: completeOnboardingAsFreeUser
                 )
             }
         }
@@ -54,6 +63,17 @@ struct OnboardingFlowView: View {
         .onAppear {
             openSpecialOfferPaywallIfNeeded()
             openPaywallIfNeeded()
+            #if DEBUG
+            openPaywallForUITestIfNeeded()
+            #endif
+        }
+        .onChange(of: path) { _, newPath in
+            if newPath.last == .paywall {
+                schedulePaywallCloseButton()
+            } else {
+                showPaywallCloseButton = false
+                paywallCloseOpacity = 0
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .courtifyOpenSpecialOfferPaywall)) { _ in
             openSpecialOfferPaywallIfNeeded()
@@ -231,12 +251,38 @@ struct OnboardingFlowView: View {
         draftFavoritePlayerID = ""
         draftFavoriteGrandSlam = ""
         showSpecialOfferOnPaywall = false
+        showPaywallCloseButton = false
+        paywallCloseOpacity = 0
         AppGroupConstants.clearOnboardingPreferences()
         CourtifyMotion.animateScreen(.backward) {
             navigationDirection = .backward
             path.removeAll()
         }
     }
+
+    private func schedulePaywallCloseButton() {
+        showPaywallCloseButton = false
+        paywallCloseOpacity = 0
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            guard path.last == .paywall else { return }
+            showPaywallCloseButton = true
+            withAnimation(CourtifyMotion.reveal) {
+                paywallCloseOpacity = 1
+            }
+        }
+    }
+
+    #if DEBUG
+    private func openPaywallForUITestIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("-UITestPaywall") else { return }
+        draftFavoritePlayerID = "sinner"
+        draftFavoriteGrandSlam = "Wimbledon"
+        path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .paywall]
+        showPaywallCloseButton = true
+        paywallCloseOpacity = 1
+    }
+    #endif
 }
 
 #Preview {

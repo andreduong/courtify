@@ -82,6 +82,7 @@ struct WidgetsCollectionView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView(
                 favoritePlayerID: favoritePlayerID.isEmpty ? "sinner" : favoritePlayerID,
+                managesOwnCloseButton: true,
                 onSubscribed: { showPaywall = false },
                 onClose: { showPaywall = false },
                 onSkip: { showPaywall = false }

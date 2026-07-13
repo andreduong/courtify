@@ -39,6 +39,7 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
 struct PaywallView: View {
     let favoritePlayerID: String
     var showSpecialOfferOnAppear = false
+    var managesOwnCloseButton = false
 
     @StateObject private var revenueCat = RevenueCatManager.shared
 
@@ -63,7 +64,7 @@ struct PaywallView: View {
 
             ScrollView {
                 VStack(spacing: 28) {
-                    Spacer(minLength: 72)
+                    Spacer(minLength: managesOwnCloseButton ? 72 : 16)
 
                     VStack(spacing: 12) {
                         Text("Go Pro with Courtify")
@@ -143,38 +144,41 @@ struct PaywallView: View {
                 .transition(CourtifyMotion.modalPresent)
                 .zIndex(2)
             }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if showCloseButton {
-                HStack {
-                    Spacer()
-                    Button {
-                        if let onSkip {
-                            onSkip()
-                        } else {
-                            CourtifyMotion.animateModal {
-                                showSpecialOffer = true
+
+            if managesOwnCloseButton, showCloseButton {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button {
+                            if let onSkip {
+                                onSkip()
+                            } else {
+                                onClose()
                             }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.32))
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
                         }
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.28))
-                            .blur(radius: 0.6)
+                        .courtifyButton(.icon)
+                        .opacity(closeButtonOpacity)
                     }
-                    .courtifyButton(.icon)
-                    .opacity(closeButtonOpacity * 0.85)
+                    .padding(.top, CourtifyLayout.topSafeInset + 4)
+                    .padding(.trailing, 20)
+                    Spacer()
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-                .padding(.bottom, 2)
+                .zIndex(3)
             }
         }
         .animation(CourtifyMotion.modal, value: showSpecialOffer)
         .navigationBarBackButtonHidden()
         .onAppear {
             BundledImageCache.warmOnboardingAssets()
-            scheduleCloseButton()
+            if managesOwnCloseButton {
+                scheduleCloseButton()
+            }
             if showSpecialOfferOnAppear {
                 showSpecialOffer = true
                 PaywallDeepLink.shouldShowSpecialOffer = false
