@@ -1,5 +1,30 @@
 import SwiftUI
 
+private enum WidgetGallerySize: String, CaseIterable, Identifiable {
+    case all = "All"
+    case small = "Small"
+    case medium = "Medium"
+    case large = "Large"
+
+    var id: String { rawValue }
+
+    var previewHeight: CGFloat {
+        switch self {
+        case .all, .medium: 160
+        case .small: 120
+        case .large: 220
+        }
+    }
+}
+
+private struct WidgetGalleryItem: Identifiable {
+    let id: String
+    let title: String
+    let size: WidgetGallerySize
+    let isPro: Bool
+    let spansFullWidth: Bool
+}
+
 struct WidgetsCollectionView: View {
     @AppStorage(AppGroupConstants.Keys.favoritePlayerID, store: AppGroupConstants.userDefaults)
     private var favoritePlayerID = ""
@@ -7,13 +32,24 @@ struct WidgetsCollectionView: View {
     @StateObject private var revenueCat = RevenueCatManager.shared
     @ObservedObject private var dataStore = WidgetDataStore.shared
 
-    @State private var selectedFilter = "All"
+    @State private var selectedFilter: WidgetGallerySize = .all
     @State private var showPaywall = false
-
-    private let filters = ["All", "Small", "Medium", "Large"]
 
     private var favoritePlayer: TennisPlayer? {
         TennisPlayer.player(for: favoritePlayerID)
+    }
+
+    private let catalog: [WidgetGalleryItem] = [
+        WidgetGalleryItem(id: "next", title: "Next tournament", size: .medium, isPro: false, spansFullWidth: false),
+        WidgetGalleryItem(id: "favorite", title: "Favorite player", size: .medium, isPro: false, spansFullWidth: false),
+        WidgetGalleryItem(id: "live", title: "Live scores", size: .small, isPro: true, spansFullWidth: false),
+        WidgetGalleryItem(id: "rankings", title: "Rankings", size: .small, isPro: false, spansFullWidth: false),
+        WidgetGalleryItem(id: "order", title: "Order of play", size: .large, isPro: true, spansFullWidth: true),
+    ]
+
+    private var visibleItems: [WidgetGalleryItem] {
+        guard selectedFilter != .all else { return catalog }
+        return catalog.filter { $0.size == selectedFilter }
     }
 
     var body: some View {
@@ -22,20 +58,27 @@ struct WidgetsCollectionView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Widgets collection")
-                        .font(ThemeManager.roundedFont(.title2, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.top, 56)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Widgets collection")
+                            .font(ThemeManager.roundedFont(.title2, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.top, CourtifyLayout.topSafeInset + 8)
+
+                        LastUpdatedLabel(date: dataStore.lastUpdated)
+                    }
 
                     filterBar
-
                     widgetGrid
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 100)
+                .padding(.bottom, 120)
+                .animation(CourtifyMotion.selection, value: selectedFilter)
+            }
+            .refreshable {
+                await dataStore.refresh()
             }
         }
-        .onAppear { dataStore.refreshIfNeeded() }
+        .onAppear { dataStore.loadCachedPayload() }
         .sheet(isPresented: $showPaywall) {
             PaywallView(
                 favoritePlayerID: favoritePlayerID.isEmpty ? "sinner" : favoritePlayerID,
@@ -49,11 +92,11 @@ struct WidgetsCollectionView: View {
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(filters, id: \.self) { filter in
+                ForEach(WidgetGallerySize.allCases) { filter in
                     Button {
                         CourtifyMotion.animateSelection { selectedFilter = filter }
                     } label: {
-                        Text(filter)
+                        Text(filter.rawValue)
                             .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
                             .foregroundStyle(selectedFilter == filter ? .white : .white.opacity(0.7))
                             .padding(.horizontal, 16)
@@ -68,65 +111,40 @@ struct WidgetsCollectionView: View {
     }
 
     private var widgetGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-            widgetCard(
-                title: "Next tournament",
-                height: 160,
-                isPro: false
-            ) {
-                nextTournamentPreview
-            }
-
-            widgetCard(
-                title: "Favorite player",
-                height: 160,
-                isPro: false
-            ) {
-                favoritePlayerPreview
-            }
-
-            widgetCard(
-                title: "Live scores",
-                height: 160,
-                isPro: true
-            ) {
-                liveScoresPreview
-            }
-
-            widgetCard(
-                title: "Rankings",
-                height: 160,
-                isPro: false
-            ) {
-                rankingsPreview
-            }
-
-            widgetCard(
-                title: "Order of play",
-                height: 180,
-                isPro: true,
-                spanColumns: true
-            ) {
-                orderOfPlayPreview
+        LazyVGrid(
+            columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
+            spacing: 16
+        ) {
+            if visibleItems.isEmpty {
+                Text("No \(selectedFilter.rawValue.lowercased()) widgets in this collection")
+                    .font(ThemeManager.roundedFont(.subheadline))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .gridCellColumns(2)
+                    .padding(.vertical, 24)
+            } else {
+                ForEach(visibleItems) { item in
+                    widgetCard(for: item)
+                        .gridCellColumns(item.spansFullWidth ? 2 : 1)
+                }
             }
         }
     }
 
-    private func widgetCard<Content: View>(
-        title: String,
-        height: CGFloat,
-        isPro: Bool,
-        spanColumns: Bool = false,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
+    private func previewHeight(for item: WidgetGalleryItem) -> CGFloat {
+        selectedFilter == .all ? item.size.previewHeight : selectedFilter.previewHeight
+    }
+
+    @ViewBuilder
+    private func widgetCard(for item: WidgetGalleryItem) -> some View {
+        let height = previewHeight(for: item)
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topTrailing) {
-                content()
+                previewContent(for: item)
                     .frame(maxWidth: .infinity)
                     .frame(height: height)
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
-                if isPro, !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
+                if item.isPro, !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
                     Text("PRO 🎾")
                         .font(ThemeManager.roundedFont(.caption2, weight: .bold))
                         .foregroundStyle(.white)
@@ -142,9 +160,7 @@ struct WidgetsCollectionView: View {
                     HStack {
                         Spacer()
                         Button {
-                            if revenueCat.isProUser || AppGroupConstants.referralBypassActive || !isPro {
-                                // Free widgets — no paywall
-                            } else {
+                            if item.isPro, !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
                                 showPaywall = true
                             }
                         } label: {
@@ -162,11 +178,30 @@ struct WidgetsCollectionView: View {
                 }
             }
 
-            Text(title)
-                .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
-                .foregroundStyle(.white.opacity(0.85))
+            HStack {
+                Text(item.title)
+                    .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.85))
+                Spacer()
+                if selectedFilter == .all {
+                    Text(item.size.rawValue)
+                        .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+            }
         }
-        .gridCellColumns(spanColumns ? 2 : 1)
+    }
+
+    @ViewBuilder
+    private func previewContent(for item: WidgetGalleryItem) -> some View {
+        switch item.id {
+        case "next": nextTournamentPreview
+        case "favorite": favoritePlayerPreview
+        case "live": liveScoresPreview
+        case "rankings": rankingsPreview
+        case "order": orderOfPlayPreview
+        default: EmptyView()
+        }
     }
 
     private var nextTournamentPreview: some View {
@@ -238,7 +273,7 @@ struct WidgetsCollectionView: View {
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                Text("No live matches")
+                Text("Pull to refresh")
                     .font(ThemeManager.roundedFont(.caption))
                     .foregroundStyle(.white.opacity(0.6))
             }
@@ -262,6 +297,11 @@ struct WidgetsCollectionView: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
                 }
+                if dataStore.rankings(for: .atp).isEmpty {
+                    Text("Pull to refresh")
+                        .font(ThemeManager.roundedFont(.caption2))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
                 Spacer()
             }
             .padding(16)
@@ -278,15 +318,17 @@ struct WidgetsCollectionView: View {
                     .foregroundStyle(ThemeManager.opticYellow)
                 ForEach((dataStore.payload?.upcomingMatches ?? []).prefix(3)) { match in
                     HStack {
-                        Text(match.player1.name)
-                            .lineLimit(1)
-                        Text("vs")
-                            .foregroundStyle(.white.opacity(0.5))
-                        Text(match.player2.name)
-                            .lineLimit(1)
+                        Text(match.player1.name).lineLimit(1)
+                        Text("vs").foregroundStyle(.white.opacity(0.5))
+                        Text(match.player2.name).lineLimit(1)
                     }
                     .font(ThemeManager.roundedFont(.caption2, weight: .medium))
                     .foregroundStyle(.white.opacity(0.85))
+                }
+                if dataStore.payload?.upcomingMatches.isEmpty != false {
+                    Text("Pull to refresh")
+                        .font(ThemeManager.roundedFont(.caption2))
+                        .foregroundStyle(.white.opacity(0.6))
                 }
             }
             .padding(16)

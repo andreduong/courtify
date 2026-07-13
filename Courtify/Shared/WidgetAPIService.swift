@@ -5,8 +5,13 @@ enum WidgetAPIService {
     static let widgetDataURL = URL(string: "https://courtify-tennis-worker.courtify.workers.dev/api/widget-data")!
 
     static func fetchWidgetData() async throws -> WidgetDataPayload {
+        let data = try await fetchWidgetDataBytes()
+        return try JSONDecoder().decode(WidgetDataPayload.self, from: data)
+    }
+
+    static func fetchWidgetDataBytes() async throws -> Data {
         if AppGroupConstants.useMockWidgetData {
-            return WidgetMockData.sample
+            return Data(WidgetMockData.sampleJSON.utf8)
         }
 
         var request = URLRequest(url: widgetDataURL)
@@ -23,8 +28,7 @@ enum WidgetAPIService {
             throw WidgetAPIError.httpStatus(http.statusCode)
         }
 
-        let decoder = JSONDecoder()
-        return try decoder.decode(WidgetDataPayload.self, from: data)
+        return data
     }
 }
 

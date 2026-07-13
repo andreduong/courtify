@@ -15,8 +15,12 @@ struct RankingsView: View {
         rankings.first
     }
 
+    private var restOfRankings: [WidgetRankingEntry] {
+        Array(rankings.dropFirst())
+    }
+
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack {
             ThemeManager.midnightGreen.ignoresSafeArea()
 
             ScrollView {
@@ -25,90 +29,118 @@ struct RankingsView: View {
                     rankingsList
                 }
             }
-            .ignoresSafeArea(edges: .top)
-
-            VStack {
-                HStack {
-                    TourPillToggle(selectedTour: $selectedTour)
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, CourtifyLayout.topSafeInset + 8)
-                Spacer()
+            .refreshable {
+                await dataStore.refresh()
             }
         }
         .onAppear {
             if let pref = TourPreference(rawValue: tourPreferenceRaw), pref != .both {
                 selectedTour = pref == .wta ? .wta : .atp
             }
-            dataStore.refreshIfNeeded()
-        }
-        .onChange(of: selectedTour) { _, _ in
-            dataStore.refreshIfNeeded()
+            dataStore.loadCachedPayload()
         }
     }
 
     @ViewBuilder
     private var heroSection: some View {
-        if let leader {
-            ZStack(alignment: .bottomLeading) {
+        ZStack(alignment: .bottom) {
+            if let leader {
                 heroBackground(for: leader)
 
-                HStack(alignment: .bottom) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(ordinalRank(leader.rank ?? 1))
-                            .font(ThemeManager.roundedFont(size: 52, weight: .bold))
-                            .foregroundStyle(.white)
-
-                        if let points = leader.points {
-                            Text("\(points)pts")
-                                .font(ThemeManager.roundedFont(.title3, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.85))
-                        }
-
-                        Text(leader.player.name)
-                            .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.9))
-
-                        if let country = leader.player.country {
-                            Text(country)
-                                .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.55))
-                        }
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        TourPillToggle(selectedTour: $selectedTour)
+                        Spacer()
                     }
+                    .padding(.top, CourtifyLayout.topSafeInset + 8)
 
-                    Spacer()
+                    Spacer(minLength: 12)
 
-                    playerPortrait(for: leader, fullBody: true)
-                        .frame(width: 160, height: 240)
+                    HStack(alignment: .bottom, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            LastUpdatedLabel(date: dataStore.lastUpdated)
+
+                            Text(ordinalRank(leader.rank ?? 1))
+                                .font(ThemeManager.roundedFont(size: 48, weight: .bold))
+                                .foregroundStyle(.white)
+
+                            if let points = leader.points {
+                                Text("\(points) pts")
+                                    .font(ThemeManager.roundedFont(.title3, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.85))
+                            }
+
+                            Text(leader.player.name)
+                                .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                                .foregroundStyle(.white.opacity(0.9))
+                                .lineLimit(2)
+
+                            if let country = leader.player.country {
+                                Text(country)
+                                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.55))
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        playerPortrait(for: leader)
+                            .frame(width: 130, height: 220)
+                            .offset(y: 12)
+                    }
+                    .padding(.bottom, 44)
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 48)
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        TourPillToggle(selectedTour: $selectedTour)
+                        Spacer()
+                    }
+                    .padding(.top, CourtifyLayout.topSafeInset + 8)
+
+                    LastUpdatedLabel(date: dataStore.lastUpdated)
+                    PullToRefreshHint(message: "Pull down to load \(selectedTour.rawValue) rankings")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 40)
+                .frame(height: 320)
             }
-            .frame(height: 340)
-        } else if dataStore.isLoading {
-            ProgressView()
-                .tint(ThemeManager.opticYellow)
-                .frame(height: 340)
         }
+        .frame(height: leader == nil ? 320 : 400)
     }
 
     private var rankingsList: some View {
         VStack(spacing: 0) {
-            ForEach(Array(rankings.enumerated()), id: \.element.id) { index, entry in
-                if index > 0 {
-                    RankingRow(rank: entry.rank ?? index + 1, entry: entry)
+            if dataStore.isLoading, rankings.isEmpty {
+                ProgressView()
+                    .tint(ThemeManager.opticYellow)
+                    .padding(.vertical, 40)
+            } else if restOfRankings.isEmpty, leader != nil {
+                Text("No additional rankings loaded")
+                    .font(ThemeManager.roundedFont(.subheadline))
+                    .foregroundStyle(.gray)
+                    .padding(.vertical, 24)
+            } else {
+                ForEach(Array(restOfRankings.enumerated()), id: \.element.id) { index, entry in
+                    RankingRow(rank: entry.rank ?? index + 2, entry: entry)
                 }
             }
+
+            if let error = dataStore.lastError, rankings.isEmpty {
+                Text(error)
+                    .font(ThemeManager.roundedFont(.caption))
+                    .foregroundStyle(.red.opacity(0.8))
+                    .padding()
+            }
         }
-        .padding(.top, 8)
-        .padding(.bottom, 100)
+        .padding(.top, 4)
+        .padding(.bottom, 120)
         .background {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color.white)
-                .ignoresSafeArea(edges: .bottom)
         }
-        .offset(y: -24)
+        .offset(y: leader == nil ? 0 : -16)
     }
 
     @ViewBuilder
@@ -116,8 +148,8 @@ struct RankingsView: View {
         ZStack {
             if let bundled = bundledPlayer(for: leader) {
                 CachedBundledImage(name: bundled.paywallImageName, contentMode: .fill)
-                    .blur(radius: 28)
-                    .scaleEffect(1.15)
+                    .blur(radius: 24)
+                    .scaleEffect(1.08)
             } else {
                 LinearGradient(
                     colors: [ThemeManager.emeraldGreen.opacity(0.7), ThemeManager.midnightGreen],
@@ -125,16 +157,20 @@ struct RankingsView: View {
                     endPoint: .bottomTrailing
                 )
             }
-            Color.black.opacity(0.5)
+            LinearGradient(
+                colors: [.black.opacity(0.1), .black.opacity(0.55)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
     }
 
     @ViewBuilder
-    private func playerPortrait(for entry: WidgetRankingEntry, fullBody: Bool) -> some View {
+    private func playerPortrait(for entry: WidgetRankingEntry) -> some View {
         if let bundled = bundledPlayer(for: entry) {
-            CachedBundledImage(name: fullBody ? bundled.resolvedImageName : bundled.resolvedImageName, contentMode: .fit)
+            CachedBundledImage(name: bundled.resolvedImageName, contentMode: .fit)
         } else if let url = entry.player.imageURL {
             AsyncImage(url: url) { phase in
                 switch phase {
@@ -205,8 +241,8 @@ private struct RankingRow: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
-                if let points = entry.points {
+            if let points = entry.points {
+                VStack(alignment: .trailing, spacing: 2) {
                     Text("\(points)")
                         .font(ThemeManager.roundedFont(.headline, weight: .bold))
                         .foregroundStyle(ThemeManager.midnightGreen)

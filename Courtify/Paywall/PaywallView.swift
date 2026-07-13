@@ -130,33 +130,6 @@ struct PaywallView: View {
                 .padding(.bottom, 8)
             }
 
-            if showCloseButton {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button {
-                            if let onSkip {
-                                onSkip()
-                            } else {
-                                CourtifyMotion.animateModal {
-                                    showSpecialOffer = true
-                                }
-                            }
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 15, weight: .medium, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.28))
-                                .blur(radius: 0.6)
-                        }
-                        .courtifyButton(.icon)
-                        .opacity(closeButtonOpacity * 0.85)
-                    }
-                    .padding(.top, CourtifyLayout.topSafeInset + 8)
-                    .padding(.trailing, 20)
-                    Spacer()
-                }
-            }
-
             if showSpecialOffer {
                 SpecialOfferPopup(
                     introPrice: revenueCat.yearlyIntroOfferPrice ?? "$24.99",
@@ -169,6 +142,32 @@ struct PaywallView: View {
                 )
                 .transition(CourtifyMotion.modalPresent)
                 .zIndex(2)
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if showCloseButton {
+                HStack {
+                    Spacer()
+                    Button {
+                        if let onSkip {
+                            onSkip()
+                        } else {
+                            CourtifyMotion.animateModal {
+                                showSpecialOffer = true
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.28))
+                            .blur(radius: 0.6)
+                    }
+                    .courtifyButton(.icon)
+                    .opacity(closeButtonOpacity * 0.85)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 2)
             }
         }
         .animation(CourtifyMotion.modal, value: showSpecialOffer)

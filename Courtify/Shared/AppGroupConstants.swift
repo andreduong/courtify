@@ -23,6 +23,7 @@ enum AppGroupConstants {
         static let tourPreference = "tourPreference"
         static let favoriteGrandSlam = "favoriteGrandSlam"
         static let useMockWidgetData = "useMockWidgetData"
+        static let widgetDataPayloadCache = "widgetDataPayloadCache"
         static let referralBypassActive = "referralBypassActive"
         static let widgetAccessEnabled = "widgetAccessEnabled"
         static let notificationsEnabled = "notificationsEnabled"
@@ -77,9 +78,6 @@ enum AppGroupConstants {
 
     static var useMockWidgetData: Bool {
         #if DEBUG
-        if userDefaults.object(forKey: Keys.useMockWidgetData) == nil {
-            return true
-        }
         return userDefaults.bool(forKey: Keys.useMockWidgetData)
         #else
         return false

@@ -8,7 +8,7 @@ enum WidgetMockData {
         )
     }
 
-    private static let sampleJSON = """
+    static let sampleJSON = """
     {
       "updatedAt": "2026-07-10T19:00:00Z",
       "liveMatches": [
@@ -39,9 +39,16 @@ enum WidgetMockData {
       ],
       "rankings": {
         "atp": [
-          { "rank": 1, "points": 12000, "player": { "id": 5994, "name": "Novak Djokovic", "country": "SRB", "imageUrl": null } },
-          { "rank": 2, "points": 11000, "player": { "id": 5992, "name": "Jannik Sinner", "country": "ITA", "imageUrl": null } },
-          { "rank": 3, "points": 10000, "player": { "id": 5993, "name": "Carlos Alcaraz", "country": "ESP", "imageUrl": null } }
+          { "rank": 1, "points": 12000, "player": { "id": 5992, "name": "Jannik Sinner", "country": "ITA", "imageUrl": null } },
+          { "rank": 2, "points": 11000, "player": { "id": 5993, "name": "Carlos Alcaraz", "country": "ESP", "imageUrl": null } },
+          { "rank": 3, "points": 10000, "player": { "id": 5994, "name": "Novak Djokovic", "country": "SRB", "imageUrl": null } },
+          { "rank": 4, "points": 9000, "player": { "id": 5995, "name": "Daniil Medvedev", "country": "RUS", "imageUrl": null } },
+          { "rank": 5, "points": 8000, "player": { "id": 5996, "name": "Alexander Zverev", "country": "GER", "imageUrl": null } },
+          { "rank": 6, "points": 7000, "player": { "id": 5997, "name": "Taylor Fritz", "country": "USA", "imageUrl": null } },
+          { "rank": 7, "points": 6000, "player": { "id": 5998, "name": "Ben Shelton", "country": "USA", "imageUrl": null } },
+          { "rank": 8, "points": 5000, "player": { "id": 5999, "name": "Tommy Paul", "country": "USA", "imageUrl": null } },
+          { "rank": 9, "points": 4000, "player": { "id": 6000, "name": "Hubert Hurkacz", "country": "POL", "imageUrl": null } },
+          { "rank": 10, "points": 3000, "player": { "id": 6001, "name": "Casper Ruud", "country": "NOR", "imageUrl": null } }
         ],
         "wta": [
           { "rank": 1, "points": 9800, "player": { "id": 7001, "name": "Iga Świątek", "country": "POL", "imageUrl": null } },

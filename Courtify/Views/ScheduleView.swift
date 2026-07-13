@@ -36,6 +36,7 @@ struct ScheduleView: View {
 
     @State private var selectedTour: TourPreference = .atp
     @State private var now = Date()
+    @State private var didInitialScroll = false
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
@@ -47,26 +48,27 @@ struct ScheduleView: View {
         TournamentCalendar.nextMajor(for: selectedTour)
     }
 
+    private var upcomingEventID: String? {
+        let today = Calendar.current.startOfDay(for: now)
+        return events.first(where: { $0.endDate >= today })?.id
+    }
+
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack {
             ThemeManager.midnightGreen.ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    heroSection
-                    tournamentList
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        heroSection
+                        tournamentList
+                    }
                 }
-            }
-            .ignoresSafeArea(edges: .top)
-
-            VStack {
-                HStack {
-                    TourPillToggle(selectedTour: $selectedTour)
-                    Spacer()
+                .onAppear { scrollToUpcoming(proxy, animated: false) }
+                .onChange(of: selectedTour) { _, _ in
+                    didInitialScroll = false
+                    scrollToUpcoming(proxy, animated: true)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, CourtifyLayout.topSafeInset + 8)
-                Spacer()
             }
         }
         .onAppear {
@@ -84,41 +86,55 @@ struct ScheduleView: View {
             ZStack(alignment: .bottomLeading) {
                 heroBackground(for: event)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("2026 \(selectedTour.rawValue) Schedule")
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.75))
-
-                    Text(event.shortName + " · " + event.location)
-                        .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.55))
-
-                    Text(event.dateRangeLabel)
-                        .font(ThemeManager.roundedFont(size: 42, weight: .bold))
-                        .foregroundStyle(.white)
-
-                    if event.startDate > Date() {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Tournament starts in")
-                                .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.6))
-
-                            HStack(spacing: 16) {
-                                countdownUnit(value: countdown.days, label: "DAYS")
-                                countdownUnit(value: countdown.hours, label: "HOURS")
-                                countdownUnit(value: countdown.minutes, label: "MINUTES")
-                            }
-                        }
-                    } else {
-                        Text(event.tier.rawValue.uppercased())
-                            .font(ThemeManager.roundedFont(.caption, weight: .bold))
-                            .foregroundStyle(ThemeManager.opticYellow)
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        TourPillToggle(selectedTour: $selectedTour)
+                        Spacer()
                     }
+                    .padding(.top, CourtifyLayout.topSafeInset + 8)
+
+                    Spacer(minLength: 16)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        LastUpdatedLabel(date: nil, prefix: "2026 calendar")
+
+                        Text("2026 \(selectedTour.rawValue) Schedule")
+                            .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.75))
+
+                        Text(event.shortName + " · " + event.location)
+                            .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+
+                        Text(event.dateRangeLabel)
+                            .font(ThemeManager.roundedFont(size: 38, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+
+                        if event.startDate > now {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Tournament starts in")
+                                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.6))
+
+                                HStack(spacing: 16) {
+                                    countdownUnit(value: countdown.days, label: "DAYS")
+                                    countdownUnit(value: countdown.hours, label: "HOURS")
+                                    countdownUnit(value: countdown.minutes, label: "MINUTES")
+                                }
+                            }
+                        } else {
+                            Text(event.tier.rawValue.uppercased())
+                                .font(ThemeManager.roundedFont(.caption, weight: .bold))
+                                .foregroundStyle(ThemeManager.opticYellow)
+                        }
+                    }
+                    .padding(.bottom, 52)
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 48)
             }
-            .frame(height: 340)
+            .frame(height: 380)
         }
     }
 
@@ -126,16 +142,16 @@ struct ScheduleView: View {
         VStack(spacing: 0) {
             ForEach(events) { event in
                 TournamentRow(event: event, isPast: event.endDate < Calendar.current.startOfDay(for: now))
+                    .id(event.id)
             }
         }
-        .padding(.top, 8)
-        .padding(.bottom, 100)
+        .padding(.top, 4)
+        .padding(.bottom, 120)
         .background {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color.white)
-                .ignoresSafeArea(edges: .bottom)
         }
-        .offset(y: -24)
+        .offset(y: -20)
     }
 
     @ViewBuilder
@@ -143,8 +159,8 @@ struct ScheduleView: View {
         ZStack {
             if let imageName = event.heroImageName {
                 CachedBundledImage(name: imageName, contentMode: .fill)
-                    .blur(radius: 28)
-                    .scaleEffect(1.15)
+                    .blur(radius: 24)
+                    .scaleEffect(1.1)
             } else {
                 LinearGradient(
                     colors: [ThemeManager.emeraldGreen.opacity(0.8), ThemeManager.midnightGreen],
@@ -152,7 +168,11 @@ struct ScheduleView: View {
                     endPoint: .bottomTrailing
                 )
             }
-            Color.black.opacity(0.45)
+            LinearGradient(
+                colors: [.black.opacity(0.15), .black.opacity(0.55)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
@@ -166,6 +186,19 @@ struct ScheduleView: View {
             Text(label)
                 .font(ThemeManager.roundedFont(.caption2, weight: .medium))
                 .foregroundStyle(.white.opacity(0.5))
+        }
+    }
+
+    private func scrollToUpcoming(_ proxy: ScrollViewProxy, animated: Bool) {
+        guard let id = upcomingEventID else { return }
+        let action = {
+            proxy.scrollTo(id, anchor: .top)
+            didInitialScroll = true
+        }
+        if animated {
+            withAnimation(CourtifyMotion.screen) { action() }
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { action() }
         }
     }
 }
@@ -192,7 +225,7 @@ private struct TournamentRow: View {
                     }
                     Text(event.name)
                         .font(ThemeManager.roundedFont(.headline, weight: .semibold))
-                        .foregroundStyle(ThemeManager.midnightGreen)
+                        .foregroundStyle(isPast ? .gray : ThemeManager.midnightGreen)
                 }
 
                 Text("\(event.shortName) · \(event.location) · \(event.surface)")
@@ -212,6 +245,7 @@ private struct TournamentRow: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+        .opacity(isPast ? 0.72 : 1)
     }
 }
 

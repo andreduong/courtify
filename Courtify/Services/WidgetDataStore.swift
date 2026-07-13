@@ -8,14 +8,14 @@ final class WidgetDataStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var lastError: String?
 
-    private var loadTask: Task<Void, Never>?
+    private static let cacheKey = AppGroupConstants.Keys.widgetDataPayloadCache
 
-    func refreshIfNeeded() {
-        guard loadTask == nil else { return }
-        loadTask = Task {
-            await refresh()
-            loadTask = nil
-        }
+    var lastUpdated: Date? { payload?.updatedAt }
+
+    func loadCachedPayload() {
+        guard payload == nil,
+              let data = AppGroupConstants.userDefaults.data(forKey: Self.cacheKey) else { return }
+        payload = try? JSONDecoder().decode(WidgetDataPayload.self, from: data)
     }
 
     func refresh() async {
@@ -24,31 +24,22 @@ final class WidgetDataStore: ObservableObject {
         defer { isLoading = false }
 
         do {
-            payload = try await WidgetAPIService.fetchWidgetData()
+            let data = try await WidgetAPIService.fetchWidgetDataBytes()
+            let decoded = try JSONDecoder().decode(WidgetDataPayload.self, from: data)
+            payload = decoded
+            AppGroupConstants.userDefaults.set(data, forKey: Self.cacheKey)
         } catch {
             lastError = error.localizedDescription
         }
     }
 
     func rankings(for tour: TourPreference) -> [WidgetRankingEntry] {
-        guard let payload else { return fallbackRankings(for: tour) }
+        guard let payload else { return [] }
         switch tour {
         case .atp: return payload.rankings.atp
-        case .wta: return payload.rankings.wta.isEmpty ? fallbackRankings(for: tour) : payload.rankings.wta
+        case .wta: return payload.rankings.wta
         case .both: return payload.rankings.atp
         }
     }
 
-    private func fallbackRankings(for tour: TourPreference) -> [WidgetRankingEntry] {
-        TennisPlayer.topPlayers
-            .filter { $0.tour == tour }
-            .prefix(10)
-            .map { player in
-                WidgetRankingEntry(
-                    rank: player.ranking,
-                    points: nil,
-                    player: WidgetPlayer(id: nil, name: player.name, country: nil, imageUrl: nil)
-                )
-            }
-    }
 }
