@@ -100,6 +100,13 @@ struct RankingsView: View {
 
                     LastUpdatedLabel(date: dataStore.lastUpdated)
                     PullToRefreshHint(message: "Pull down to load \(selectedTour.rawValue) rankings")
+
+                    if let error = dataStore.lastError {
+                        Text(error)
+                            .font(ThemeManager.roundedFont(.caption))
+                            .foregroundStyle(ThemeManager.opticYellow.opacity(0.85))
+                            .padding(.top, 4)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
@@ -125,13 +132,6 @@ struct RankingsView: View {
                 ForEach(Array(restOfRankings.enumerated()), id: \.element.id) { index, entry in
                     RankingRow(rank: entry.rank ?? index + 2, entry: entry)
                 }
-            }
-
-            if let error = dataStore.lastError, rankings.isEmpty {
-                Text(error)
-                    .font(ThemeManager.roundedFont(.caption))
-                    .foregroundStyle(.red.opacity(0.8))
-                    .padding()
             }
         }
         .padding(.top, 4)
