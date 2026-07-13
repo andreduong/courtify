@@ -151,10 +151,10 @@ struct PaywallView: View {
                         .courtifyButton(.icon)
                         .opacity(closeButtonOpacity * 0.85)
                     }
+                    .padding(.top, CourtifyLayout.topSafeInset + 8)
                     .padding(.trailing, 20)
                     Spacer()
                 }
-                .safeAreaPadding(.top, 8)
             }
 
             if showSpecialOffer {
@@ -171,7 +171,6 @@ struct PaywallView: View {
                 .zIndex(2)
             }
         }
-        .ignoresSafeArea()
         .animation(CourtifyMotion.modal, value: showSpecialOffer)
         .navigationBarBackButtonHidden()
         .onAppear {

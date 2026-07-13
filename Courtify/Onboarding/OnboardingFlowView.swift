@@ -26,24 +26,29 @@ struct OnboardingFlowView: View {
     }
 
     private var showsBackButton: Bool {
-        !path.isEmpty
+        !path.isEmpty && path.last != .paywall
+    }
+
+    private var showsOnboardingChrome: Bool {
+        path.last != .paywall
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            CourtifyScreenFlow(path: $path, direction: $navigationDirection) {
-                SplashScreenView {
-                    navigateForward(.tourPreference)
-                }
-            } destination: { step in
-                destinationView(for: step)
+        CourtifyScreenFlow(path: $path, direction: $navigationDirection) {
+            SplashScreenView {
+                navigateForward(.tourPreference)
             }
-
-            OnboardingChrome(
-                progress: onboardingProgress,
-                showsBackButton: showsBackButton,
-                onBack: navigateBackward
-            )
+        } destination: { step in
+            destinationView(for: step)
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if showsOnboardingChrome {
+                OnboardingChrome(
+                    progress: onboardingProgress,
+                    showsBackButton: showsBackButton,
+                    onBack: navigateBackward
+                )
+            }
         }
         .courtifyBackground()
         .onAppear {
@@ -128,7 +133,7 @@ struct OnboardingFlowView: View {
     }
 
     private var onboardingContentTopInset: CGFloat {
-        showsBackButton ? 52 : 18
+        8
     }
 
     private func navigateForward(_ step: OnboardingStep) {

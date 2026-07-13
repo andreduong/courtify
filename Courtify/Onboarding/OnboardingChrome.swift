@@ -52,7 +52,6 @@ struct OnboardingChrome: View {
                 .transition(.opacity.combined(with: .move(edge: .leading)))
             }
         }
-        .safeAreaPadding(.top, 8)
         .animation(CourtifyMotion.screen, value: showsBackButton)
         .animation(CourtifyMotion.screen, value: progress)
     }

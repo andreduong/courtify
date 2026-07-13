@@ -121,9 +121,10 @@ async function refreshWidgetData(env, { force = false } = {}) {
 
   try {
     // 3 RapidAPI calls per refresh (was 5–7 every 15 min — burned BASIC quota in hours)
-    const [liveResult, atpRankingsResult, atpFixturesResult] = await fetchSequentially(env, [
+    const [liveResult, atpRankingsResult, wtaRankingsResult, atpFixturesResult] = await fetchSequentially(env, [
       { label: "live-events", path: ENDPOINTS.liveEvents },
       { label: "atp-rankings", path: ENDPOINTS.atpRankings },
+      { label: "wta-rankings", path: ENDPOINTS.wtaRankings },
       { label: "atp-fixtures", path: ENDPOINTS.atpFixtures },
     ]);
 
@@ -151,13 +152,13 @@ async function refreshWidgetData(env, { force = false } = {}) {
       upcomingMatches,
       rankings: {
         atp: atpRankingsResult.ok ? parseRankings(atpRankingsResult.data, "atp") : [],
-        wta: [],
+        wta: wtaRankingsResult.ok ? parseRankings(wtaRankingsResult.data, "wta") : [],
       },
       meta: {
         sources: {
           live: liveResult.ok ? "events/live" : "fixtures-filter",
           atpRankings: atpRankingsResult.ok ? "ok" : `error:${atpRankingsResult.status}`,
-          wtaRankings: "skipped-quota-saver",
+          wtaRankings: wtaRankingsResult.ok ? "ok" : `error:${wtaRankingsResult.status}`,
           upcoming: upcomingMatches.length > 0 ? "ok" : "empty",
         },
       },
@@ -166,7 +167,7 @@ async function refreshWidgetData(env, { force = false } = {}) {
     await env.TENNIS_DATA.put(KV_KEY, JSON.stringify(payload));
     await env.TENNIS_DATA.put(
       KV_META_KEY,
-      JSON.stringify({ lastRefresh: Date.now(), apiCalls: 3 }),
+      JSON.stringify({ lastRefresh: Date.now(), apiCalls: 4 }),
     );
     console.log(
       `[cron] Cached widget data — ${liveMatches.length} live, ` +

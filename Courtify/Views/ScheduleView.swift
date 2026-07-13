@@ -65,7 +65,7 @@ struct ScheduleView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 56)
+                .padding(.top, CourtifyLayout.topSafeInset + 8)
                 Spacer()
             }
         }

@@ -5,10 +5,11 @@ struct SplashScreenView: View {
 
     var body: some View {
         ZStack {
-            ThemeManager.midnightGreen
+            ThemeManager.midnightGreen.ignoresSafeArea()
 
             MarqueeWidgetBackground()
                 .allowsHitTesting(false)
+                .ignoresSafeArea()
 
             VStack(spacing: 32) {
                 Spacer()
@@ -41,7 +42,6 @@ struct SplashScreenView: View {
                 .padding(.bottom, 40)
             }
         }
-        .ignoresSafeArea()
         .onAppear {
             BundledImageCache.warmOnboardingAssets()
         }
