@@ -122,7 +122,8 @@ struct OnboardingFlowView: View {
                 favoritePlayerID: draftFavoritePlayerID,
                 showSpecialOfferOnAppear: showSpecialOfferOnPaywall,
                 onSubscribed: completeOnboarding,
-                onClose: returnToJoinScreen
+                onClose: returnToJoinScreen,
+                onSkip: completeOnboardingAsFreeUser
             )
         }
     }
@@ -189,22 +190,33 @@ struct OnboardingFlowView: View {
 
     private func completeOnboarding() {
         guard revenueCat.isProUser else { return }
-        commitOnboardingAndFinish()
+        commitOnboardingAndFinish(grantWidgetAccess: true)
     }
 
     private func completeOnboardingViaReferral() {
         AppGroupConstants.activateReferralBypass()
-        commitOnboardingAndFinish()
+        commitOnboardingAndFinish(grantWidgetAccess: true)
     }
 
-    private func commitOnboardingAndFinish() {
+    private func completeOnboardingAsFreeUser() {
+        commitOnboardingAndFinish(grantWidgetAccess: false)
+    }
+
+    private func commitOnboardingAndFinish(grantWidgetAccess: Bool) {
         OnboardingReminderManager.cancelAbandonmentReminders()
         OfferNotificationManager.cancelOfferReminders()
         AppGroupConstants.commitOnboarding(
             tourPreference: draftTourPreference,
             favoritePlayerID: draftFavoritePlayerID,
-            favoriteGrandSlam: draftFavoriteGrandSlam
+            favoriteGrandSlam: draftFavoriteGrandSlam,
+            grantWidgetAccess: grantWidgetAccess
         )
+        if !grantWidgetAccess {
+            AppGroupConstants.syncWidgetAccess(
+                isProUser: revenueCat.isProUser,
+                referralBypass: false
+            )
+        }
         hasCompletedOnboarding = true
         showSpecialOfferOnPaywall = false
     }

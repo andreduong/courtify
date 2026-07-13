@@ -43,7 +43,11 @@ enum WidgetMockData {
           { "rank": 2, "points": 11000, "player": { "id": 5992, "name": "Jannik Sinner", "country": "ITA", "imageUrl": null } },
           { "rank": 3, "points": 10000, "player": { "id": 5993, "name": "Carlos Alcaraz", "country": "ESP", "imageUrl": null } }
         ],
-        "wta": []
+        "wta": [
+          { "rank": 1, "points": 9800, "player": { "id": 7001, "name": "Iga Świątek", "country": "POL", "imageUrl": null } },
+          { "rank": 2, "points": 8700, "player": { "id": 7002, "name": "Aryna Sabalenka", "country": "BLR", "imageUrl": null } },
+          { "rank": 3, "points": 7600, "player": { "id": 7003, "name": "Coco Gauff", "country": "USA", "imageUrl": null } }
+        ],
       },
       "meta": { "sources": { "live": "mock", "atpRankings": "mock", "wtaRankings": "mock" } }
     }

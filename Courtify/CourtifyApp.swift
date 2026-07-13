@@ -22,7 +22,7 @@ private struct AppRootView: View {
     private var shouldShowHome: Bool {
         if revenueCat.isProUser { return true }
         if referralBypassActive { return true }
-        if hasCompletedOnboarding, AppGroupConstants.referralBypassActive { return true }
+        if hasCompletedOnboarding { return true }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-UITestHome") { return true }
         if AppGroupConstants.debugProUserEnabled { return true }
@@ -57,17 +57,10 @@ private struct AppRootView: View {
                 isProUser: revenueCat.isProUser,
                 referralBypass: referralBypassActive
             )
-            if !revenueCat.isProUser, !referralBypassActive {
-                #if DEBUG
-                if !shouldShowHome {
-                    hasCompletedOnboarding = false
-                    AppGroupConstants.clearOnboardingPreferences()
-                }
-                #else
-                hasCompletedOnboarding = false
-                AppGroupConstants.clearOnboardingPreferences()
-                #endif
-            }
+            AppGroupConstants.syncWidgetAccess(
+                isProUser: revenueCat.isProUser,
+                referralBypass: referralBypassActive
+            )
             isBootstrapped = true
         }
     }

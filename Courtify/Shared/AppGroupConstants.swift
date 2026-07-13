@@ -93,12 +93,15 @@ enum AppGroupConstants {
     static func commitOnboarding(
         tourPreference: TourPreference,
         favoritePlayerID: String,
-        favoriteGrandSlam: String
+        favoriteGrandSlam: String,
+        grantWidgetAccess: Bool = true
     ) {
         userDefaults.set(tourPreference.rawValue, forKey: Keys.tourPreference)
         userDefaults.set(favoritePlayerID, forKey: Keys.favoritePlayerID)
         userDefaults.set(favoriteGrandSlam, forKey: Keys.favoriteGrandSlam)
-        setWidgetAccessEnabled(true)
+        if grantWidgetAccess {
+            setWidgetAccessEnabled(true)
+        }
         WidgetTimelineRefresher.reloadAll()
     }
 

@@ -49,6 +49,7 @@ struct PaywallView: View {
 
     let onSubscribed: () -> Void
     let onClose: () -> Void
+    var onSkip: (() -> Void)?
 
     private var favoritePlayer: TennisPlayer? {
         TennisPlayer.player(for: favoritePlayerID)
@@ -134,19 +135,21 @@ struct PaywallView: View {
                     HStack {
                         Spacer()
                         Button {
-                            CourtifyMotion.animateModal {
-                                showSpecialOffer = true
+                            if let onSkip {
+                                onSkip()
+                            } else {
+                                CourtifyMotion.animateModal {
+                                    showSpecialOffer = true
+                                }
                             }
                         } label: {
                             Image(systemName: "xmark")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.8))
-                                .padding(10)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
+                                .font(.system(size: 15, weight: .medium, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.28))
+                                .blur(radius: 0.6)
                         }
                         .courtifyButton(.icon)
-                        .opacity(closeButtonOpacity)
+                        .opacity(closeButtonOpacity * 0.85)
                     }
                     .padding(.top, 12)
                     .padding(.trailing, 20)
