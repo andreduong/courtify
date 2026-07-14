@@ -53,30 +53,24 @@ struct WidgetsCollectionView: View {
     }
 
     var body: some View {
-        ZStack {
-            ThemeManager.midnightGreen.ignoresSafeArea()
+        CourtifyPlainScrollScreen {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Widgets collection")
+                        .font(ThemeManager.roundedFont(.title2, weight: .bold))
+                        .foregroundStyle(.white)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Widgets collection")
-                            .font(ThemeManager.roundedFont(.title2, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.top, CourtifyLayout.topSafeInset + 8)
-
-                        LastUpdatedLabel(date: dataStore.lastUpdated)
-                    }
-
-                    filterBar
-                    widgetGrid
+                    LastUpdatedLabel(date: dataStore.lastUpdated)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 120)
-                .animation(CourtifyMotion.selection, value: selectedFilter)
+
+                filterBar
+                widgetGrid
             }
-            .refreshable {
-                await dataStore.refresh()
-            }
+            .padding(.horizontal, 20)
+            .animation(CourtifyMotion.selection, value: selectedFilter)
+        }
+        .refreshable {
+            await dataStore.refresh()
         }
         .onAppear { dataStore.loadCachedPayload() }
         .sheet(isPresented: $showPaywall) {

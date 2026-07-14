@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum OnboardingProgress {
-    static let totalSteps = 7
+    static let totalSteps = 8
 
     static func stepIndex(for path: [OnboardingStep]) -> Int {
         guard let last = path.last else { return 0 }
@@ -12,7 +12,8 @@ enum OnboardingProgress {
         case .favoriteGrandSlam: return 3
         case .notifications: return 4
         case .referralCode: return 5
-        case .paywall: return 6
+        case .allSet: return 6
+        case .paywall: return 7
         }
     }
 

@@ -38,6 +38,48 @@ struct WidgetLiveMatch: Codable, Identifiable {
         if let id { return String(id) }
         return "\(player1.id ?? 0)-\(player2.id ?? 0)"
     }
+
+    init(
+        id: Int?,
+        tour: String,
+        tournament: String?,
+        court: String?,
+        status: String?,
+        score: String?,
+        gameScore: String?,
+        server: Int?,
+        player1: WidgetPlayer,
+        player2: WidgetPlayer
+    ) {
+        self.id = id
+        self.tour = tour
+        self.tournament = tournament
+        self.court = court
+        self.status = status
+        self.score = score
+        self.gameScore = gameScore
+        self.server = server
+        self.player1 = player1
+        self.player2 = player2
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeFlexibleIntIfPresent(forKey: .id)
+        tour = try container.decode(String.self, forKey: .tour)
+        tournament = try container.decodeIfPresent(String.self, forKey: .tournament)
+        court = try container.decodeIfPresent(String.self, forKey: .court)
+        status = try container.decodeIfPresent(String.self, forKey: .status)
+        score = try container.decodeIfPresent(String.self, forKey: .score)
+        gameScore = try container.decodeIfPresent(String.self, forKey: .gameScore)
+        server = try container.decodeFlexibleIntIfPresent(forKey: .server)
+        player1 = try container.decode(WidgetPlayer.self, forKey: .player1)
+        player2 = try container.decode(WidgetPlayer.self, forKey: .player2)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, tour, tournament, court, status, score, gameScore, server, player1, player2
+    }
 }
 
 struct WidgetUpcomingMatch: Codable, Identifiable {
@@ -61,7 +103,7 @@ struct WidgetUpcomingMatch: Codable, Identifiable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIfPresent(Int.self, forKey: .id)
+        id = try container.decodeFlexibleIntIfPresent(forKey: .id)
         tour = try container.decode(String.self, forKey: .tour)
         tournament = try container.decodeIfPresent(String.self, forKey: .tournament)
         court = try container.decodeIfPresent(String.self, forKey: .court)
@@ -120,4 +162,14 @@ extension WidgetDataPayload {
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         return formatter
     }()
+}
+
+private extension KeyedDecodingContainer {
+    func decodeFlexibleIntIfPresent(forKey key: Key) throws -> Int? {
+        guard contains(key) else { return nil }
+        if try decodeNil(forKey: key) { return nil }
+        if let int = try? decode(Int.self, forKey: key) { return int }
+        if let string = try? decode(String.self, forKey: key) { return Int(string) }
+        return nil
+    }
 }

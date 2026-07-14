@@ -307,6 +307,16 @@ function parseServerIndicator(event, player1Id, player2Id) {
   return null;
 }
 
+function parseNumericId(value) {
+  if (value == null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  }
+  return null;
+}
+
 function parseLiveEvents(data) {
   const events = extractArray(data, ["data", "events", "matches", "liveEvents", "results"]);
 
@@ -323,7 +333,7 @@ function parseLiveEvents(data) {
     const player2Id = event?.player2Id ?? player2Raw?.id ?? matchPlayer2Id ?? null;
 
     return {
-      id: event?.id ?? event?.eventId ?? event?.matchId ?? null,
+      id: parseNumericId(event?.id ?? event?.eventId ?? event?.matchId),
       tour: tour.toUpperCase(),
       tournament:
         event?.tournament?.name ??
@@ -353,7 +363,7 @@ function parseLiveFixtures(data, tour) {
   return fixtures
     .filter((fixture) => fixture?.live != null && fixture.live !== "")
     .map((fixture) => ({
-      id: fixture.id,
+      id: parseNumericId(fixture.id),
       tour: tour.toUpperCase(),
       tournament: fixture?.tournament?.name ?? null,
       court: fixture?.court?.name ?? fixture?.courtName ?? fixture?.court ?? null,
@@ -383,7 +393,7 @@ function parseUpcomingFixtures(data, tour) {
       const startMs = startTime ? Date.parse(startTime) : null;
 
       return {
-        id: fixture.id,
+        id: parseNumericId(fixture.id),
         tour: tour.toUpperCase(),
         tournament: fixture?.tournament?.name ?? null,
         court: fixture?.court?.name ?? fixture?.courtName ?? fixture?.court ?? null,

@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum HomeTab: String, CaseIterable, Identifiable {
+    case home
     case schedule
     case rankings
     case widgets
@@ -9,6 +10,7 @@ enum HomeTab: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .home: "Home"
         case .schedule: "Schedule"
         case .rankings: "Rankings"
         case .widgets: "Widgets"
@@ -17,6 +19,7 @@ enum HomeTab: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
+        case .home: "house.fill"
         case .schedule: "calendar"
         case .rankings: "trophy"
         case .widgets: "square.grid.2x2"
@@ -25,10 +28,16 @@ enum HomeTab: String, CaseIterable, Identifiable {
 }
 
 struct HomeView: View {
-    @State private var selectedTab: HomeTab = .schedule
+    @State private var selectedTab: HomeTab = .home
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            HomeDashboardView()
+                .tabItem {
+                    Label(HomeTab.home.title, systemImage: HomeTab.home.icon)
+                }
+                .tag(HomeTab.home)
+
             ScheduleView()
                 .tabItem {
                     Label(HomeTab.schedule.title, systemImage: HomeTab.schedule.icon)

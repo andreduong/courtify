@@ -11,6 +11,7 @@ build/
 *.xcuserstate
 xcuserdata/
 DerivedData/
+.derivedData/
 *.ipa
 *.dSYM.zip
 *.dSYM

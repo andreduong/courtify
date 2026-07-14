@@ -110,6 +110,14 @@ enum TournamentCalendar {
             .first
     }
 
+    static func nextGrandSlam(for tour: TourPreference) -> TournamentEvent? {
+        let today = calendar.startOfDay(for: Date())
+        return events(for: tour)
+            .filter { $0.tier == .grandSlam && $0.endDate >= today }
+            .sorted { $0.startDate < $1.startDate }
+            .first
+    }
+
     static func countdown(to event: TournamentEvent) -> (days: Int, hours: Int, minutes: Int) {
         let now = Date()
         let target = event.startDate > now ? event.startDate : event.endDate

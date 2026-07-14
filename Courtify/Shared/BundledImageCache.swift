@@ -26,11 +26,12 @@ enum BundledImageCache {
     static func warmOnboardingAssets() {
         let names = TennisPlayer.topPlayers.flatMap { player -> [String] in
             guard let imageName = player.imageName else { return [] }
-            return [imageName, player.paywallImageName]
+            return [imageName, player.paywallImageName, player.heroImageName]
         } + GrandSlam.allCases.map(\.logoImageName) + [
             "placeholder-male",
             "placeholder-female",
             "marquee-widget-strip",
+            "courtify-logo",
         ]
         for name in Set(names) {
             _ = uiImage(named: name)

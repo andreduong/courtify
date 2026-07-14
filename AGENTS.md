@@ -157,6 +157,52 @@ curl http://localhost:8787/api/widget-data
 - `RevenueCatManager` for subscriptions
 - Models in `Courtify/Models/OnboardingModels.swift`
 
+### Full-bleed top layouts (IMPORTANT)
+
+**Never wrap a `GeometryReader` in `.ignoresSafeArea(edges: .top)`** — the reader
+then reports `safeAreaInsets.top == 0`, so every "safeTop" offset inside silently
+collapses and content overlaps the status bar. This bug shipped once on Home.
+
+Use the shared containers in `Courtify/Shared/CourtifyLayout.swift` instead:
+
+| Container | Use for |
+|-----------|---------|
+| `CourtifyFullBleedScreen` | Non-scrolling full-bleed screens (Home). Measures the real inset first, then extends content under the status bar via frame + offset, and passes the correct `safeTop` to content. |
+| `CourtifyHeroScrollScreen` / `CourtifyHeroOnlyScrollScreen` | Scrolling screens with a hero header (Schedule, Rankings) |
+| `CourtifyPlainScrollScreen` | Plain scrolling tabs (Widgets) |
+
+If a new screen needs a full-bleed top, extend one of these rather than hand-rolling `ignoresSafeArea`.
+
+### Player hero images (zero API cost)
+
+Home uses transparent full-torso cutouts bundled in `Assets.xcassets` as
+`player-{id}-hero` imagesets (`TennisPlayer.heroImageName`). They were downloaded
+**once at development time** from the tours' free public media CDNs — do NOT fetch
+them at runtime and do NOT use the paid RapidAPI for images:
+
+- **ATP**: `https://www.atptour.com/-/media/alias/player-gladiator-headshot/{playerCode}`
+  (e.g. Djokovic `d643`, Sinner `s0ag`, Alcaraz `a0e2`, Medvedev `mm58`, Zverev `z355`).
+  Cloudflare blocks curl/scripts — fetch through a real browser session.
+- **WTA**: torso PNG URLs on `photoresources.wtatennis.com` (curl-friendly); find the
+  exact UUID URL by grepping the player page (`https://www.wtatennis.com/players/{id}/{slug}`)
+  for `Torso`. Supports `?width=&height=` resizing.
+
+The old `player-{id}` imagesets are small circular avatar cutouts still used by
+onboarding/rankings; `player-{id}-paywall` are pre-blurred paywall backgrounds.
+
+### Previewing the Home screen
+
+Build scheme `Courtify`, install on the iPhone 17 Pro simulator, then launch with
+the DEBUG-only `-UITestHome` argument to skip onboarding:
+
+```bash
+xcodebuild -scheme Courtify -project Courtify.xcodeproj \
+  -destination 'platform=iOS Simulator,id=744F6ACA-F0CC-4105-8794-D798EF7726CC' \
+  -derivedDataPath .derivedData build
+xcrun simctl install 744F6ACA-F0CC-4105-8794-D798EF7726CC .derivedData/Build/Products/Debug-iphonesimulator/Courtify.app
+xcrun simctl launch 744F6ACA-F0CC-4105-8794-D798EF7726CC com.courtify.xyz -UITestHome
+```
+
 ---
 
 ## Agent guidelines

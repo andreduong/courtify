@@ -45,6 +45,32 @@ struct TennisPlayer: Identifiable, Hashable {
         return imageName ?? placeholderImageName
     }
 
+    /// Transparent full-torso cutout bundled at build time (sourced once from the
+    /// official ATP/WTA media CDNs — no runtime fetching, no API cost).
+    /// Falls back to the avatar asset for custom players.
+    var heroImageName: String {
+        if isCustom { return placeholderImageName }
+        guard let imageName else { return placeholderImageName }
+        return "\(imageName)-hero"
+    }
+
+    /// Bundled 2026 season W/L through current tour stop (placeholder until live stats API).
+    var seasonRecord: (wins: Int, losses: Int) {
+        switch id {
+        case "djokovic": return (28, 7)
+        case "sinner": return (42, 5)
+        case "alcaraz": return (38, 8)
+        case "medvedev": return (31, 12)
+        case "zverev": return (35, 10)
+        case "swiatek": return (40, 6)
+        case "sabalenka": return (36, 9)
+        case "gauff": return (33, 11)
+        case "rybakina": return (29, 10)
+        case "pegula": return (27, 12)
+        default: return (24, 8)
+        }
+    }
+
     /// Pre-blurred full-screen background baked at asset build time (no runtime blur).
     var paywallImageName: String {
         if isCustom { return placeholderImageName }

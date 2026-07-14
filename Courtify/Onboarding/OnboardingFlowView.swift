@@ -7,6 +7,7 @@ enum OnboardingStep: Hashable {
     case favoriteGrandSlam
     case notifications
     case referralCode
+    case allSet
     case paywall
 }
 
@@ -32,7 +33,8 @@ struct OnboardingFlowView: View {
     }
 
     private var showsOnboardingChrome: Bool {
-        !path.isEmpty
+        guard let last = path.last else { return false }
+        return last != .allSet
     }
 
     private var isPaywallStep: Bool {
@@ -137,16 +139,21 @@ struct OnboardingFlowView: View {
         case .referralCode:
             ReferralCodeView(
                 onSubmit: completeOnboardingViaReferral,
-                onSkip: { navigateForward(.paywall) }
+                onSkip: { navigateForward(.allSet) }
             )
             .courtifyScreenContent()
             .padding(.top, onboardingContentTopInset)
+        case .allSet:
+            OnboardingCompleteView(
+                favoritePlayerName: TennisPlayer.displayName(for: draftFavoritePlayerID),
+                onContinue: { navigateForward(.paywall) }
+            )
         case .paywall:
             PaywallView(
                 favoritePlayerID: draftFavoritePlayerID,
                 showSpecialOfferOnAppear: showSpecialOfferOnPaywall,
                 onSubscribed: completeOnboarding,
-                onClose: returnToJoinScreen,
+                onClose: completeOnboardingAsFreeUser,
                 onSkip: completeOnboardingAsFreeUser
             )
         }
@@ -183,9 +190,15 @@ struct OnboardingFlowView: View {
             CourtifyMotion.animateScreen(.forward) {
                 navigationDirection = .forward
                 if path.isEmpty {
-                    path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .paywall]
+                    path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .allSet, .paywall]
                 } else if !path.contains(.paywall) {
-                    path.append(.paywall)
+                    if path.last == .allSet {
+                        path.append(.paywall)
+                    } else if !path.contains(.allSet) {
+                        path.append(.allSet)
+                    } else {
+                        path.append(.paywall)
+                    }
                 } else {
                     path = path.filter { $0 != .paywall } + [.paywall]
                 }
@@ -204,7 +217,7 @@ struct OnboardingFlowView: View {
             CourtifyMotion.animateScreen(.forward) {
                 navigationDirection = .forward
                 if path.isEmpty {
-                    path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .paywall]
+                    path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .allSet, .paywall]
                 } else {
                     path.append(.paywall)
                 }
@@ -278,7 +291,7 @@ struct OnboardingFlowView: View {
         guard ProcessInfo.processInfo.arguments.contains("-UITestPaywall") else { return }
         draftFavoritePlayerID = "sinner"
         draftFavoriteGrandSlam = "Wimbledon"
-        path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .paywall]
+        path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .allSet, .paywall]
         showPaywallCloseButton = true
         paywallCloseOpacity = 1
     }

@@ -28,6 +28,8 @@
 		C3D4E5F60718293A4B5C6D80 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F60718293A4B5C6D81 /* ScheduleView.swift */; };
 		D4E5F60718293A4B5C6D7E90 /* RankingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F60718293A4B5C6D7E91 /* RankingsView.swift */; };
 		E5F60718293A4B5C6D7E8F01 /* WidgetsCollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F60718293A4B5C6D7E8F02 /* WidgetsCollectionView.swift */; };
+		8B9C0D1E2F3045567F8193A5E /* OnboardingCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B9C0D1E2F3045567F8193A5F /* OnboardingCompleteView.swift */; };
+		9C0D1E2F3045567F8193A4C0 /* HomeDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0D1E2F3045567F8193A4C1 /* HomeDashboardView.swift */; };
 		9FB4D1CE237D4B8BBC8990CD /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC2498726254A049F313895 /* OnboardingFlowView.swift */; };
 		C1D2E3F4056677F8193A4B5F /* OnboardingChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */; };
 		D2E3F4056677F8193A4B5D0 /* ReferralCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */; };
@@ -89,6 +91,8 @@
 		0B55AE6EDCA04B46BC79B005 /* CourtifyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyApp.swift; sourceTree = "<group>"; };
 		15B730C2132E4B4C8C2479EA /* FavoritePlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayersView.swift; sourceTree = "<group>"; };
 		4E0989DAC1B245ECA4E79614 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8B9C0D1E2F3045567F8193A5F /* OnboardingCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCompleteView.swift; sourceTree = "<group>"; };
+		9C0D1E2F3045567F8193A4C1 /* HomeDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDashboardView.swift; sourceTree = "<group>"; };
 		5AC2498726254A049F313895 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChrome.swift; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferralCodeView.swift; sourceTree = "<group>"; };
@@ -208,6 +212,7 @@
 		A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */,
 		B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */,
 		E3F4056677F8193A4B5C6D7 /* NotificationPermissionView.swift */,
+		8B9C0D1E2F3045567F8193A5F /* OnboardingCompleteView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -233,6 +238,7 @@
 			isa = PBXGroup;
 			children = (
 				999441123B4E49889D87FCB9 /* HomeView.swift */,
+				9C0D1E2F3045567F8193A4C1 /* HomeDashboardView.swift */,
 				C3D4E5F60718293A4B5C6D81 /* ScheduleView.swift */,
 				D4E5F60718293A4B5C6D7E91 /* RankingsView.swift */,
 				E5F60718293A4B5C6D7E8F02 /* WidgetsCollectionView.swift */,
@@ -406,9 +412,11 @@
 				9FB4D1CE237D4B8BBC8990CD /* OnboardingFlowView.swift in Sources */,
 		C1D2E3F4056677F8193A4B5F /* OnboardingChrome.swift in Sources */,
 		D2E3F4056677F8193A4B5D0 /* ReferralCodeView.swift in Sources */,
-		E3F4056677F8193A4B5C6D8 /* NotificationPermissionView.swift in Sources */,
+				E3F4056677F8193A4B5C6D8 /* NotificationPermissionView.swift in Sources */,
+				8B9C0D1E2F3045567F8193A5E /* OnboardingCompleteView.swift in Sources */,
 				5D0F22A6A4714F61A53F732E /* PaywallView.swift in Sources */,
 				9E82673EB24A4F018D2F3AC4 /* HomeView.swift in Sources */,
+				9C0D1E2F3045567F8193A4C0 /* HomeDashboardView.swift in Sources */,
 				A1B2C3D4E5F60718293A4B60 /* TournamentCalendar.swift in Sources */,
 				B2C3D4E5F60718293A4B5C70 /* WidgetDataStore.swift in Sources */,
 				C3D4E5F60718293A4B5C6D80 /* ScheduleView.swift in Sources */,

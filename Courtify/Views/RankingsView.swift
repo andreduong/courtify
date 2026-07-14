@@ -20,131 +20,144 @@ struct RankingsView: View {
     }
 
     var body: some View {
-        ZStack {
-            ThemeManager.midnightGreen.ignoresSafeArea()
-
-            ScrollView {
-                VStack(spacing: 0) {
-                    heroSection
-                    rankingsList
-                }
-            }
-            .refreshable {
-                await dataStore.refresh()
+        Group {
+            if leader != nil {
+                CourtifyHeroScrollScreen(
+                    heroHeight: CourtifyLayout.rankingsHeroHeight,
+                    heroBackground: { leaderHeroBackground },
+                    heroContent: { leaderHeroContent },
+                    listContent: { rankingsListContent }
+                )
+            } else {
+                CourtifyHeroOnlyScrollScreen(
+                    heroHeight: CourtifyLayout.rankingsHeroEmptyHeight,
+                    heroBackground: { emptyHeroBackground },
+                    heroContent: { emptyHeroContent }
+                )
             }
         }
+        .refreshable {
+            await dataStore.refresh()
+        }
+        .tint(ThemeManager.opticYellow)
         .onAppear {
             if let pref = TourPreference(rawValue: tourPreferenceRaw), pref != .both {
                 selectedTour = pref == .wta ? .wta : .atp
             }
             dataStore.loadCachedPayload()
+            if dataStore.payload == nil {
+                Task { await dataStore.refresh() }
+            }
+        }
+    }
+
+    private var tourToggle: some View {
+        HStack {
+            TourPillToggle(selectedTour: $selectedTour)
+            Spacer()
         }
     }
 
     @ViewBuilder
-    private var heroSection: some View {
-        ZStack(alignment: .bottom) {
-            if let leader {
-                heroBackground(for: leader)
-
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        TourPillToggle(selectedTour: $selectedTour)
-                        Spacer()
-                    }
-                    .padding(.top, CourtifyLayout.topSafeInset + 8)
-
-                    Spacer(minLength: 12)
-
-                    HStack(alignment: .bottom, spacing: 8) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            LastUpdatedLabel(date: dataStore.lastUpdated)
-
-                            Text(ordinalRank(leader.rank ?? 1))
-                                .font(ThemeManager.roundedFont(size: 48, weight: .bold))
-                                .foregroundStyle(.white)
-
-                            if let points = leader.points {
-                                Text("\(points) pts")
-                                    .font(ThemeManager.roundedFont(.title3, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(0.85))
-                            }
-
-                            Text(leader.player.name)
-                                .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                                .foregroundStyle(.white.opacity(0.9))
-                                .lineLimit(2)
-
-                            if let country = leader.player.country {
-                                Text(country)
-                                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                                    .foregroundStyle(.white.opacity(0.55))
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        playerPortrait(for: leader)
-                            .frame(width: 130, height: 220)
-                            .offset(y: 12)
-                    }
-                    .padding(.bottom, 44)
-                }
-                .padding(.horizontal, 24)
-            } else {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        TourPillToggle(selectedTour: $selectedTour)
-                        Spacer()
-                    }
-                    .padding(.top, CourtifyLayout.topSafeInset + 8)
-
-                    LastUpdatedLabel(date: dataStore.lastUpdated)
-                    PullToRefreshHint(message: "Pull down to load \(selectedTour.rawValue) rankings")
-
-                    if let error = dataStore.lastError {
-                        Text(error)
-                            .font(ThemeManager.roundedFont(.caption))
-                            .foregroundStyle(ThemeManager.opticYellow.opacity(0.85))
-                            .padding(.top, 4)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
-                .frame(height: 320)
-            }
+    private var leaderHeroBackground: some View {
+        if let leader {
+            styledHeroBackground(for: leader)
         }
-        .frame(height: leader == nil ? 320 : 400)
     }
 
-    private var rankingsList: some View {
-        VStack(spacing: 0) {
-            if dataStore.isLoading, rankings.isEmpty {
+    @ViewBuilder
+    private var leaderHeroContent: some View {
+        if let leader {
+            VStack(alignment: .leading, spacing: 0) {
+                tourToggle
+
+                Spacer(minLength: 8)
+
+                HStack(alignment: .bottom, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        LastUpdatedLabel(date: dataStore.lastUpdated)
+
+                        Text(ordinalRank(leader.rank ?? 1))
+                            .font(ThemeManager.roundedFont(size: 44, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        if let points = leader.points {
+                            Text("\(points) pts")
+                                .font(ThemeManager.roundedFont(.title3, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.85))
+                        }
+
+                        Text(leader.player.name)
+                            .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(2)
+
+                        if let country = leader.player.country {
+                            Text(country)
+                                .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.55))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    playerPortrait(for: leader)
+                        .frame(width: 108, height: 168)
+                }
+                .padding(.bottom, CourtifyLayout.heroListOverlap + 20)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var emptyHeroBackground: some View {
+        LinearGradient(
+            colors: [ThemeManager.emeraldGreen.opacity(0.55), ThemeManager.midnightGreen],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    @ViewBuilder
+    private var emptyHeroContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            tourToggle
+            LastUpdatedLabel(date: dataStore.lastUpdated)
+
+            if dataStore.isLoading {
                 ProgressView()
                     .tint(ThemeManager.opticYellow)
-                    .padding(.vertical, 40)
-            } else if restOfRankings.isEmpty, leader != nil {
-                Text("No additional rankings loaded")
-                    .font(ThemeManager.roundedFont(.subheadline))
-                    .foregroundStyle(.gray)
-                    .padding(.vertical, 24)
+                    .padding(.top, 24)
             } else {
-                ForEach(Array(restOfRankings.enumerated()), id: \.element.id) { index, entry in
-                    RankingRow(rank: entry.rank ?? index + 2, entry: entry)
+                PullToRefreshHint(message: "Pull down to load \(selectedTour.rawValue) rankings")
+
+                if let error = dataStore.lastError {
+                    Text(error)
+                        .font(ThemeManager.roundedFont(.caption))
+                        .foregroundStyle(ThemeManager.opticYellow.opacity(0.85))
+                        .padding(.top, 4)
                 }
             }
+
+            Spacer(minLength: 0)
         }
-        .padding(.top, 4)
-        .padding(.bottom, 120)
-        .background {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white)
-        }
-        .offset(y: leader == nil ? 0 : -16)
     }
 
     @ViewBuilder
-    private func heroBackground(for leader: WidgetRankingEntry) -> some View {
+    private var rankingsListContent: some View {
+        if restOfRankings.isEmpty {
+            Text("No additional rankings loaded")
+                .font(ThemeManager.roundedFont(.subheadline))
+                .foregroundStyle(.gray)
+                .padding(.vertical, 24)
+        } else {
+            ForEach(Array(restOfRankings.enumerated()), id: \.element.id) { index, entry in
+                RankingRow(rank: entry.rank ?? index + 2, entry: entry)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func styledHeroBackground(for leader: WidgetRankingEntry) -> some View {
         ZStack {
             if let bundled = bundledPlayer(for: leader) {
                 CachedBundledImage(name: bundled.paywallImageName, contentMode: .fill)
@@ -163,8 +176,6 @@ struct RankingsView: View {
                 endPoint: .bottom
             )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
     }
 
     @ViewBuilder
