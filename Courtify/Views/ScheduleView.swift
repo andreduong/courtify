@@ -6,198 +6,226 @@ struct ScheduleView: View {
 
     @State private var selectedTour: TourPreference = .atp
     @State private var now = Date()
-    @State private var tourScrollGeneration = 0
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
-    private var events: [TournamentEvent] {
-        TournamentCalendar.events(for: selectedTour)
+    private var upcomingEvents: [TournamentEvent] {
+        let today = Calendar.current.startOfDay(for: now)
+        return TournamentCalendar.events(for: selectedTour).filter { $0.endDate >= today }
+    }
+
+    private var completedEvents: [TournamentEvent] {
+        let today = Calendar.current.startOfDay(for: now)
+        return TournamentCalendar.events(for: selectedTour).filter { $0.endDate < today }
     }
 
     private var heroEvent: TournamentEvent? {
         TournamentCalendar.nextMajor(for: selectedTour)
     }
 
-    private var upcomingEventID: String? {
-        let today = Calendar.current.startOfDay(for: now)
-        return events.first(where: { $0.endDate >= today })?.id
-    }
-
     var body: some View {
-        Group {
-            if heroEvent != nil {
-                CourtifyHeroScrollScreen(
-                    heroHeight: CourtifyLayout.scheduleHeroHeight,
-                    scrollTrigger: tourScrollGeneration,
-                    onScroll: { proxy in
-                        scrollToUpcoming(proxy, animated: tourScrollGeneration > 0)
-                    },
-                    heroBackground: { heroBackground },
-                    heroContent: { heroContent },
-                    listContent: { tournamentListContent }
-                )
-            }
-        }
+        CourtifyHeroScrollScreen(
+            heroHeight: CourtifyLayout.scheduleHeroHeight,
+            heroBackground: { heroBackground },
+            heroContent: { heroContent },
+            listContent: { tournamentListContent }
+        )
         .onAppear {
             if let pref = TourPreference(rawValue: tourPreferenceRaw), pref != .both {
                 selectedTour = pref == .wta ? .wta : .atp
             }
         }
-        .onChange(of: selectedTour) { _, _ in
-            tourScrollGeneration += 1
-        }
         .onReceive(timer) { now = $0 }
     }
 
-    @ViewBuilder
+    // MARK: - Hero
+
     private var heroBackground: some View {
-        if let event = heroEvent {
-            ZStack {
-                if let imageName = event.heroImageName {
-                    CachedBundledImage(name: imageName, contentMode: .fill)
-                        .blur(radius: 24)
-                        .scaleEffect(1.1)
-                } else {
-                    LinearGradient(
-                        colors: [ThemeManager.emeraldGreen.opacity(0.8), ThemeManager.midnightGreen],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                }
-                LinearGradient(
-                    colors: [.black.opacity(0.15), .black.opacity(0.55)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
-        }
+        LinearGradient(
+            colors: [
+                ThemeManager.emeraldGreen.opacity(0.9),
+                ThemeManager.emeraldGreen.opacity(0.45),
+                ThemeManager.midnightGreen,
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
     }
 
     @ViewBuilder
     private var heroContent: some View {
-        if let event = heroEvent {
-            let countdown = TournamentCalendar.countdown(to: event)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Upcoming Tournaments")
+                    .font(ThemeManager.roundedFont(.title3, weight: .bold))
+                    .foregroundStyle(.white)
 
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    TourPillToggle(selectedTour: $selectedTour)
-                    Spacer()
-                }
+                Spacer()
 
-                Spacer(minLength: 16)
+                TourPillToggle(selectedTour: $selectedTour)
+            }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    LastUpdatedLabel(date: nil, prefix: "2026 calendar")
+            Spacer(minLength: 12)
 
-                    Text("2026 \(selectedTour.rawValue) Schedule")
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.75))
+            if let event = heroEvent {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(event.tier.rawValue)
+                        .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
 
-                    Text(event.shortName + " · " + event.location)
-                        .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.55))
-
-                    Text(event.dateRangeLabel)
-                        .font(ThemeManager.roundedFont(size: 38, weight: .bold))
+                    Text(event.name)
+                        .font(ThemeManager.roundedFont(size: 32, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
 
-                    if event.startDate > now {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Tournament starts in")
-                                .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.6))
+                    Text(event.location)
+                        .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
+                        .foregroundStyle(ThemeManager.opticYellow)
 
-                            HStack(spacing: 16) {
-                                countdownUnit(value: countdown.days, label: "DAYS")
-                                countdownUnit(value: countdown.hours, label: "HOURS")
-                                countdownUnit(value: countdown.minutes, label: "MINUTES")
-                            }
-                        }
-                    } else {
-                        Text(event.tier.rawValue.uppercased())
-                            .font(ThemeManager.roundedFont(.caption, weight: .bold))
-                            .foregroundStyle(ThemeManager.opticYellow)
-                    }
+                    Text(event.dateRangeLabel)
+                        .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
                 }
-                .padding(.bottom, CourtifyLayout.heroListOverlap + 24)
+
+                Spacer(minLength: 16)
+
+                if event.startDate > now {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("\(event.shortName) starts in")
+                            .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.6))
+
+                        HStack(spacing: 20) {
+                            countdownUnit(value: TournamentCalendar.countdown(to: event).days, label: "Days")
+                            countdownUnit(value: TournamentCalendar.countdown(to: event).hours, label: "Hours")
+                            countdownUnit(value: TournamentCalendar.countdown(to: event).minutes, label: "Minutes")
+                        }
+                    }
+                } else {
+                    Text("LIVE THIS WEEK")
+                        .font(ThemeManager.roundedFont(.caption, weight: .bold))
+                        .foregroundStyle(ThemeManager.opticYellow)
+                }
             }
         }
-    }
-
-    @ViewBuilder
-    private var tournamentListContent: some View {
-        ForEach(events) { event in
-            TournamentRow(event: event, isPast: event.endDate < Calendar.current.startOfDay(for: now))
-                .id(event.id)
-        }
+        .padding(.bottom, 28)
     }
 
     private func countdownUnit(value: Int, label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(String(format: "%02d", value))
-                .font(ThemeManager.roundedFont(.title2, weight: .bold))
-                .foregroundStyle(.white)
+                .font(ThemeManager.roundedFont(size: 34, weight: .bold))
+                .foregroundStyle(ThemeManager.opticYellow)
             Text(label)
                 .font(ThemeManager.roundedFont(.caption2, weight: .medium))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.white.opacity(0.55))
         }
     }
 
-    private func scrollToUpcoming(_ proxy: ScrollViewProxy, animated: Bool) {
-        guard let id = upcomingEventID else { return }
-        let action = { proxy.scrollTo(id, anchor: .top) }
-        if animated {
-            withAnimation(CourtifyMotion.screen) { action() }
-        } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { action() }
+    // MARK: - List tiles
+
+    @ViewBuilder
+    private var tournamentListContent: some View {
+        sectionHeader("2026 \(selectedTour.rawValue) calendar · Slams & Masters 1000")
+            .padding(.top, 10)
+
+        ForEach(upcomingEvents) { event in
+            VStack(spacing: 0) {
+                TournamentTile(event: event, isPast: false)
+                CourtifyTileDivider()
+            }
         }
+
+        if !completedEvents.isEmpty {
+            sectionHeader("Completed")
+                .padding(.top, 20)
+
+            ForEach(completedEvents) { event in
+                VStack(spacing: 0) {
+                    TournamentTile(event: event, isPast: true)
+                    CourtifyTileDivider()
+                }
+            }
+        }
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.4))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 6)
     }
 }
 
-private struct TournamentRow: View {
+private struct TournamentTile: View {
     let event: TournamentEvent
     let isPast: Bool
 
-    var body: some View {
-        HStack(spacing: 14) {
-            Text(event.listDateLabel)
-                .font(ThemeManager.roundedFont(.caption, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(isPast ? Color.gray.opacity(0.35) : ThemeManager.midnightGreen)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    private var dayLabel: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "dd"
+        return formatter.string(from: event.startDate)
+    }
 
-            VStack(alignment: .leading, spacing: 4) {
+    private var monthLabel: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "MMM"
+        return formatter.string(from: event.startDate)
+    }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            VStack(spacing: 0) {
+                Text(dayLabel)
+                    .font(ThemeManager.roundedFont(.title3, weight: .bold))
+                    .foregroundStyle(isPast ? .white.opacity(0.35) : .white)
+                Text(monthLabel)
+                    .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                    .foregroundStyle(.white.opacity(isPast ? 0.25 : 0.55))
+            }
+            .frame(width: 44)
+
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
+                    Text(event.name)
+                        .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                        .foregroundStyle(isPast ? .white.opacity(0.4) : .white)
+
                     if isPast {
                         Image(systemName: "checkmark")
-                            .font(.caption.weight(.bold))
+                            .font(.caption2.weight(.bold))
                             .foregroundStyle(ThemeManager.emeraldGreen)
                     }
-                    Text(event.name)
-                        .font(ThemeManager.roundedFont(.headline, weight: .semibold))
-                        .foregroundStyle(isPast ? .gray : ThemeManager.midnightGreen)
                 }
 
-                Text("\(event.shortName) · \(event.location) · \(event.surface)")
-                    .font(ThemeManager.roundedFont(.caption))
-                    .foregroundStyle(.gray)
-
-                Text(event.tier.rawValue)
-                    .font(ThemeManager.roundedFont(.caption2, weight: .medium))
-                    .foregroundStyle(.gray.opacity(0.8))
+                Text("\(event.shortName) · \(event.location)")
+                    .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                    .foregroundStyle(
+                        isPast
+                            ? Color.white.opacity(0.3)
+                            : (event.tier == .grandSlam ? ThemeManager.opticYellow : ThemeManager.courtGreen)
+                    )
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            Image(systemName: "tennisball")
-                .font(.title3)
-                .foregroundStyle(.gray.opacity(0.25))
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(event.surface)
+                    .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                    .foregroundStyle(.white.opacity(isPast ? 0.3 : 0.7))
+                Text(event.tier == .grandSlam ? "Slam" : "1000")
+                    .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                    .foregroundStyle(.white.opacity(isPast ? 0.2 : 0.45))
+            }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
+        .contentShape(Rectangle())
     }
 }
 

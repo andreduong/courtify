@@ -51,10 +51,9 @@ struct HomeDashboardView: View {
             .frame(width: size.width, height: size.height, alignment: .top)
         }
         .onAppear {
+            // Cache only — live data refreshes exclusively on pull-to-refresh
+            // (Rankings/Widgets tabs) to keep API usage minimal.
             dataStore.loadCachedPayload()
-            if dataStore.payload == nil {
-                Task { await dataStore.refresh() }
-            }
         }
         .onReceive(timer) { now = $0 }
         .sheet(isPresented: $showPaywall) {

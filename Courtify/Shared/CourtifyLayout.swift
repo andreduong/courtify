@@ -51,8 +51,12 @@ struct CourtifyFullBleedScreen<Content: View>: View {
     }
 }
 
-// MARK: - Hero + list card (Schedule, Rankings)
+// MARK: - Gradient hero + dark tile list (Schedule, Rankings)
 
+/// F1-app-style screen: a full-bleed gradient hero on top that fades into the
+/// dark background, followed by flat list tiles separated by hairline dividers
+/// (no white card). `listContent` rows are wrapped in a single VStack here so
+/// row modifiers never accidentally apply per-`ForEach`-element.
 struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListContent: View, ScrollTrigger: Equatable>: View {
     let heroHeight: CGFloat
     let scrollTrigger: ScrollTrigger
@@ -81,33 +85,22 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
         GeometryReader { geometry in
             let safeTop = geometry.safeAreaInsets.top
             let safeBottom = geometry.safeAreaInsets.bottom
-            let overlap = CourtifyLayout.heroListOverlap
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: -overlap) {
-                        ZStack(alignment: .topLeading) {
-                            heroBackground()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: heroHeight + safeTop)
-                                .offset(y: -safeTop)
-                                .clipped()
+                    VStack(spacing: 0) {
+                        CourtifyHeroBlock(
+                            heroHeight: heroHeight,
+                            safeTop: safeTop,
+                            heroBackground: heroBackground,
+                            heroContent: heroContent
+                        )
 
-                            heroContent()
-                                .padding(.top, safeTop + CourtifyLayout.heroContentTopExtra)
-                                .padding(.horizontal, 24)
-                                .frame(maxWidth: .infinity, minHeight: heroHeight, alignment: .topLeading)
+                        VStack(spacing: 0) {
+                            listContent()
                         }
-                        .frame(height: heroHeight)
-
-                        listContent()
-                            .padding(.top, overlap + 12)
-                            .padding(.bottom, safeBottom + CourtifyLayout.tabBarHeight + CourtifyLayout.scrollBottomExtra)
-                            .frame(maxWidth: .infinity)
-                            .background {
-                                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                                    .fill(Color.white)
-                            }
+                        .frame(maxWidth: .infinity)
+                        .padding(.bottom, safeBottom + CourtifyLayout.tabBarHeight + CourtifyLayout.scrollBottomExtra)
                     }
                 }
                 .scrollContentBackground(.hidden)
@@ -120,6 +113,51 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
             }
         }
         .background(ThemeManager.midnightGreen.ignoresSafeArea())
+    }
+}
+
+/// Hero background extended under the status bar, content inset below it,
+/// bottom fade into the screen background so the list tiles blend seamlessly.
+private struct CourtifyHeroBlock<HeroBackground: View, HeroContent: View>: View {
+    let heroHeight: CGFloat
+    let safeTop: CGFloat
+    @ViewBuilder var heroBackground: () -> HeroBackground
+    @ViewBuilder var heroContent: () -> HeroContent
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            heroBackground()
+                .frame(maxWidth: .infinity)
+                .frame(height: heroHeight + safeTop)
+                .overlay(alignment: .bottom) {
+                    // Fade the hero into the screen background *behind* the hero
+                    // content so text near the bottom stays fully legible.
+                    LinearGradient(
+                        colors: [.clear, ThemeManager.midnightGreen],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 120)
+                }
+                .offset(y: -safeTop)
+                .clipped()
+
+            heroContent()
+                .padding(.top, safeTop + CourtifyLayout.heroContentTopExtra)
+                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity, minHeight: heroHeight, alignment: .topLeading)
+        }
+        .frame(height: heroHeight)
+    }
+}
+
+/// Hairline separator between list tiles.
+struct CourtifyTileDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(.white.opacity(0.08))
+            .frame(height: 1)
+            .padding(.leading, 20)
     }
 }
 
@@ -136,40 +174,6 @@ struct CourtifyPlainScrollScreen<Content: View>: View {
                 content()
                     .padding(.top, 12)
                     .padding(.bottom, safeBottom + CourtifyLayout.tabBarHeight + CourtifyLayout.scrollBottomExtra)
-            }
-            .scrollContentBackground(.hidden)
-        }
-        .background(ThemeManager.midnightGreen.ignoresSafeArea())
-    }
-}
-
-// MARK: - Hero-only scroll (Rankings empty state)
-
-struct CourtifyHeroOnlyScrollScreen<HeroBackground: View, HeroContent: View>: View {
-    let heroHeight: CGFloat
-    @ViewBuilder var heroBackground: () -> HeroBackground
-    @ViewBuilder var heroContent: () -> HeroContent
-
-    var body: some View {
-        GeometryReader { geometry in
-            let safeTop = geometry.safeAreaInsets.top
-            let safeBottom = geometry.safeAreaInsets.bottom
-
-            ScrollView {
-                ZStack(alignment: .topLeading) {
-                    heroBackground()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: heroHeight + safeTop)
-                        .offset(y: -safeTop)
-                        .clipped()
-
-                    heroContent()
-                        .padding(.top, safeTop + CourtifyLayout.heroContentTopExtra)
-                        .padding(.horizontal, 24)
-                        .frame(maxWidth: .infinity, minHeight: heroHeight, alignment: .topLeading)
-                }
-                .frame(height: heroHeight)
-                .padding(.bottom, safeBottom + CourtifyLayout.tabBarHeight + CourtifyLayout.scrollBottomExtra)
             }
             .scrollContentBackground(.hidden)
         }

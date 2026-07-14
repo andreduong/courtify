@@ -28,7 +28,19 @@ enum HomeTab: String, CaseIterable, Identifiable {
 }
 
 struct HomeView: View {
-    @State private var selectedTab: HomeTab = .home
+    @State private var selectedTab: HomeTab = HomeView.initialTab
+
+    /// DEBUG-only: launch with `-UITestTab schedule|rankings|widgets` to open a
+    /// specific tab in the simulator (used by agents to screenshot tabs).
+    private static var initialTab: HomeTab {
+        #if DEBUG
+        if let raw = UserDefaults.standard.string(forKey: "UITestTab"),
+           let tab = HomeTab(rawValue: raw) {
+            return tab
+        }
+        #endif
+        return .home
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {

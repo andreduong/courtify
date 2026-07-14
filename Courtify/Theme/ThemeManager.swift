@@ -6,6 +6,8 @@ enum ThemeManager {
     static let midnightGreen = Color(hex: 0x0A120D)
     static let opticYellow = Color(hex: 0xCCFF00)
     static let emeraldGreen = Color(hex: 0x00703C)
+    /// Brighter green for accent text on dark tiles (subtitles, highlights).
+    static let courtGreen = Color(hex: 0x35C77F)
 
     // MARK: - Typography
 

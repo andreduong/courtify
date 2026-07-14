@@ -15,27 +15,13 @@ struct RankingsView: View {
         rankings.first
     }
 
-    private var restOfRankings: [WidgetRankingEntry] {
-        Array(rankings.dropFirst())
-    }
-
     var body: some View {
-        Group {
-            if leader != nil {
-                CourtifyHeroScrollScreen(
-                    heroHeight: CourtifyLayout.rankingsHeroHeight,
-                    heroBackground: { leaderHeroBackground },
-                    heroContent: { leaderHeroContent },
-                    listContent: { rankingsListContent }
-                )
-            } else {
-                CourtifyHeroOnlyScrollScreen(
-                    heroHeight: CourtifyLayout.rankingsHeroEmptyHeight,
-                    heroBackground: { emptyHeroBackground },
-                    heroContent: { emptyHeroContent }
-                )
-            }
-        }
+        CourtifyHeroScrollScreen(
+            heroHeight: CourtifyLayout.rankingsHeroHeight,
+            heroBackground: { heroBackground },
+            heroContent: { heroContent },
+            listContent: { rankingsListContent }
+        )
         .refreshable {
             await dataStore.refresh()
         }
@@ -44,161 +30,106 @@ struct RankingsView: View {
             if let pref = TourPreference(rawValue: tourPreferenceRaw), pref != .both {
                 selectedTour = pref == .wta ? .wta : .atp
             }
+            // Cache only — live data refreshes exclusively on pull-to-refresh.
             dataStore.loadCachedPayload()
-            if dataStore.payload == nil {
-                Task { await dataStore.refresh() }
-            }
         }
     }
 
-    private var tourToggle: some View {
-        HStack {
-            TourPillToggle(selectedTour: $selectedTour)
-            Spacer()
-        }
-    }
+    // MARK: - Hero
 
-    @ViewBuilder
-    private var leaderHeroBackground: some View {
-        if let leader {
-            styledHeroBackground(for: leader)
-        }
-    }
-
-    @ViewBuilder
-    private var leaderHeroContent: some View {
-        if let leader {
-            VStack(alignment: .leading, spacing: 0) {
-                tourToggle
-
-                Spacer(minLength: 8)
-
-                HStack(alignment: .bottom, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        LastUpdatedLabel(date: dataStore.lastUpdated)
-
-                        Text(ordinalRank(leader.rank ?? 1))
-                            .font(ThemeManager.roundedFont(size: 44, weight: .bold))
-                            .foregroundStyle(.white)
-
-                        if let points = leader.points {
-                            Text("\(points) pts")
-                                .font(ThemeManager.roundedFont(.title3, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.85))
-                        }
-
-                        Text(leader.player.name)
-                            .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .lineLimit(2)
-
-                        if let country = leader.player.country {
-                            Text(country)
-                                .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.55))
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    playerPortrait(for: leader)
-                        .frame(width: 108, height: 168)
-                }
-                .padding(.bottom, CourtifyLayout.heroListOverlap + 20)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var emptyHeroBackground: some View {
-        LinearGradient(
-            colors: [ThemeManager.emeraldGreen.opacity(0.55), ThemeManager.midnightGreen],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
-    @ViewBuilder
-    private var emptyHeroContent: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            tourToggle
-            LastUpdatedLabel(date: dataStore.lastUpdated)
-
-            if dataStore.isLoading {
-                ProgressView()
-                    .tint(ThemeManager.opticYellow)
-                    .padding(.top, 24)
-            } else {
-                PullToRefreshHint(message: "Pull down to load \(selectedTour.rawValue) rankings")
-
-                if let error = dataStore.lastError {
-                    Text(error)
-                        .font(ThemeManager.roundedFont(.caption))
-                        .foregroundStyle(ThemeManager.opticYellow.opacity(0.85))
-                        .padding(.top, 4)
-                }
-            }
-
-            Spacer(minLength: 0)
-        }
-    }
-
-    @ViewBuilder
-    private var rankingsListContent: some View {
-        if restOfRankings.isEmpty {
-            Text("No additional rankings loaded")
-                .font(ThemeManager.roundedFont(.subheadline))
-                .foregroundStyle(.gray)
-                .padding(.vertical, 24)
-        } else {
-            ForEach(Array(restOfRankings.enumerated()), id: \.element.id) { index, entry in
-                RankingRow(rank: entry.rank ?? index + 2, entry: entry)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func styledHeroBackground(for leader: WidgetRankingEntry) -> some View {
-        ZStack {
-            if let bundled = bundledPlayer(for: leader) {
-                CachedBundledImage(name: bundled.paywallImageName, contentMode: .fill)
-                    .blur(radius: 24)
-                    .scaleEffect(1.08)
-            } else {
-                LinearGradient(
-                    colors: [ThemeManager.emeraldGreen.opacity(0.7), ThemeManager.midnightGreen],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
+    private var heroBackground: some View {
+        ZStack(alignment: .bottomTrailing) {
             LinearGradient(
-                colors: [.black.opacity(0.1), .black.opacity(0.55)],
+                colors: [
+                    ThemeManager.emeraldGreen.opacity(0.95),
+                    ThemeManager.emeraldGreen.opacity(0.5),
+                    ThemeManager.midnightGreen,
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
+
+            if let leader, let bundled = bundledPlayer(for: leader) {
+                CachedBundledImage(name: bundled.heroImageName, contentMode: .fit)
+                    .frame(maxWidth: 220, maxHeight: 260, alignment: .bottomTrailing)
+                    .padding(.trailing, 8)
+                    .opacity(0.92)
+            }
         }
     }
 
     @ViewBuilder
-    private func playerPortrait(for entry: WidgetRankingEntry) -> some View {
-        if let bundled = bundledPlayer(for: entry) {
-            CachedBundledImage(name: bundled.resolvedImageName, contentMode: .fit)
-        } else if let url = entry.player.imageURL {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().aspectRatio(contentMode: .fit)
-                default:
-                    Image(systemName: "person.fill")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .foregroundStyle(.white.opacity(0.3))
+    private var heroContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("\(selectedTour.rawValue) Rankings")
+                    .font(ThemeManager.roundedFont(.title3, weight: .bold))
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                TourPillToggle(selectedTour: $selectedTour)
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .leading, spacing: 6) {
+                if let leader {
+                    Text("World No. 1")
+                        .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                        .foregroundStyle(ThemeManager.opticYellow)
+
+                    Text(leader.player.name)
+                        .font(ThemeManager.roundedFont(size: 28, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: 220, alignment: .leading)
+                }
+
+                HStack(spacing: 4) {
+                    LastUpdatedLabel(date: dataStore.lastUpdated)
+                    if dataStore.lastUpdated != nil {
+                        Text("· Pull down to refresh")
+                            .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.35))
+                    }
                 }
             }
+        }
+        .padding(.bottom, 20)
+    }
+
+    // MARK: - List tiles
+
+    @ViewBuilder
+    private var rankingsListContent: some View {
+        if rankings.isEmpty {
+            VStack(spacing: 12) {
+                if dataStore.isLoading {
+                    ProgressView()
+                        .tint(ThemeManager.opticYellow)
+                } else {
+                    PullToRefreshHint(message: "Pull down to load \(selectedTour.rawValue) rankings")
+
+                    if let error = dataStore.lastError {
+                        Text(error)
+                            .font(ThemeManager.roundedFont(.caption))
+                            .foregroundStyle(ThemeManager.opticYellow.opacity(0.85))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 40)
         } else {
-            Image(systemName: "person.fill")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .foregroundStyle(.white.opacity(0.3))
+            ForEach(Array(rankings.enumerated()), id: \.element.id) { index, entry in
+                VStack(spacing: 0) {
+                    RankingTile(rank: entry.rank ?? index + 1, entry: entry)
+                    CourtifyTileDivider()
+                }
+            }
         }
     }
 
@@ -207,64 +138,47 @@ struct RankingsView: View {
             $0.name.caseInsensitiveCompare(entry.player.name) == .orderedSame
         }
     }
-
-    private func ordinalRank(_ rank: Int) -> String {
-        let mod100 = rank % 100
-        let mod10 = rank % 10
-        let suffix: String
-        if (11 ... 13).contains(mod100) {
-            suffix = "th"
-        } else {
-            switch mod10 {
-            case 1: suffix = "st"
-            case 2: suffix = "nd"
-            case 3: suffix = "rd"
-            default: suffix = "th"
-            }
-        }
-        return "\(rank)\(suffix)"
-    }
 }
 
-private struct RankingRow: View {
+private struct RankingTile: View {
     let rank: Int
     let entry: WidgetRankingEntry
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 16) {
             Text(String(format: "%02d", rank))
-                .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
-                .foregroundStyle(.gray)
-                .frame(width: 36, height: 36)
-                .background(Circle().strokeBorder(Color.gray.opacity(0.2), lineWidth: 1))
+                .font(ThemeManager.roundedFont(.title3, weight: .bold))
+                .foregroundStyle(.white.opacity(rank <= 3 ? 1 : 0.55))
+                .frame(width: 44, alignment: .center)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(entry.player.name)
-                    .font(ThemeManager.roundedFont(.headline, weight: .semibold))
-                    .foregroundStyle(ThemeManager.midnightGreen)
+                    .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                    .foregroundStyle(.white)
 
                 if let country = entry.player.country {
                     Text(country)
-                        .font(ThemeManager.roundedFont(.caption))
-                        .foregroundStyle(.gray)
+                        .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                        .foregroundStyle(ThemeManager.courtGreen)
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             if let points = entry.points {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(points)")
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(points.formatted())
                         .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                        .foregroundStyle(ThemeManager.midnightGreen)
-                    Text("pts")
-                        .font(ThemeManager.roundedFont(.caption2))
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(.white)
+                    Text("PTS")
+                        .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.45))
                 }
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
+        .contentShape(Rectangle())
     }
 }
 

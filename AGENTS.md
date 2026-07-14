@@ -168,10 +168,29 @@ Use the shared containers in `Courtify/Shared/CourtifyLayout.swift` instead:
 | Container | Use for |
 |-----------|---------|
 | `CourtifyFullBleedScreen` | Non-scrolling full-bleed screens (Home). Measures the real inset first, then extends content under the status bar via frame + offset, and passes the correct `safeTop` to content. |
-| `CourtifyHeroScrollScreen` / `CourtifyHeroOnlyScrollScreen` | Scrolling screens with a hero header (Schedule, Rankings) |
+| `CourtifyHeroScrollScreen` | Scrolling screens with a gradient hero that fades into the dark background, followed by flat list tiles with `CourtifyTileDivider` hairlines (Schedule, Rankings). F1-app-inspired; no white cards. |
 | `CourtifyPlainScrollScreen` | Plain scrolling tabs (Widgets) |
 
 If a new screen needs a full-bleed top, extend one of these rather than hand-rolling `ignoresSafeArea`.
+
+### Tab screen design language
+
+All tabs share: `ThemeManager.midnightGreen` base, gradient hero top
+(`emeraldGreen` → `midnightGreen`), white bold rounded type, `opticYellow` for
+highlights/countdowns, `courtGreen` for accent subtitles on tiles, hairline
+`CourtifyTileDivider` between rows. Haptics/animation come exclusively from
+`CourtifyMotion` + `.courtifyButton(...)` (light impact on press) and
+`TourPillToggle` (uses `CourtifyMotion.animateSelection`) — do not introduce
+other animation curves or haptic calls.
+
+### Data refresh policy (API cost control)
+
+Live data (rankings/live scores from the Worker) refreshes **only when the user
+pulls to refresh** (Rankings and Widgets tabs). No automatic fetch on appear —
+screens call `dataStore.loadCachedPayload()` only, and show `LastUpdatedLabel`
+plus a "Pull down to refresh" hint. The tournament calendar is bundled
+(`TournamentCalendar`, zero API cost). Do not add auto-refresh timers or
+on-appear fetches without explicit request.
 
 ### Player hero images (zero API cost)
 
@@ -202,6 +221,20 @@ xcodebuild -scheme Courtify -project Courtify.xcodeproj \
 xcrun simctl install 744F6ACA-F0CC-4105-8794-D798EF7726CC .derivedData/Build/Products/Debug-iphonesimulator/Courtify.app
 xcrun simctl launch 744F6ACA-F0CC-4105-8794-D798EF7726CC com.courtify.xyz -UITestHome
 ```
+
+Add `-UITestTab schedule|rankings|widgets` to open a specific tab (DEBUG only,
+read in `HomeView`). To preview WTA variants, write the shared app-group pref
+before launch (find the container with `xcrun simctl get_app_container <udid>
+com.courtify.xyz groups`):
+
+```bash
+xcrun simctl spawn <udid> defaults write \
+  "<group-container>/Library/Preferences/group.com.courtify.xyz" tourPreference WTA
+```
+
+Screenshot with `xcrun simctl io <udid> screenshot out.png`. Note there is no
+tap/scroll automation tooling installed — verify states by relaunching with
+different args/prefs.
 
 ---
 
