@@ -93,10 +93,7 @@ private struct RankingsWidgetContainer: View {
     var body: some View {
         Group {
             if entry.isLocked {
-                WidgetLockedView(
-                    title: "\(entry.tour.rawValue) standings",
-                    subtitle: "Go Pro for live rankings on your home screen."
-                )
+                WidgetLockedView()
             } else if family == .systemLarge {
                 RankingsLargeWidgetView(tour: entry.tour, entries: entry.entries)
             } else {

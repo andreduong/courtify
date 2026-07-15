@@ -52,10 +52,7 @@ struct LiveScoresWidget: Widget {
         StaticConfiguration(kind: kind, provider: LiveScoresProvider()) { entry in
             Group {
                 if entry.isLocked {
-                    WidgetLockedView(
-                        title: "Live scores",
-                        subtitle: "Go Pro for live match scores on your home screen."
-                    )
+                    WidgetLockedView()
                 } else {
                     LiveScoresWidgetView(match: entry.match)
                 }

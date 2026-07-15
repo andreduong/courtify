@@ -68,6 +68,11 @@ private struct AppRootView: View {
             }
             isBootstrapped = true
         }
+        .onOpenURL { url in
+            guard CourtifyDeepLinks.isPaywall(url) else { return }
+            PaywallDeepLink.shouldOpenPaywall = true
+            NotificationCenter.default.post(name: .courtifyOpenPaywall, object: nil)
+        }
     }
 
     private var bootstrapView: some View {

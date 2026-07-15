@@ -28,7 +28,11 @@ enum HomeTab: String, CaseIterable, Identifiable {
 }
 
 struct HomeView: View {
+    @StateObject private var revenueCat = RevenueCatManager.shared
+    @AppStorage(AppGroupConstants.Keys.favoritePlayerID, store: AppGroupConstants.appGroupStorage)
+    private var favoritePlayerID = ""
     @State private var selectedTab: HomeTab = HomeView.initialTab
+    @State private var showPaywallFromDeepLink = false
 
     /// DEBUG-only: launch with `-UITestTab schedule|rankings|widgets` to open a
     /// specific tab in the simulator (used by agents to screenshot tabs).
@@ -71,6 +75,26 @@ struct HomeView: View {
         .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .preferredColorScheme(.dark)
+        .onAppear(perform: openPaywallFromDeepLinkIfNeeded)
+        .onReceive(NotificationCenter.default.publisher(for: .courtifyOpenPaywall)) { _ in
+            openPaywallFromDeepLinkIfNeeded()
+        }
+        .sheet(isPresented: $showPaywallFromDeepLink) {
+            PaywallView(
+                favoritePlayerID: favoritePlayerID.isEmpty ? "sinner" : favoritePlayerID,
+                managesOwnCloseButton: true,
+                onSubscribed: { showPaywallFromDeepLink = false },
+                onClose: { showPaywallFromDeepLink = false },
+                onSkip: { showPaywallFromDeepLink = false }
+            )
+        }
+    }
+
+    private func openPaywallFromDeepLinkIfNeeded() {
+        guard PaywallDeepLink.shouldOpenPaywall else { return }
+        PaywallDeepLink.shouldOpenPaywall = false
+        guard !revenueCat.isProUser, !AppGroupConstants.referralBypassActive else { return }
+        showPaywallFromDeepLink = true
     }
 }
 

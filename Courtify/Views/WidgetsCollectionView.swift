@@ -184,7 +184,7 @@ struct WidgetsCollectionView: View {
     }
 
     private var freeExplainer: some View {
-        Text("Free includes your favorite player widget — no live data needed. Unlock Pro for live scores, rankings and tournament widgets.")
+        Text("Free includes your favorite player widget — no live data needed. Unlock Premium for live scores, rankings and tournament widgets.")
             .font(ThemeManager.roundedFont(.footnote))
             .foregroundStyle(.white.opacity(0.6))
             .fixedSize(horizontal: false, vertical: true)
@@ -293,7 +293,7 @@ struct WidgetsCollectionView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                     if locked {
-                        Text("PRO 🎾")
+                        Text("Premium 🎾")
                             .font(ThemeManager.roundedFont(.caption2, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)

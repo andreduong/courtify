@@ -1,9 +1,7 @@
 import SwiftUI
+import WidgetKit
 
 struct WidgetLockedView: View {
-    var title: String = "Courtify Pro"
-    var subtitle: String = "Subscribe in the app to unlock live widgets."
-
     var body: some View {
         ZStack {
             LinearGradient(
@@ -17,11 +15,11 @@ struct WidgetLockedView: View {
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(WidgetTheme.opticYellow)
 
-                Text(title)
+                Text("Premium Widget")
                     .font(WidgetTheme.roundedFont(.headline, weight: .bold))
                     .foregroundStyle(.white)
 
-                Text(subtitle)
+                Text("Press to unlock.")
                     .font(WidgetTheme.roundedFont(.caption))
                     .foregroundStyle(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
@@ -30,5 +28,6 @@ struct WidgetLockedView: View {
             .padding(12)
         }
         .courtifyWidgetCanvas()
+        .widgetURL(CourtifyDeepLinks.paywallURL)
     }
 }

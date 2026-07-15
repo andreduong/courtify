@@ -53,10 +53,7 @@ struct NextTournamentWidget: Widget {
         StaticConfiguration(kind: kind, provider: TournamentProvider()) { entry in
             Group {
                 if entry.isLocked {
-                    WidgetLockedView(
-                        title: "Next tournament",
-                        subtitle: "Go Pro for tournament countdown widgets."
-                    )
+                    WidgetLockedView()
                 } else {
                     TournamentWidgetContent(tour: entry.tour)
                 }
@@ -92,10 +89,7 @@ struct SeasonCalendarWidget: Widget {
         StaticConfiguration(kind: kind, provider: TournamentProvider()) { entry in
             Group {
                 if entry.isLocked {
-                    WidgetLockedView(
-                        title: "Season calendar",
-                        subtitle: "Go Pro for the full 2026 tournament calendar."
-                    )
+                    WidgetLockedView()
                 } else {
                     SeasonCalendarView(tour: entry.tour)
                 }

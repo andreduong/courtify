@@ -58,10 +58,7 @@ struct OrderOfPlayWidget: Widget {
         StaticConfiguration(kind: kind, provider: OrderOfPlayProvider()) { entry in
             Group {
                 if entry.isLocked {
-                    WidgetLockedView(
-                        title: "Order of play",
-                        subtitle: "Go Pro for upcoming matches on your home screen."
-                    )
+                    WidgetLockedView()
                 } else {
                     OrderOfPlayListView(matches: entry.matches)
                 }
