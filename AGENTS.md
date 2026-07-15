@@ -194,6 +194,28 @@ highlights/countdowns, `courtGreen` for accent subtitles on tiles, hairline
 `TourPillToggle` (uses `CourtifyMotion.animateSelection`) — do not introduce
 other animation curves or haptic calls.
 
+### Widgets tab (gallery)
+
+`WidgetsCollectionView` is an F1-app-style gallery: filter pills
+(All / **Free** / Small / Medium / Large), sections with captions under each
+card. Catalog: Favorite player (small, **free**), Next tournament
+(small + large), Tournament countdown (medium), Season calendar (large),
+ATP/WTA standings (medium top-5 + large top-10), Live scores (small),
+Order of play (large).
+
+Gating rules:
+
+- **Every widget is Pro-gated except Favorite player.** Entitled means
+  `RevenueCatManager.isProUser || AppGroupConstants.referralBypassActive`.
+- Locked cards show a `PRO 🎾` badge and the whole card opens the paywall.
+- The Favorite player widget uses **bundled data only** (hardcoded
+  `TennisPlayer.ranking`, `seasonRecord`, hero asset) so free users never
+  trigger API calls. Its paintbrush button opens a picker that writes
+  `favoritePlayerID` via `AppGroupConstants.updateFavoritePlayer`.
+- Rankings / live / order-of-play cards read `WidgetDataStore` (cached payload;
+  pull-to-refresh only). Tournament cards read the bundled
+  `TournamentCalendar` (zero API cost).
+
 ### Data refresh policy (API cost control)
 
 Live data (rankings/live scores from the Worker) refreshes **only when the user
@@ -234,7 +256,13 @@ xcrun simctl launch 744F6ACA-F0CC-4105-8794-D798EF7726CC com.courtify.xyz -UITes
 ```
 
 Add `-UITestTab schedule|rankings|widgets` to open a specific tab (DEBUG only,
-read in `HomeView`), and `-UITestSettings` to auto-present the Settings sheet. To preview WTA variants, write the shared app-group pref
+read in `HomeView`), and `-UITestSettings` to auto-present the Settings sheet.
+The Widgets tab supports two more DEBUG args: `-UITestWidgetFilter
+free|small|medium|large` preselects a gallery filter pill, and
+`-UITestWidgetOnly <itemID>` renders a single widget card (IDs in the
+`sections` catalog in `WidgetsCollectionView.swift`) — useful for
+screenshotting below-the-fold widgets since there is no scroll automation.
+To preview WTA variants, write the shared app-group pref
 before launch (find the container with `xcrun simctl get_app_container <udid>
 com.courtify.xyz groups`):
 

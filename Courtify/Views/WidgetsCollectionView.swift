@@ -51,9 +51,21 @@ struct WidgetsCollectionView: View {
     @StateObject private var revenueCat = RevenueCatManager.shared
     @ObservedObject private var dataStore = WidgetDataStore.shared
 
-    @State private var selectedFilter: WidgetGalleryFilter = .all
+    @State private var selectedFilter: WidgetGalleryFilter = WidgetsCollectionView.initialFilter
     @State private var showPaywall = false
     @State private var showPlayerPicker = false
+
+    /// DEBUG-only: launch with `-UITestWidgetFilter free|small|medium|large` to
+    /// preselect a gallery filter (used by agents to screenshot filter states).
+    private static var initialFilter: WidgetGalleryFilter {
+        #if DEBUG
+        if let raw = UserDefaults.standard.string(forKey: "UITestWidgetFilter"),
+           let filter = WidgetGalleryFilter(rawValue: raw.capitalized) {
+            return filter
+        }
+        #endif
+        return .all
+    }
 
     private var favoritePlayer: TennisPlayer? {
         TennisPlayer.player(for: favoritePlayerID)
@@ -92,15 +104,26 @@ struct WidgetsCollectionView: View {
         ]),
     ]
 
+    /// DEBUG-only: launch with `-UITestWidgetOnly <itemID>` to render a single
+    /// widget (used by agents to screenshot widgets that are below the fold).
+    private static var debugOnlyItemID: String? {
+        #if DEBUG
+        return UserDefaults.standard.string(forKey: "UITestWidgetOnly")
+        #else
+        return nil
+        #endif
+    }
+
     private var visibleSections: [WidgetGallerySection] {
         sections.compactMap { section in
             let items = section.items.filter { item in
+                if let onlyID = Self.debugOnlyItemID, item.id != onlyID { return false }
                 switch selectedFilter {
-                case .all: true
-                case .free: item.isFree
-                case .small: item.size == .small
-                case .medium: item.size == .medium
-                case .large: item.size == .large
+                case .all: return true
+                case .free: return item.isFree
+                case .small: return item.size == .small
+                case .medium: return item.size == .medium
+                case .large: return item.size == .large
                 }
             }
             guard !items.isEmpty else { return nil }
@@ -270,15 +293,17 @@ struct WidgetsCollectionView: View {
                             .background(.black.opacity(0.45))
                             .clipShape(Capsule())
                             .padding(10)
-                    } else if item.id == "favorite" {
-                        Text("Customize 🖌️")
-                            .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
+                    }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    if !locked, item.id == "favorite" {
+                        Image(systemName: "paintbrush.fill")
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
+                            .padding(8)
                             .background(.black.opacity(0.45))
-                            .clipShape(Capsule())
-                            .padding(10)
+                            .clipShape(Circle())
+                            .padding(8)
                     }
                 }
             }
@@ -347,7 +372,8 @@ private struct FavoritePlayerWidgetPreview: View {
             if let player {
                 CachedBundledImage(name: player.heroImageName, contentMode: .fit)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(.leading, 60)
+                    .padding(.leading, 78)
+                    .offset(x: 16)
                     .opacity(0.95)
             }
 
@@ -364,15 +390,15 @@ private struct FavoritePlayerWidgetPreview: View {
 
                 Spacer()
 
-                Text(rankLabel)
-                    .font(ThemeManager.roundedFont(size: 34, weight: .bold))
-                    .foregroundStyle(.white)
-
                 if let record = player?.seasonRecord {
                     Text("\(record.wins)-\(record.losses) season")
                         .font(ThemeManager.roundedFont(.caption2, weight: .medium))
                         .foregroundStyle(.white.opacity(0.7))
                 }
+
+                Text(rankLabel)
+                    .font(ThemeManager.roundedFont(size: 34, weight: .bold))
+                    .foregroundStyle(.white)
             }
             .padding(14)
         }
@@ -390,10 +416,13 @@ private struct NextTournamentSmallPreview: View {
             surfaceGradient(for: event)
             VStack(alignment: .leading, spacing: 4) {
                 if let event {
+                    // Trailing inset keeps the header clear of the PRO badge.
                     Text("\(event.shortName) · \(event.location.uppercased())")
                         .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.75))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .padding(.trailing, 56)
 
                     Text(event.dateRangeLabel)
                         .font(ThemeManager.roundedFont(size: 24, weight: .bold))
@@ -428,11 +457,14 @@ private struct TournamentCountdownPreview: View {
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
         ZStack {
+            surfaceGradient(for: event)
+
             if let imageName = event?.heroImageName {
-                CachedBundledImage(name: imageName, contentMode: .fill)
-                    .overlay(Color.black.opacity(0.45))
-            } else {
-                surfaceGradient(for: event)
+                CachedBundledImage(name: imageName, contentMode: .fit)
+                    .frame(width: 130)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, -30)
+                    .opacity(0.18)
             }
 
             VStack(spacing: 4) {
@@ -581,7 +613,9 @@ private struct SeasonCalendarPreview: View {
                     Text(event.listDateLabel)
                         .font(ThemeManager.roundedFont(.caption2, weight: .bold))
                         .foregroundStyle(.white.opacity(0.55))
-                        .frame(width: 42, alignment: .leading)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(width: 46, alignment: .leading)
 
                     if !event.isUpcoming {
                         Image(systemName: "checkmark")
@@ -632,10 +666,12 @@ private struct RankingsWidgetPreview: View {
                 endPoint: .bottomTrailing
             )
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
+                // Reserve the badge row so the PRO pill never overlaps row 1.
                 Text("\(tour.rawValue) TOP \(limit)")
                     .font(ThemeManager.roundedFont(.caption, weight: .bold))
                     .foregroundStyle(.white)
+                    .frame(height: 26, alignment: .topLeading)
 
                 if entries.isEmpty {
                     Spacer()
@@ -643,13 +679,13 @@ private struct RankingsWidgetPreview: View {
                     Spacer()
                 } else {
                     ForEach(entries.prefix(limit)) { entry in
-                        RankingRow(entry: entry)
+                        RankingRow(entry: entry, showsCountry: false)
+                            .frame(maxHeight: .infinity)
                     }
-                    Spacer(minLength: 0)
                 }
             }
             .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 }
@@ -682,25 +718,27 @@ private struct RankingsLargeWidgetPreview: View {
                         rankingColumn(Array(top10.prefix(midpoint)))
                         rankingColumn(Array(top10.dropFirst(midpoint)))
                     }
-                    Spacer(minLength: 0)
                 }
             }
             .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     private func rankingColumn(_ column: [WidgetRankingEntry]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(column) { entry in
                 RankingRow(entry: entry)
+                    .frame(maxHeight: .infinity)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }
 
 private struct RankingRow: View {
     let entry: WidgetRankingEntry
+    var showsCountry = true
 
     var body: some View {
         HStack(spacing: 8) {
@@ -715,7 +753,7 @@ private struct RankingRow: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                if let country = entry.player.country {
+                if showsCountry, let country = entry.player.country {
                     Text(country)
                         .font(ThemeManager.roundedFont(size: 9, weight: .medium))
                         .foregroundStyle(.white.opacity(0.5))
@@ -755,7 +793,9 @@ private struct LiveScoresWidgetPreview: View {
                         Text("LIVE · \(match.tour)")
                             .font(ThemeManager.roundedFont(.caption2, weight: .bold))
                             .foregroundStyle(ThemeManager.opticYellow)
+                            .lineLimit(1)
                     }
+                    .padding(.trailing, 56)
 
                     if let tournament = match.tournament {
                         Text(tournament)
@@ -849,7 +889,7 @@ private struct OrderOfPlayWidgetPreview: View {
                                         .foregroundStyle(.white.opacity(0.5))
                                 }
                             }
-                            .frame(width: 84, alignment: .leading)
+                            .frame(width: 64, alignment: .leading)
 
                             Text(match.player1.name)
                                 .lineLimit(1)
@@ -864,11 +904,12 @@ private struct OrderOfPlayWidgetPreview: View {
                         }
                         .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.9))
+                        .frame(maxHeight: .infinity)
                     }
-                    Spacer(minLength: 0)
                 }
             }
             .padding(14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 }
