@@ -54,12 +54,13 @@ struct WidgetsCollectionView: View {
     @State private var selectedFilter: WidgetGalleryFilter = WidgetsCollectionView.initialFilter
     @State private var showPaywall = false
     @State private var showPlayerPicker = false
+    @State private var showSettings = false
 
     /// DEBUG-only: launch with `-UITestWidgetFilter free|small|medium|large` to
     /// preselect a gallery filter (used by agents to screenshot filter states).
     private static var initialFilter: WidgetGalleryFilter {
         #if DEBUG
-        if let raw = UserDefaults.standard.string(forKey: "UITestWidgetFilter"),
+        if let raw = UITestLaunchArgs.widgetFilter,
            let filter = WidgetGalleryFilter(rawValue: raw.capitalized) {
             return filter
         }
@@ -108,7 +109,7 @@ struct WidgetsCollectionView: View {
     /// widget (used by agents to screenshot widgets that are below the fold).
     private static var debugOnlyItemID: String? {
         #if DEBUG
-        return UserDefaults.standard.string(forKey: "UITestWidgetOnly")
+        return UITestLaunchArgs.widgetOnlyItemID
         #else
         return nil
         #endif
@@ -134,12 +135,18 @@ struct WidgetsCollectionView: View {
     var body: some View {
         CourtifyPlainScrollScreen {
             VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Widgets collection")
-                        .font(ThemeManager.roundedFont(.title2, weight: .bold))
-                        .foregroundStyle(.white)
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Widgets collection")
+                            .font(ThemeManager.roundedFont(.title2, weight: .bold))
+                            .foregroundStyle(.white)
 
-                    LastUpdatedLabel(date: dataStore.lastUpdated)
+                        LastUpdatedLabel(date: dataStore.lastUpdated)
+                    }
+
+                    Spacer()
+
+                    ProfileIconButton(showSettings: $showSettings)
                 }
 
                 filterBar
@@ -159,6 +166,7 @@ struct WidgetsCollectionView: View {
             await dataStore.refresh()
         }
         .onAppear { dataStore.loadCachedPayload() }
+        .settingsSheet(isPresented: $showSettings)
         .sheet(isPresented: $showPaywall) {
             PaywallView(
                 favoritePlayerID: favoritePlayerID.isEmpty ? "sinner" : favoritePlayerID,

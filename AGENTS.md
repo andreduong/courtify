@@ -8,10 +8,31 @@ This repo has two parts:
 
 | Area | Path | Status |
 |------|------|--------|
-| iOS app | `Courtify/` | Onboarding, paywall (RevenueCat), home view — uses hardcoded `TennisPlayer` data in `Courtify/Models/OnboardingModels.swift` |
-| Cloudflare Worker | `index.js`, `wrangler.toml` | **Implemented** — fetches tennis data, caches in KV, serves `/api/widget-data` |
+| iOS app | `Courtify/` | Onboarding, paywall (RevenueCat), Home / Schedule / Rankings / Widgets tabs — wired to Worker via `WidgetDataStore` |
+| Widget extension | `CourtifyWidget/` | `PlayerTrackerWidget` + `OrderOfPlayWidget` (Pro-gated via `widgetAccessEnabled`) |
+| Cloudflare Worker | `index.js`, `wrangler.toml` | **Deployed** — `https://courtify-tennis-worker.courtify.workers.dev/api/widget-data` |
 
-There is **no Widget Extension target** in the Xcode project yet. The splash screen (`SplashScreenView.swift`) only shows decorative widget previews.
+---
+
+## Agent quick start (read before changing anything)
+
+**Build on what exists — do not re-invent:**
+
+| Area | Source of truth | Do not… |
+|------|-----------------|---------|
+| Full-bleed layouts | `Courtify/Shared/CourtifyLayout.swift` | Hand-roll `ignoresSafeArea` on a `GeometryReader`; offset hero backgrounds inside a `ScrollView` |
+| Live tennis data | `WidgetDataStore` + Worker KV cache | Add on-appear `refresh()`, timers, or per-screen fetch logic |
+| Tournament calendar | `TournamentCalendar` (bundled 2026) | Hit RapidAPI for schedule / slam dates |
+| Player photos (in-app) | `player-{id}-hero` assets + `TennisPlayer.heroImageName` | Fetch ATP/WTA CDN at runtime or use paid API images on free surfaces |
+| Tab chrome | `ProfileIconButton`, `TourPillToggle`, `LastUpdatedLabel`, `CourtifyTileDivider` | Duplicate profile/settings entry points or introduce new haptic/animation curves |
+| Settings / favorites | `SettingsView` + `AppGroupConstants` | Write prefs outside app group (widgets won't see them) |
+| Simulator screenshots | `UITestLaunchArgs` + `simctl launch` flags | Install tap/scroll automation (none available) |
+
+**UI language:** F1-app dark mode — `midnightGreen` base, `emeraldGreen`→`midnightGreen` gradient heroes, white rounded type, `opticYellow` highlights, `courtGreen` tile subtitles, hairline dividers. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)`.
+
+**API cost rule:** Worker data refreshes on **user pull-to-refresh** (Rankings, Widgets) or the **one-time onboarding exception**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
+
+**Verify your work:** build → `simctl install` → `simctl launch … -UITestHome [-UITestTab …]` → wait ~7s (bootstrap spinner) → screenshot. See [Simulator testing](#simulator-testing-for-agents) below.
 
 ---
 
@@ -19,18 +40,19 @@ There is **no Widget Extension target** in the Xcode project yet. The splash scr
 
 ### Purpose
 
-A scheduled Worker that:
+An on-demand Worker that:
 
-1. Runs on a **cron every 15 minutes** (`*/15 * * * *` UTC)
-2. Calls the **Tennis API - ATP WTA ITF** on RapidAPI
-3. Extracts a lightweight JSON payload for iOS widgets
-4. Writes it to **KV** (`TENNIS_DATA` binding, key `widget-data`)
-5. Exposes **`GET /api/widget-data`** with CORS + `Cache-Control: public, max-age=300`
+1. Serves **`GET /api/widget-data`** from KV with CORS + `Cache-Control: public, max-age=300`
+2. Refreshes from RapidAPI at most every **6 hours** when a client request finds stale cache (`MIN_REFRESH_INTERVAL_MS`)
+3. Calls the **Tennis API - ATP WTA ITF** on RapidAPI (rankings, live, fixtures)
+4. Writes a lightweight JSON payload to **KV** (`TENNIS_DATA` binding, key `widget-data`)
+
+There is **no cron** (see `wrangler.toml`). iOS pull-to-refresh and the one-time onboarding fetch hit this endpoint; free-tier surfaces must not poll it automatically.
 
 ### Files
 
-- `index.js` — Worker logic (scheduled + fetch handlers)
-- `wrangler.toml` — Worker config, cron, KV binding placeholders
+- `index.js` — fetch handler + KV read/write + RapidAPI mapping
+- `wrangler.toml` — Worker config, KV binding
 
 ### External API
 
@@ -45,8 +67,8 @@ A scheduled Worker that:
 |--------|---------------|
 | Live matches | `GET /tennis/v2/extend/api/events/live` |
 | Live fallback | `GET /tennis/v2/{atp\|wta}/fixtures` — filter rows where `live` is non-null |
-| ATP top 10 | `GET /tennis/v2/atp/ranking/singles?pageSize=10` |
-| WTA top 10 | `GET /tennis/v2/wta/ranking/singles?pageSize=10` |
+| ATP top 20 | `GET /tennis/v2/atp/ranking/singles?pageSize=20` |
+| WTA top 20 | `GET /tennis/v2/wta/ranking/singles?pageSize=20` |
 
 Player headshots are constructed as:
 
@@ -61,19 +83,8 @@ https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/ms-api/uploads/Photo/{at
 ```json
 {
   "updatedAt": "ISO-8601",
-  "liveMatches": [
-    {
-      "id": 123,
-      "tour": "ATP",
-      "tournament": "Wimbledon",
-      "status": "LIVE",
-      "score": "6-4 3-2",
-      "gameScore": null,
-      "server": 1,
-      "player1": { "id": 47275, "name": "...", "country": "ITA", "imageUrl": "..." },
-      "player2": { "id": 68074, "name": "...", "country": "ESP", "imageUrl": "..." }
-    }
-  ],
+  "liveMatches": [ ... ],
+  "upcomingMatches": [ ... ],
   "rankings": {
     "atp": [{ "rank": 1, "points": 14700, "player": { "id", "name", "country", "imageUrl" } }],
     "wta": [{ ... }]
@@ -91,7 +102,7 @@ https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/ms-api/uploads/Photo/{at
 - `server`: `1` = player1 serving, `2` = player2 serving, `null` if unknown (fixtures fallback has no server data)
 - Rate limits: Worker retries on 429/5xx with backoff; 250ms delay between sequential API calls
 - **Points normalization**: the WTA feed reports points scaled ×100 (e.g. `855000` for 8,550). `normalizeRankingPoints` fixes this at parse time *and* at serve time (`normalizeCachedPayload`), so stale KV payloads are corrected without extra RapidAPI calls.
-- Refresh model is **pull-based**: no cron; `/api/widget-data` refreshes from RapidAPI at most every 6 h (`MIN_REFRESH_INTERVAL_MS`) when a request finds the KV cache stale.
+- Refresh model is **on-demand**: `/api/widget-data` refreshes from RapidAPI at most every 6 h when a request finds the KV cache stale. No scheduled cron.
 
 ### Deployment checklist (user action required)
 
@@ -110,47 +121,41 @@ These steps are **not done** until the user completes them:
    ```
 5. **Deploy**:
    ```bash
-   wrangler deploy
+   npx wrangler deploy   # wrangler CLI may not be on PATH; npx works
    ```
 6. **Verify**:
    ```bash
    wrangler tail                          # watch logs
-   curl https://<worker-url>/api/widget-data
+   curl https://courtify-tennis-worker.courtify.workers.dev/api/widget-data
    ```
-
-Local cron test:
-
-```bash
-wrangler dev --test-scheduled
-curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=*/15+*+*+*+*"
-curl http://localhost:8787/api/widget-data
-```
 
 ### Known limitations
 
 - **Live events endpoint** may require a higher RapidAPI plan (Ultra/Mega for some live features). If it fails, the Worker falls back to fixtures filtering.
 - **Player images** from the API proxy may require RapidAPI headers when fetched directly by the iOS widget — consider proxying images through the Worker or bundling fallbacks.
-- **Cron propagation** can take up to ~15 minutes after first deploy.
 - **KV placeholder IDs** in `wrangler.toml` will block deploy until replaced.
 
 ---
 
-## iOS app (not yet wired to Worker)
+## iOS app
 
 ### Current state
 
-- SwiftUI app with onboarding flow, theme, RevenueCat paywall
-- `TennisPlayer.topPlayers` is **hardcoded** mock data — not fetched from the Worker
-- No `WidgetKit` extension exists yet
+- SwiftUI app with onboarding flow, theme, RevenueCat paywall, four main tabs
+- Live rankings (top 20 per tour), live scores, and order of play from `WidgetDataStore` → Worker
+- `TennisPlayer.topPlayers` remains the **bundled avatar/hero catalog** (10 featured players); onboarding maps API names onto these assets when possible
+- Home-screen widgets in `CourtifyWidget/`; free users get bundled-only Favorite player in the in-app gallery
 
-### Future work (for agents)
+### Shared data layer
 
-1. Add a **Widget Extension** target in Xcode
-2. Create a shared model (or duplicate) matching the Worker JSON schema above
-3. Point widget timeline provider at `https://<worker-url>/api/widget-data`
-4. Replace hardcoded rankings/players in the app with live data where appropriate
-5. Handle image loading (API images may need auth headers)
-6. Add App Group / shared container if widget and app need shared favorites
+| Type | Class / file | Role |
+|------|-------------|------|
+| Fetch + cache | `WidgetDataStore` | Single `@MainActor` store; KV cache key `widgetDataPayloadCache` in app group |
+| Models | `WidgetDataModels.swift` | Codable types matching Worker JSON |
+| API URL | `WidgetAPIService.widgetDataURL` | Production Worker endpoint |
+| Prefs | `AppGroupConstants` | `favoritePlayerID`, `tourPreference`, `widgetAccessEnabled`, `didFetchOnboardingRankings`, etc. |
+
+When changing the JSON schema, update `index.js`, `WidgetDataModels.swift`, and any widget preview code together.
 
 ### iOS conventions in this repo
 
@@ -161,28 +166,58 @@ curl http://localhost:8787/api/widget-data
 
 ### Full-bleed top layouts (IMPORTANT)
 
-**Never wrap a `GeometryReader` in `.ignoresSafeArea(edges: .top)`** — the reader
-then reports `safeAreaInsets.top == 0`, so every "safeTop" offset inside silently
-collapses and content overlaps the status bar. This bug shipped once on Home.
+Two separate traps have shipped bugs — both are solved in `CourtifyLayout.swift`:
 
-Use the shared containers in `Courtify/Shared/CourtifyLayout.swift` instead:
+| Trap | Symptom | Wrong approach | Correct approach |
+|------|---------|----------------|------------------|
+| **GeometryReader safe area** | Status bar overlaps chrome; `safeTop` is ~8pt not ~59pt | `.ignoresSafeArea(edges: .top)` on a view that *contains* the `GeometryReader` | Use a shared container that measures inset first, then extends content |
+| **ScrollView clipping** | Dark band under status bar on Schedule/Rankings | Offset hero background up by `safeTop` inside a `ScrollView` (clips at bounds) | Apply `.ignoresSafeArea(edges: .top)` on the `ScrollView`; pad hero *content* with `safeTop` |
+
+**Containers** (`Courtify/Shared/CourtifyLayout.swift`):
 
 | Container | Use for |
 |-----------|---------|
-| `CourtifyFullBleedScreen` | Non-scrolling full-bleed screens (Home). Measures the real inset first, then extends content under the status bar via frame + offset, and passes the correct `safeTop` to content. |
-| `CourtifyHeroScrollScreen` | Scrolling screens with a gradient hero that fades into the dark background, followed by flat list tiles with `CourtifyTileDivider` hairlines (Schedule, Rankings). F1-app-inspired; no white cards. |
-| `CourtifyPlainScrollScreen` | Plain scrolling tabs (Widgets) |
+| `CourtifyFullBleedScreen` | Non-scrolling full-bleed (Home). Passes `(safeTop, size)` to content; grows height by `safeTop` and offsets up. |
+| `CourtifyHeroScrollScreen` | Scrolling gradient hero → dark tile list (Schedule, Rankings). Hero fades into `midnightGreen` via bottom gradient behind content. List rows wrapped in one `VStack` so modifiers don't apply per-`ForEach` element. |
+| `CourtifyPlainScrollScreen` | Plain scrolling (Widgets). |
 
-If a new screen needs a full-bleed top, extend one of these rather than hand-rolling `ignoresSafeArea`.
+If a new screen needs a full-bleed top, **extend one of these** — do not hand-roll.
+
+### Home tab (`HomeDashboardView`)
+
+- Uses `CourtifyFullBleedScreen` — never the old `GeometryReader` + `.ignoresSafeArea(.top)` pattern.
+- **Layout:** hero flexes (`maxHeight: .infinity`); Grand Slam countdown is `fixedSize` at the bottom — no fixed 48/52 split (that caused the gap under the player name).
+- **Hero image:** `TennisPlayer.heroImageName` → `player-{id}-hero` transparent torso (not the circular `player-{id}` avatar).
+- **Get Premium:** single pill beside "Next Grand Slam" only (not in the status-bar toolbar).
+- **Data:** `loadCachedPayload()` on appear only — no automatic Worker refresh.
+
+### Schedule tab (`ScheduleView`)
+
+- Bundled `TournamentCalendar` only — **zero API cost**, ever.
+- `CourtifyHeroScrollScreen` with gradient hero, next-major countdown (Days/Hours/Minutes in `opticYellow`).
+- List: upcoming events first, then a "Completed" section (dimmed). Tiles use date block + name + `courtGreen`/`opticYellow` subtitle — no white card.
+- `TourPillToggle` + `ProfileIconButton` in hero header.
+
+### Rankings tab (`RankingsView`)
+
+- `CourtifyHeroScrollScreen`; hero shows World No. 1 name + bundled `heroImageName` torso on the right.
+- Full top 10 as dark tiles (`RankingTile` + `CourtifyTileDivider`).
+- **Refresh:** `.refreshable { await dataStore.refresh() }` only; on appear → `loadCachedPayload()` only.
+- Hero shows `LastUpdatedLabel` + "· Pull down to refresh" when cache exists; empty cache shows `PullToRefreshHint`.
+- WTA points come from Worker already normalized (see points normalization above).
 
 ### Settings (profile) screen
 
-Every tab shows a `ProfileIconButton` (top-right) that presents `SettingsView`
-(`Courtify/Views/SettingsView.swift`) as a sheet — attach it with
-`.settingsSheet(isPresented:)`. It contains favorite player / Grand Slam cards
-with picker sheets (writes through `AppGroupConstants` so widgets reload),
-premium activate (paywall sheet) + RevenueCat restore, and placeholder
-contact/rate actions (`mailto:support@courtify.xyz`, `SKStoreReviewController`).
+Every tab shows `ProfileIconButton` (top-right) → `SettingsView` sheet via
+`.settingsSheet(isPresented:)`. Contains:
+
+- **Your favorites** — player + Grand Slam cards with **Change** → picker sheets
+  (writes `AppGroupConstants` / `WidgetTimelineRefresher.reloadAll()`).
+- **Personal** — time zone (display only), 24h format toggle, Premium activate
+  (paywall), Restore purchase (RevenueCat).
+- **Help** — `mailto:support@courtify.xyz`, How to add widgets (in-app guide),
+  Rate us (`SKStoreReviewController`).
+- DEBUG: `-UITestSettings` auto-opens the sheet from Home.
 
 ### Tab screen design language
 
@@ -218,12 +253,37 @@ Gating rules:
 
 ### Data refresh policy (API cost control)
 
-Live data (rankings/live scores from the Worker) refreshes **only when the user
-pulls to refresh** (Rankings and Widgets tabs). No automatic fetch on appear —
-screens call `dataStore.loadCachedPayload()` only, and show `LastUpdatedLabel`
-plus a "Pull down to refresh" hint. The tournament calendar is bundled
-(`TournamentCalendar`, zero API cost). Do not add auto-refresh timers or
-on-appear fetches without explicit request.
+**Default rule:** live Worker data refreshes **only when the user pulls to refresh**
+(Rankings and Widgets tabs). On appear, screens call `dataStore.loadCachedPayload()`
+only, and show `LastUpdatedLabel` plus a pull-to-refresh hint. Do not add
+auto-refresh timers or on-appear `refresh()` without an explicit product request.
+
+| Surface | Data source | Network? |
+|---------|-------------|----------|
+| Rankings tab (20 rows/tour) | Cached Worker payload | Pull-to-refresh only |
+| Widgets gallery — rankings / live / order of play | Same cache | Pull-to-refresh only |
+| Widgets gallery — tournaments | `TournamentCalendar` (bundled 2026) | Never |
+| Widgets gallery — favorite player | `TennisPlayer` bundled rank + `seasonRecord` + hero asset | Never |
+| Onboarding favorite-player row | Worker top 10 (or top 5+5 for Both) | **Once ever** on first app open |
+| Home-screen widget extension | Worker (Pro/bypass only) | Widget timeline refresh |
+
+**Onboarding one-time fetch** (`OnboardingFlowView.task` →
+`WidgetDataStore.refreshOnceForOnboarding()`):
+
+1. Loads cache if present — if hit, no network.
+2. Else checks `didFetchOnboardingRankings` in app group — if set, no network
+   (even if cache was cleared later).
+3. Else calls `refresh()` once and sets the flag on success.
+
+`FavoritePlayersView` maps API rankings onto bundled photos via diacritic-insensitive
+last-name + first-initial matching; players outside the bundled catalog get
+`custom:` IDs and placeholder avatars. Custom search (`PlayerSearchCatalog`) stays
+bundled — no API for autocomplete.
+
+**Free vs Pro widget access:** `AppGroupConstants.widgetAccessEnabled` is synced from
+RevenueCat Pro or referral bypass. Free onboarding completion sets it `false` so home
+widgets show the locked state. The in-app Favorite player gallery card is always free
+and never reads live rankings.
 
 ### Player hero images (zero API cost)
 
@@ -242,38 +302,157 @@ them at runtime and do NOT use the paid RapidAPI for images:
 The old `player-{id}` imagesets are small circular avatar cutouts still used by
 onboarding/rankings; `player-{id}-paywall` are pre-blurred paywall backgrounds.
 
-### Previewing the Home screen
+### Previewing tabs & Settings (DEBUG launch args)
 
-Build scheme `Courtify`, install on the iPhone 17 Pro simulator, then launch with
-the DEBUG-only `-UITestHome` argument to skip onboarding:
+All hooks are parsed from `ProcessInfo.processInfo.arguments` via
+`Courtify/Shared/UITestLaunchArgs.swift` — pass flags to `simctl launch`, not
+`UserDefaults`.
+
+| Flag | Effect |
+|------|--------|
+| `-UITestHome` | Skip onboarding → main `TabView` |
+| `-UITestPaywall` | Reset onboarding prefs → onboarding / paywall flow |
+| `-UITestTab schedule\|rankings\|widgets` | Open that tab (omit for Home) |
+| `-UITestSettings` | Auto-present Settings sheet (Home tab) |
+| `-UITestWidgetFilter free\|small\|medium\|large` | Preselect Widgets gallery filter |
+| `-UITestWidgetOnly <itemID>` | Render one widget card (see IDs below) |
+
+**Standard build + launch loop:**
 
 ```bash
 xcodebuild -scheme Courtify -project Courtify.xcodeproj \
   -destination 'platform=iOS Simulator,id=744F6ACA-F0CC-4105-8794-D798EF7726CC' \
   -derivedDataPath .derivedData build
-xcrun simctl install 744F6ACA-F0CC-4105-8794-D798EF7726CC .derivedData/Build/Products/Debug-iphonesimulator/Courtify.app
-xcrun simctl launch 744F6ACA-F0CC-4105-8794-D798EF7726CC com.courtify.xyz -UITestHome
+xcrun simctl install 744F6ACA-F0CC-4105-8794-D798EF7726CC \
+  .derivedData/Build/Products/Debug-iphonesimulator/Courtify.app
+xcrun simctl launch 744F6ACA-F0CC-4105-8794-D798EF7726CC com.courtify.xyz \
+  -UITestHome -UITestTab rankings
 ```
 
-Add `-UITestTab schedule|rankings|widgets` to open a specific tab (DEBUG only,
-read in `HomeView`), and `-UITestSettings` to auto-present the Settings sheet.
-The Widgets tab supports two more DEBUG args: `-UITestWidgetFilter
-free|small|medium|large` preselects a gallery filter pill, and
-`-UITestWidgetOnly <itemID>` renders a single widget card (IDs in the
-`sections` catalog in `WidgetsCollectionView.swift`) — useful for
-screenshotting below-the-fold widgets since there is no scroll automation.
-To preview WTA variants, write the shared app-group pref
-before launch (find the container with `xcrun simctl get_app_container <udid>
-com.courtify.xyz groups`):
+Wait **~7 seconds** after launch (bootstrap `ProgressView` + RevenueCat) before
+`xcrun simctl io <udid> screenshot out.png`.
 
-```bash
-xcrun simctl spawn <udid> defaults write \
-  "<group-container>/Library/Preferences/group.com.courtify.xyz" tourPreference WTA
-```
+### Simulator testing (for agents)
 
-Screenshot with `xcrun simctl io <udid> screenshot out.png`. Note there is no
-tap/scroll automation tooling installed — verify states by relaunching with
-different args/prefs.
+Use this loop every session — do not rediscover setup:
+
+1. **Build + install** (Debug, `.derivedData`):
+   ```bash
+   xcodebuild -scheme Courtify -project Courtify.xcodeproj \
+     -destination 'platform=iOS Simulator,id=744F6ACA-F0CC-4105-8794-D798EF7726CC' \
+     -derivedDataPath .derivedData build
+   xcrun simctl install 744F6ACA-F0CC-4105-8794-D798EF7726CC \
+     .derivedData/Build/Products/Debug-iphonesimulator/Courtify.app
+   ```
+
+2. **Launch to a specific state** — combine flags as needed:
+   ```bash
+   xcrun simctl launch 744F6ACA-F0CC-4105-8794-D798EF7726CC com.courtify.xyz \
+     -UITestHome -UITestTab schedule
+   ```
+
+3. **WTA tour** — write app-group pref before launch:
+   ```bash
+   CONTAINER=$(xcrun simctl get_app_container 744F6ACA-F0CC-4105-8794-D798EF7726CC \
+     com.courtify.xyz groups | awk '{print $2}')
+   PLIST="$CONTAINER/Library/Preferences/group.com.courtify.xyz"
+   xcrun simctl spawn 744F6ACA-F0CC-4105-8794-D798EF7726CC \
+     defaults write "$PLIST" tourPreference WTA
+   ```
+
+4. **Free vs Pro** — same plist path:
+   ```bash
+   xcrun simctl spawn <udid> defaults write "$PLIST" referralBypassActive -bool NO
+   xcrun simctl spawn <udid> defaults write "$PLIST" widgetAccessEnabled -bool NO
+   ```
+
+5. **Seed rankings cache** (test tiles without pull-to-refresh):
+   ```bash
+   curl -s https://courtify-tennis-worker.courtify.workers.dev/api/widget-data \
+     -o /tmp/widget-data.json
+   HEX=$(xxd -p /tmp/widget-data.json | tr -d '\n')
+   xcrun simctl spawn <udid> defaults write "$PLIST" widgetDataPayloadCache -data "$HEX"
+   ```
+
+6. **Clear cache** (empty Rankings / pull-hint state):
+   ```bash
+   xcrun simctl spawn <udid> defaults delete "$PLIST" widgetDataPayloadCache
+   ```
+
+7. **Widget gallery item IDs** for `-UITestWidgetOnly`:
+   `favorite`, `next-small`, `countdown`, `next-large`, `calendar`,
+   `atp-medium`, `atp-large`, `wta-medium`, `wta-large`, `live`, `order`
+
+8. **No tap/scroll automation** — relaunch with different args/prefs instead of
+   trying to tap filter pills or pull to refresh.
+
+9. **Layout checks from screenshots:** PRO badge overlapping row 1 (reserve ~56pt
+   trailing inset in widget previews), slam logos stretched (use `.fit` not
+   `.fill`), bottom tab bar cropping (scroll bottom padding in layout containers).
+
+**Simulator:** iPhone 17 Pro `744F6ACA-F0CC-4105-8794-D798EF7726CC`
+
+### TestFlight release
+
+1. Bump `CURRENT_PROJECT_VERSION` in `Courtify.xcodeproj/project.pbxproj` (all targets).
+2. Commit + push when the user asks.
+3. Deploy Worker if `index.js` changed: `npx wrangler deploy`
+4. Upload:
+   ```bash
+   bash scripts/upload-testflight.sh
+   ```
+   Uses `scripts/xcode-env.sh` (`DEVELOPER_DIR` → Xcode 26.0.1). Archive +
+   export + upload to App Store Connect; wait for processing in TestFlight.
+
+### Home-screen widget (manual E2E)
+
+After onboarding with a favorite player set, long-press home screen → add widget →
+Courtify → **Player Tracker** (small). Free users should see the locked view;
+Pro/referral users see bundled rank + optional live data. Changing favorite in
+Settings or the Widgets gallery picker calls `WidgetTimelineRefresher.reloadAll()`.
+Agents cannot add widgets via simctl — verify in Simulator manually or on device
+after TestFlight install.
+
+---
+
+## Established practices (build on these, don't redo)
+
+### UI/UX anti-patterns (already fixed — don't reintroduce)
+
+- White rounded card overlapping hero on Schedule/Rankings (use dark tiles + `CourtifyTileDivider`).
+- Fixed % height split on Home (use flex hero + content-sized countdown).
+- Circular `player-{id}` asset as Home hero (use `player-{id}-hero` torso).
+- Duplicate Get Premium pills on Home (one beside Grand Slam only).
+- Slam logo in Schedule hero at `.fill` in a small frame (assets are wide — use typography or `.fit`).
+- Per-row `.padding` inside `ForEach` passed to `CourtifyHeroScrollScreen` listContent (wrap rows in a single `VStack` in the container instead).
+- `AsyncImage` on Home or Schedule (bundled only on those surfaces).
+
+### UI/UX building blocks
+
+- **Design reference:** F1-style sports app — dark tiles, gradient heroes, no white cards.
+- **Reuse:** `CourtifyLayout` containers, `TourPillToggle`, `ProfileIconButton`,
+  `.settingsSheet`, `LastUpdatedLabel`, `PullToRefreshHint`, `GetPremiumPill`.
+- **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Free/Small/Medium/Large;
+  sectioned catalog; only **Favorite player** is free (bundled). All other cards Pro-gated
+  (`PRO 🎾` badge → paywall). Reserve ~56pt trailing inset in widget previews so PRO badges
+  don't overlap row 1.
+- **Onboarding player cards:** horizontal scroll, star on primary pick, bundled search sheet
+  for out-of-top-10 names.
+
+### API / backend
+
+- One Worker request serves rankings + live + upcoming; iOS caches the whole payload in app group.
+- Worker refresh is **on-demand** (stale KV + user/client request), max once per 6 h — not cron.
+- WTA points ×100 normalization: `normalizeRankingPoints` at parse **and** `normalizeCachedPayload` at serve.
+- Expanding ranking depth: change `pageSize` in `index.js` **and** deploy — UI reads `dataStore.rankings(for:)`.
+- Player photos in-app: bundled assets. Widget extension may cache RapidAPI image URLs via `WidgetImageCache` (Pro widget cost only).
+
+### Testing
+
+- Parse launch args via `UITestLaunchArgs` — add new hooks there + document in this file.
+- Prefer launch-arg / plist state over UI automation.
+- Wait ~7s after launch before screenshots.
+- Screenshot every UI state you change before calling the task done.
 
 ---
 

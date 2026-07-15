@@ -1,0 +1,47 @@
+---
+description: Courtify UI/UX, API cost, and simulator testing practices — read AGENTS.md for full detail
+alwaysApply: true
+---
+
+# Courtify agent practices
+
+Full context lives in `AGENTS.md` (start with **Agent quick start**). Do not re-invent patterns already implemented there.
+
+## UI/UX (F1-app style)
+
+- **Layouts:** `Courtify/Shared/CourtifyLayout.swift` only — `CourtifyFullBleedScreen` (Home), `CourtifyHeroScrollScreen` (Schedule/Rankings), `CourtifyPlainScrollScreen` (Widgets).
+- **Safe-area traps (fixed — do not reintroduce):**
+  1. Never `.ignoresSafeArea(edges: .top)` on a view wrapping a `GeometryReader` (safeTop becomes 0).
+  2. Never offset hero background up inside a `ScrollView` (clips → dark band under status bar). ScrollView gets `.ignoresSafeArea(edges: .top)`; pad hero *content* with safeTop.
+- **Chrome:** `midnightGreen` base, gradient heroes, `opticYellow` highlights, `courtGreen` tile subtitles, `CourtifyTileDivider` hairlines. `ProfileIconButton` + `.settingsSheet` on **all four tabs**.
+- **Motion:** `CourtifyMotion` + `.courtifyButton(...)` only — no new haptics/animation curves.
+- **Widgets gallery:** filter pills All/Free/Small/Medium/Large; only **Favorite player** is free (bundled). Others Pro-gated (`PRO 🎾`). Reserve ~56pt trailing inset in widget previews.
+
+## API cost (strict)
+
+| Data | Source | When it fetches |
+|------|--------|-----------------|
+| Favorite player / hero images | Bundled `TennisPlayer` + `player-*-hero` assets | Never at runtime |
+| Tournament schedule | `TournamentCalendar` | Never |
+| Rankings / live / order of play | Worker via `WidgetDataStore` | Pull-to-refresh only |
+| Onboarding top-10 player row | Worker | **Once ever** via `refreshOnceForOnboarding()` |
+
+On appear: `loadCachedPayload()` only — no `refresh()` without user pull or the one-time onboarding exception.
+
+Worker: on-demand KV refresh (max every 6 h), ATP/WTA top 20 (`pageSize=20`). WTA points normalized ×100 in `index.js`. Deploy: `npx wrangler deploy`.
+
+## Simulator testing (no tap automation)
+
+- Simulator: iPhone 17 Pro `744F6ACA-F0CC-4105-8794-D798EF7726CC`
+- Build: `xcodebuild … -derivedDataPath .derivedData` → `simctl install` → `simctl launch`
+- Launch args parsed by `UITestLaunchArgs.swift` from `ProcessInfo` (not UserDefaults):
+  `-UITestHome`, `-UITestTab schedule|rankings|widgets`, `-UITestSettings`,
+  `-UITestWidgetFilter free|small|medium|large`, `-UITestWidgetOnly <itemID>`, `-UITestPaywall`
+- Wait ~7s after launch (bootstrap spinner) before screenshots.
+- App-group prefs: `simctl get_app_container <udid> com.courtify.xyz groups` → `defaults write` on `group.com.courtify.xyz`
+
+## Release
+
+- Bump `CURRENT_PROJECT_VERSION` in `Courtify.xcodeproj/project.pbxproj` before TestFlight
+- Upload: `bash scripts/upload-testflight.sh` (uses `scripts/xcode-env.sh` → Xcode 26.0.1)
+- Commit/push only when the user asks (see user rules); workspace rule encourages push after stable work

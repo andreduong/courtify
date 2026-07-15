@@ -34,8 +34,7 @@ struct HomeView: View {
     /// specific tab in the simulator (used by agents to screenshot tabs).
     private static var initialTab: HomeTab {
         #if DEBUG
-        if let raw = UserDefaults.standard.string(forKey: "UITestTab"),
-           let tab = HomeTab(rawValue: raw) {
+        if let raw = UITestLaunchArgs.tab, let tab = HomeTab(rawValue: raw) {
             return tab
         }
         #endif

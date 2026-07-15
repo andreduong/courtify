@@ -56,7 +56,7 @@ struct HomeDashboardView: View {
             // (Rankings/Widgets tabs) to keep API usage minimal.
             dataStore.loadCachedPayload()
             #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-UITestSettings") {
+            if UITestLaunchArgs.showsSettings {
                 showSettings = true
             }
             #endif

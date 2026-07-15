@@ -29,6 +29,7 @@ Do this at the end of a session when changes are stable, not after every single 
 ## Documentation
 
 - Update `AGENTS.md` when architecture, APIs, deployment steps, or agent workflows change
+- Cursor rule `.cursor/rules/courtify-practices.mdc` mirrors the highest-signal constraints; keep it in sync when practices change
 - Keep Worker JSON schema docs in sync with `index.js` when the payload shape changes
 
 ## Example end-of-task flow
