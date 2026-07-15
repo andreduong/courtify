@@ -29,5 +29,6 @@ struct WidgetLockedView: View {
             }
             .padding(12)
         }
+        .courtifyWidgetCanvas()
     }
 }

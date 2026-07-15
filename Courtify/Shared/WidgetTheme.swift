@@ -1,9 +1,10 @@
 import SwiftUI
 
 enum WidgetTheme {
-    static let midnightGreen = Color(red: 10 / 255, green: 18 / 255, blue: 13 / 255)
-    static let opticYellow = Color(red: 204 / 255, green: 1, blue: 0)
-    static let emeraldGreen = Color(red: 0, green: 112 / 255, blue: 60 / 255)
+    static let midnightGreen = Color(hex: 0x0A120D)
+    static let opticYellow = Color(hex: 0xCCFF00)
+    static let emeraldGreen = Color(hex: 0x00703C)
+    static let courtGreen = Color(hex: 0x35C77F)
 
     static func roundedFont(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
         .system(style, design: .rounded).weight(weight)

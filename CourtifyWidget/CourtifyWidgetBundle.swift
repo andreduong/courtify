@@ -4,7 +4,12 @@ import SwiftUI
 @main
 struct CourtifyWidgetBundle: WidgetBundle {
     var body: some Widget {
-        PlayerTrackerWidget()
+        FavoritePlayerWidget()
+        NextTournamentWidget()
+        SeasonCalendarWidget()
+        ATPStandingsWidget()
+        WTAStandingsWidget()
+        LiveScoresWidget()
         OrderOfPlayWidget()
     }
 }

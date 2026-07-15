@@ -1,0 +1,121 @@
+import WidgetKit
+import SwiftUI
+
+// MARK: - Entry
+
+struct TournamentEntry: TimelineEntry {
+    let date: Date
+    let tour: TourPreference
+    let isLocked: Bool
+}
+
+// MARK: - Provider
+
+struct TournamentProvider: TimelineProvider {
+    func placeholder(in context: Context) -> TournamentEntry {
+        TournamentEntry(date: .now, tour: WidgetPreviewSamples.previewTour, isLocked: false)
+    }
+
+    private func lockedEntry() -> TournamentEntry {
+        TournamentEntry(date: .now, tour: WidgetPayloadReader.preferredTour(), isLocked: true)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (TournamentEntry) -> Void) {
+        if context.isPreview {
+            completion(placeholder(in: context))
+            return
+        }
+        guard AppGroupConstants.widgetAccessEnabled else {
+            completion(lockedEntry())
+            return
+        }
+        completion(TournamentEntry(date: .now, tour: WidgetPayloadReader.preferredTour(), isLocked: false))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<TournamentEntry>) -> Void) {
+        let entry: TournamentEntry
+        if AppGroupConstants.widgetAccessEnabled {
+            entry = TournamentEntry(date: .now, tour: WidgetPayloadReader.preferredTour(), isLocked: false)
+        } else {
+            entry = lockedEntry()
+        }
+        let refresh = Calendar.current.date(byAdding: .hour, value: 1, to: .now) ?? .now.addingTimeInterval(3600)
+        completion(Timeline(entries: [entry], policy: .after(refresh)))
+    }
+}
+
+// MARK: - Widget
+
+struct NextTournamentWidget: Widget {
+    let kind = WidgetTimelineRefresher.nextTournamentKind
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: TournamentProvider()) { entry in
+            Group {
+                if entry.isLocked {
+                    WidgetLockedView(
+                        title: "Next tournament",
+                        subtitle: "Go Pro for tournament countdown widgets."
+                    )
+                } else {
+                    TournamentWidgetContent(tour: entry.tour)
+                }
+            }
+        }
+        .configurationDisplayName("Next tournament")
+        .description("Countdown to the next major on your tour.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled()
+    }
+}
+
+private struct TournamentWidgetContent: View {
+    @Environment(\.widgetFamily) private var family
+    let tour: TourPreference
+
+    var body: some View {
+        switch family {
+        case .systemMedium:
+            TournamentCountdownView(tour: tour)
+        case .systemLarge:
+            NextTournamentLargeView(tour: tour)
+        default:
+            NextTournamentSmallView(tour: tour)
+        }
+    }
+}
+
+struct SeasonCalendarWidget: Widget {
+    let kind = WidgetTimelineRefresher.seasonCalendarKind
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: TournamentProvider()) { entry in
+            Group {
+                if entry.isLocked {
+                    WidgetLockedView(
+                        title: "Season calendar",
+                        subtitle: "Go Pro for the full 2026 tournament calendar."
+                    )
+                } else {
+                    SeasonCalendarView(tour: entry.tour)
+                }
+            }
+        }
+        .configurationDisplayName("Season calendar")
+        .description("Full 2026 tournament schedule for your tour.")
+        .supportedFamilies([.systemLarge])
+        .contentMarginsDisabled()
+    }
+}
+
+#Preview(as: .systemSmall) {
+    NextTournamentWidget()
+} timeline: {
+    TournamentEntry(date: .now, tour: .atp, isLocked: false)
+}
+
+#Preview(as: .systemLarge) {
+    SeasonCalendarWidget()
+} timeline: {
+    TournamentEntry(date: .now, tour: .atp, isLocked: false)
+}

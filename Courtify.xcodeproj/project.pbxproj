@@ -48,12 +48,18 @@
 		F7A8B9C0D1E2934456F70829 /* FavoritePlayerResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */; };
 		F8A9B0C1D2E3045567F81990 /* WidgetMockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */; };
 		F9C0D1E2F3045567F8193A5D /* WidgetTimelineRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */; };
+		G1B2C3D4E5F60718293A4B62 /* WidgetGalleryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = G1A2B3C4D5E6478890A1B2C5 /* WidgetGalleryViews.swift */; };
+		G2B2C3D4E5F60718293A4B63 /* WidgetPayloadReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2A3B4C5D6E7589901B2C3D5 /* WidgetPayloadReader.swift */; };
+		G7B2C3D4E5F60718293A4B65 /* WidgetPreviewSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = G7A2B3C4D5E6478890A1B2C7 /* WidgetPreviewSamples.swift */; };
+		G8B2C3D4E5F60718293A4B66 /* WidgetCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = G8A2B3C4D5E6478890A1B2C8 /* WidgetCanvas.swift */; };
+		H1B2C3D4E5F60718293A4B64 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = H1A2B3C4D5E6478890A1B2C6 /* Color+Hex.swift */; };
 		W7F8A9B0C1D2E3045567F819 /* WidgetMockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */; };
 		W8A9B0C1D2E3F4056677F81A /* WidgetTimelineRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */; };
 		W0D1E2F3045567F8193A4B5D /* OrderOfPlayWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = W1E2F3045567F8193A4B5C6D /* OrderOfPlayWidget.swift */; };
 		W1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift */; };
 		W2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift */; };
-		W2E3F4056677F8193A4B5C6D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = W3F4056677F8193A4B5C6D7E /* Assets.xcassets */; };
+		W2MAINASSETS12345678AB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4E0989DAC1B245ECA4E79614 /* Assets.xcassets */; };
+		W2TOUR7890123456ABCDEF /* TournamentCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B61 /* TournamentCalendar.swift */; };
 		W3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift */; };
 		W4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift */; };
 		W4F5067788F8193A4B5C6D7E /* CourtifyWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = W5F6078899F8193A4B5C6D7E /* CourtifyWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -61,7 +67,15 @@
 		W6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */; };
 		W7A8B9C0D1E2934456F70829 /* OnboardingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE78DDB0206F46168BA5AE16 /* OnboardingModels.swift */; };
 		W8B9C0D1E2F3045567F8193A /* CourtifyWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = W9C0D1E2F3045567F8193A4B /* CourtifyWidgetBundle.swift */; };
-		W9C0D1E2F3045567F8193A4C /* PlayerTrackerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = W0D1E2F3045567F8193A4B5C /* PlayerTrackerWidget.swift */; };
+		G1W2B3C4D5E6478890A1B2C3 /* WidgetGalleryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = G1A2B3C4D5E6478890A1B2C5 /* WidgetGalleryViews.swift */; };
+		G2W2B3C4D5E6478890A1B2C4 /* WidgetPayloadReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = G2A3B4C5D6E7589901B2C3D5 /* WidgetPayloadReader.swift */; };
+		G7W2B3C4D5E6478890A1B2C6 /* WidgetPreviewSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = G7A2B3C4D5E6478890A1B2C7 /* WidgetPreviewSamples.swift */; };
+		G8W2B3C4D5E6478890A1B2C7 /* WidgetCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = G8A2B3C4D5E6478890A1B2C8 /* WidgetCanvas.swift */; };
+		H1W2B3C4D5E6478890A1B2C5 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = H1A2B3C4D5E6478890A1B2C6 /* Color+Hex.swift */; };
+		G3W2B3C4D5E6478890A1B2C5 /* FavoritePlayerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = G3A4B5C6D7E8690012C3D4E6 /* FavoritePlayerWidget.swift */; };
+		G4W2B3C4D5E6478890A1B2C6 /* TournamentWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = G4A5B6C7D8E9701123D4E5F7 /* TournamentWidgets.swift */; };
+		G5W2B3C4D5E6478890A1B2C7 /* RankingsWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5A6B7C8D9E0812234E5F608 /* RankingsWidgets.swift */; };
+		G6W2B3C4D5E6478890A1B2C8 /* LiveScoresWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = G6A7B8C9D0E1923345F60719 /* LiveScoresWidget.swift */; };
 		WAC0D1E2F3045567F8193A4D /* WidgetLockedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WBC0D1E2F3045567F8193A4E /* WidgetLockedView.swift */; };
 /* End PBXBuildFile section */
 
@@ -131,7 +145,15 @@
 		F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerResolver.swift; sourceTree = "<group>"; };
 		F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetMockData.swift; sourceTree = "<group>"; };
 		F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTimelineRefresher.swift; sourceTree = "<group>"; };
-		W0D1E2F3045567F8193A4B5C /* PlayerTrackerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerTrackerWidget.swift; sourceTree = "<group>"; };
+		G1A2B3C4D5E6478890A1B2C5 /* WidgetGalleryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetGalleryViews.swift; sourceTree = "<group>"; };
+		G2A3B4C5D6E7589901B2C3D5 /* WidgetPayloadReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPayloadReader.swift; sourceTree = "<group>"; };
+		G7A2B3C4D5E6478890A1B2C7 /* WidgetPreviewSamples.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPreviewSamples.swift; sourceTree = "<group>"; };
+		G8A2B3C4D5E6478890A1B2C8 /* WidgetCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCanvas.swift; sourceTree = "<group>"; };
+		H1A2B3C4D5E6478890A1B2C6 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
+		G3A4B5C6D7E8690012C3D4E6 /* FavoritePlayerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerWidget.swift; sourceTree = "<group>"; };
+		G4A5B6C7D8E9701123D4E5F7 /* TournamentWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentWidgets.swift; sourceTree = "<group>"; };
+		G5A6B7C8D9E0812234E5F608 /* RankingsWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingsWidgets.swift; sourceTree = "<group>"; };
+		G6A7B8C9D0E1923345F60719 /* LiveScoresWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveScoresWidget.swift; sourceTree = "<group>"; };
 		WBC0D1E2F3045567F8193A4E /* WidgetLockedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetLockedView.swift; sourceTree = "<group>"; };
 		W1E2F3045567F8193A4B5C6D /* OrderOfPlayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderOfPlayWidget.swift; sourceTree = "<group>"; };
 		W3F4056677F8193A4B5C6D7E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -276,6 +298,11 @@
 				D1E2F3045567F8193A4B65 /* LastUpdatedLabel.swift */,
 				E2F3045567F8193A4B67 /* RefreshErrorFilter.swift */,
 				F5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift */,
+				G1A2B3C4D5E6478890A1B2C5 /* WidgetGalleryViews.swift */,
+				G2A3B4C5D6E7589901B2C3D5 /* WidgetPayloadReader.swift */,
+				G7A2B3C4D5E6478890A1B2C7 /* WidgetPreviewSamples.swift */,
+				G8A2B3C4D5E6478890A1B2C8 /* WidgetCanvas.swift */,
+				H1A2B3C4D5E6478890A1B2C6 /* Color+Hex.swift */,
 				F6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift */,
 				F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */,
 				F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */,
@@ -287,10 +314,12 @@
 			isa = PBXGroup;
 			children = (
 				W9C0D1E2F3045567F8193A4B /* CourtifyWidgetBundle.swift */,
-				W0D1E2F3045567F8193A4B5C /* PlayerTrackerWidget.swift */,
-				WBC0D1E2F3045567F8193A4E /* WidgetLockedView.swift */,
+				G3A4B5C6D7E8690012C3D4E6 /* FavoritePlayerWidget.swift */,
+				G4A5B6C7D8E9701123D4E5F7 /* TournamentWidgets.swift */,
+				G5A6B7C8D9E0812234E5F608 /* RankingsWidgets.swift */,
+				G6A7B8C9D0E1923345F60719 /* LiveScoresWidget.swift */,
 				W1E2F3045567F8193A4B5C6D /* OrderOfPlayWidget.swift */,
-				W3F4056677F8193A4B5C6D7E /* Assets.xcassets */,
+				WBC0D1E2F3045567F8193A4E /* WidgetLockedView.swift */,
 				W8F81990A1B2C3D4E5F60722 /* Info.plist */,
 				W7F81990A1B2C3D4E5F60718 /* CourtifyWidgetExtension.entitlements */,
 			);
@@ -392,7 +421,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				W2E3F4056677F8193A4B5C6D /* Assets.xcassets in Resources */,
+				W2MAINASSETS12345678AB /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -439,6 +468,11 @@
 				D1E2F3045567F8193A4B64 /* LastUpdatedLabel.swift in Sources */,
 				E2F3045567F8193A4B66 /* RefreshErrorFilter.swift in Sources */,
 				F6A7B8C9D0E1923345F60718 /* WidgetTheme.swift in Sources */,
+				G1B2C3D4E5F60718293A4B62 /* WidgetGalleryViews.swift in Sources */,
+				G2B2C3D4E5F60718293A4B63 /* WidgetPayloadReader.swift in Sources */,
+				G7B2C3D4E5F60718293A4B65 /* WidgetPreviewSamples.swift in Sources */,
+				G8B2C3D4E5F60718293A4B66 /* WidgetCanvas.swift in Sources */,
+				H1B2C3D4E5F60718293A4B64 /* Color+Hex.swift in Sources */,
 				F7A8B9C0D1E2934456F70829 /* FavoritePlayerResolver.swift in Sources */,
 				F8A9B0C1D2E3045567F81990 /* WidgetMockData.swift in Sources */,
 				F9C0D1E2F3045567F8193A5D /* WidgetTimelineRefresher.swift in Sources */,
@@ -450,14 +484,23 @@
 			buildActionMask = 2147483647;
 			files = (
 				W8B9C0D1E2F3045567F8193A /* CourtifyWidgetBundle.swift in Sources */,
-				W9C0D1E2F3045567F8193A4C /* PlayerTrackerWidget.swift in Sources */,
+				G3W2B3C4D5E6478890A1B2C5 /* FavoritePlayerWidget.swift in Sources */,
+				G4W2B3C4D5E6478890A1B2C6 /* TournamentWidgets.swift in Sources */,
+				G5W2B3C4D5E6478890A1B2C7 /* RankingsWidgets.swift in Sources */,
+				G6W2B3C4D5E6478890A1B2C8 /* LiveScoresWidget.swift in Sources */,
 				WAC0D1E2F3045567F8193A4D /* WidgetLockedView.swift in Sources */,
 				W0D1E2F3045567F8193A4B5D /* OrderOfPlayWidget.swift in Sources */,
 				W1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift in Sources */,
 				W2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift in Sources */,
+				W2TOUR7890123456ABCDEF /* TournamentCalendar.swift in Sources */,
 				W3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift in Sources */,
 				W4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift in Sources */,
 				W5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift in Sources */,
+				G1W2B3C4D5E6478890A1B2C3 /* WidgetGalleryViews.swift in Sources */,
+				G2W2B3C4D5E6478890A1B2C4 /* WidgetPayloadReader.swift in Sources */,
+				G7W2B3C4D5E6478890A1B2C6 /* WidgetPreviewSamples.swift in Sources */,
+				G8W2B3C4D5E6478890A1B2C7 /* WidgetCanvas.swift in Sources */,
+				H1W2B3C4D5E6478890A1B2C5 /* Color+Hex.swift in Sources */,
 				W6F7A8B9C0D1923345E6F708 /* FavoritePlayerResolver.swift in Sources */,
 				W7F8A9B0C1D2E3045567F819 /* WidgetMockData.swift in Sources */,
 				W8A9B0C1D2E3F4056677F81A /* WidgetTimelineRefresher.swift in Sources */,
@@ -602,7 +645,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -634,7 +677,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -665,8 +708,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = B2P86X9N67;
+				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CourtifyWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -691,8 +735,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = B2P86X9N67;
+				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CourtifyWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

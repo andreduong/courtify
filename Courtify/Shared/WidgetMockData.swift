@@ -53,7 +53,14 @@ enum WidgetMockData {
         "wta": [
           { "rank": 1, "points": 9800, "player": { "id": 7001, "name": "Iga Świątek", "country": "POL", "imageUrl": null } },
           { "rank": 2, "points": 8700, "player": { "id": 7002, "name": "Aryna Sabalenka", "country": "BLR", "imageUrl": null } },
-          { "rank": 3, "points": 7600, "player": { "id": 7003, "name": "Coco Gauff", "country": "USA", "imageUrl": null } }
+          { "rank": 3, "points": 7600, "player": { "id": 7003, "name": "Coco Gauff", "country": "USA", "imageUrl": null } },
+          { "rank": 4, "points": 6500, "player": { "id": 7004, "name": "Elena Rybakina", "country": "KAZ", "imageUrl": null } },
+          { "rank": 5, "points": 5400, "player": { "id": 7005, "name": "Jessica Pegula", "country": "USA", "imageUrl": null } },
+          { "rank": 6, "points": 4300, "player": { "id": 7006, "name": "Jasmine Paolini", "country": "ITA", "imageUrl": null } },
+          { "rank": 7, "points": 3200, "player": { "id": 7007, "name": "Madison Keys", "country": "USA", "imageUrl": null } },
+          { "rank": 8, "points": 2100, "player": { "id": 7008, "name": "Zheng Qinwen", "country": "CHN", "imageUrl": null } },
+          { "rank": 9, "points": 1800, "player": { "id": 7009, "name": "Barbora Krejcikova", "country": "CZE", "imageUrl": null } },
+          { "rank": 10, "points": 1500, "player": { "id": 7010, "name": "Mirra Andreeva", "country": "RUS", "imageUrl": null } }
         ],
       },
       "meta": { "sources": { "live": "mock", "atpRankings": "mock", "wtaRankings": "mock" } }
