@@ -90,6 +90,8 @@ https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/ms-api/uploads/Photo/{at
 
 - `server`: `1` = player1 serving, `2` = player2 serving, `null` if unknown (fixtures fallback has no server data)
 - Rate limits: Worker retries on 429/5xx with backoff; 250ms delay between sequential API calls
+- **Points normalization**: the WTA feed reports points scaled ×100 (e.g. `855000` for 8,550). `normalizeRankingPoints` fixes this at parse time *and* at serve time (`normalizeCachedPayload`), so stale KV payloads are corrected without extra RapidAPI calls.
+- Refresh model is **pull-based**: no cron; `/api/widget-data` refreshes from RapidAPI at most every 6 h (`MIN_REFRESH_INTERVAL_MS`) when a request finds the KV cache stale.
 
 ### Deployment checklist (user action required)
 
@@ -173,6 +175,15 @@ Use the shared containers in `Courtify/Shared/CourtifyLayout.swift` instead:
 
 If a new screen needs a full-bleed top, extend one of these rather than hand-rolling `ignoresSafeArea`.
 
+### Settings (profile) screen
+
+Every tab shows a `ProfileIconButton` (top-right) that presents `SettingsView`
+(`Courtify/Views/SettingsView.swift`) as a sheet — attach it with
+`.settingsSheet(isPresented:)`. It contains favorite player / Grand Slam cards
+with picker sheets (writes through `AppGroupConstants` so widgets reload),
+premium activate (paywall sheet) + RevenueCat restore, and placeholder
+contact/rate actions (`mailto:support@courtify.xyz`, `SKStoreReviewController`).
+
 ### Tab screen design language
 
 All tabs share: `ThemeManager.midnightGreen` base, gradient hero top
@@ -223,7 +234,7 @@ xcrun simctl launch 744F6ACA-F0CC-4105-8794-D798EF7726CC com.courtify.xyz -UITes
 ```
 
 Add `-UITestTab schedule|rankings|widgets` to open a specific tab (DEBUG only,
-read in `HomeView`). To preview WTA variants, write the shared app-group pref
+read in `HomeView`), and `-UITestSettings` to auto-present the Settings sheet. To preview WTA variants, write the shared app-group pref
 before launch (find the container with `xcrun simctl get_app_container <udid>
 com.courtify.xyz groups`):
 

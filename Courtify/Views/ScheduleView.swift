@@ -5,6 +5,7 @@ struct ScheduleView: View {
     private var tourPreferenceRaw = TourPreference.atp.rawValue
 
     @State private var selectedTour: TourPreference = .atp
+    @State private var showSettings = false
     @State private var now = Date()
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -36,6 +37,7 @@ struct ScheduleView: View {
             }
         }
         .onReceive(timer) { now = $0 }
+        .settingsSheet(isPresented: $showSettings)
     }
 
     // MARK: - Hero
@@ -55,7 +57,7 @@ struct ScheduleView: View {
     @ViewBuilder
     private var heroContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 12) {
                 Text("Upcoming Tournaments")
                     .font(ThemeManager.roundedFont(.title3, weight: .bold))
                     .foregroundStyle(.white)
@@ -63,6 +65,8 @@ struct ScheduleView: View {
                 Spacer()
 
                 TourPillToggle(selectedTour: $selectedTour)
+
+                ProfileIconButton(showSettings: $showSettings)
             }
 
             Spacer(minLength: 12)

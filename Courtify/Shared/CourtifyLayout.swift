@@ -104,6 +104,11 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
                     }
                 }
                 .scrollContentBackground(.hidden)
+                // The ScrollView itself extends under the status bar; the outer
+                // GeometryReader still reports the real safeTop for content.
+                // (ScrollViews clip at their bounds, so offsetting the hero
+                // upward would get cut off, leaving a dark band on top.)
+                .ignoresSafeArea(edges: .top)
                 .onAppear {
                     onScroll?(proxy)
                 }
@@ -127,8 +132,7 @@ private struct CourtifyHeroBlock<HeroBackground: View, HeroContent: View>: View 
     var body: some View {
         ZStack(alignment: .topLeading) {
             heroBackground()
-                .frame(maxWidth: .infinity)
-                .frame(height: heroHeight + safeTop)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay(alignment: .bottom) {
                     // Fade the hero into the screen background *behind* the hero
                     // content so text near the bottom stays fully legible.
@@ -139,15 +143,14 @@ private struct CourtifyHeroBlock<HeroBackground: View, HeroContent: View>: View 
                     )
                     .frame(height: 120)
                 }
-                .offset(y: -safeTop)
                 .clipped()
 
             heroContent()
                 .padding(.top, safeTop + CourtifyLayout.heroContentTopExtra)
                 .padding(.horizontal, 20)
-                .frame(maxWidth: .infinity, minHeight: heroHeight, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: heroHeight + safeTop, alignment: .topLeading)
         }
-        .frame(height: heroHeight)
+        .frame(height: heroHeight + safeTop)
     }
 }
 

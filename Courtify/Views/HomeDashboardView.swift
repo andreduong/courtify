@@ -11,6 +11,7 @@ struct HomeDashboardView: View {
     @ObservedObject private var dataStore = WidgetDataStore.shared
 
     @State private var showPaywall = false
+    @State private var showSettings = false
     @State private var now = Date()
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -54,8 +55,14 @@ struct HomeDashboardView: View {
             // Cache only — live data refreshes exclusively on pull-to-refresh
             // (Rankings/Widgets tabs) to keep API usage minimal.
             dataStore.loadCachedPayload()
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-UITestSettings") {
+                showSettings = true
+            }
+            #endif
         }
         .onReceive(timer) { now = $0 }
+        .settingsSheet(isPresented: $showSettings)
         .sheet(isPresented: $showPaywall) {
             PaywallView(
                 favoritePlayerID: favoritePlayerID.isEmpty ? "sinner" : favoritePlayerID,
@@ -81,10 +88,7 @@ struct HomeDashboardView: View {
                 HStack(alignment: .top) {
                     Spacer()
 
-                    Image(systemName: "person.crop.circle")
-                        .font(.system(size: 26, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .accessibilityLabel("Profile")
+                    ProfileIconButton(showSettings: $showSettings)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, safeTop + 8)

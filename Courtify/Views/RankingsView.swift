@@ -6,6 +6,7 @@ struct RankingsView: View {
     private var tourPreferenceRaw = TourPreference.atp.rawValue
 
     @State private var selectedTour: TourPreference = .atp
+    @State private var showSettings = false
 
     private var rankings: [WidgetRankingEntry] {
         dataStore.rankings(for: selectedTour)
@@ -33,6 +34,7 @@ struct RankingsView: View {
             // Cache only — live data refreshes exclusively on pull-to-refresh.
             dataStore.loadCachedPayload()
         }
+        .settingsSheet(isPresented: $showSettings)
     }
 
     // MARK: - Hero
@@ -61,7 +63,7 @@ struct RankingsView: View {
     @ViewBuilder
     private var heroContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 12) {
                 Text("\(selectedTour.rawValue) Rankings")
                     .font(ThemeManager.roundedFont(.title3, weight: .bold))
                     .foregroundStyle(.white)
@@ -69,6 +71,8 @@ struct RankingsView: View {
                 Spacer()
 
                 TourPillToggle(selectedTour: $selectedTour)
+
+                ProfileIconButton(showSettings: $showSettings)
             }
 
             Spacer(minLength: 0)

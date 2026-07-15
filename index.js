@@ -69,7 +69,7 @@ async function serveWidgetData(env) {
     }
 
     console.log("[api] Serving widget data from KV");
-    return new Response(data, {
+    return new Response(normalizeCachedPayload(data), {
       status: 200,
       headers: {
         ...CORS_HEADERS,
@@ -80,6 +80,25 @@ async function serveWidgetData(env) {
   } catch (error) {
     console.error("[api] Failed to read KV:", error);
     return jsonResponse({ error: "Failed to read cached data" }, 500);
+  }
+}
+
+/// Re-normalizes ranking points on the way out so payloads cached before a
+/// parser fix (e.g. WTA points scaled x100) are corrected without an extra
+/// RapidAPI refresh.
+function normalizeCachedPayload(data) {
+  try {
+    const payload = JSON.parse(data);
+    for (const tourKey of ["atp", "wta"]) {
+      const entries = payload?.rankings?.[tourKey];
+      if (!Array.isArray(entries)) continue;
+      for (const entry of entries) {
+        entry.points = normalizeRankingPoints(entry.points);
+      }
+    }
+    return JSON.stringify(payload);
+  } catch {
+    return data;
   }
 }
 
@@ -419,7 +438,9 @@ function parseRankings(data, tour) {
 
       return {
         rank: row.position ?? row.racePosition ?? row.rank ?? null,
-        points: row.rankingPoints ?? row.point ?? row.racePoints ?? row.points ?? null,
+        points: normalizeRankingPoints(
+          row.rankingPoints ?? row.point ?? row.racePoints ?? row.points ?? null
+        ),
         player: {
           id: playerId,
           name: player?.name ?? row?.name ?? "Unknown",
@@ -429,6 +450,17 @@ function parseRankings(data, tour) {
       };
     })
     .filter((entry) => entry.rank != null);
+}
+
+// The WTA feed reports points scaled x100 (e.g. 855000 for 8,550 — a decimal
+// serialized without the point). No real ranking exceeds ~15,000 points, so
+// anything above 30,000 that divides evenly by 100 is scaled back down.
+function normalizeRankingPoints(value) {
+  const numeric = typeof value === "string" ? Number.parseFloat(value) : value;
+  if (typeof numeric !== "number" || !Number.isFinite(numeric)) return null;
+  const rounded = Math.round(numeric);
+  if (rounded > 30_000 && rounded % 100 === 0) return rounded / 100;
+  return rounded;
 }
 
 function formatStructuredScore(event) {

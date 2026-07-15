@@ -27,6 +27,7 @@
 		B2C3D4E5F60718293A4B5C70 /* WidgetDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C71 /* WidgetDataStore.swift */; };
 		C3D4E5F60718293A4B5C6D80 /* ScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F60718293A4B5C6D81 /* ScheduleView.swift */; };
 		D4E5F60718293A4B5C6D7E90 /* RankingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F60718293A4B5C6D7E91 /* RankingsView.swift */; };
+		A15E77135E7713005E771300 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A15E77135E7713005E771301 /* SettingsView.swift */; };
 		E5F60718293A4B5C6D7E8F01 /* WidgetsCollectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F60718293A4B5C6D7E8F02 /* WidgetsCollectionView.swift */; };
 		8B9C0D1E2F3045567F8193A5E /* OnboardingCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B9C0D1E2F3045567F8193A5F /* OnboardingCompleteView.swift */; };
 		9C0D1E2F3045567F8193A4C0 /* HomeDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0D1E2F3045567F8193A4C1 /* HomeDashboardView.swift */; };
@@ -109,6 +110,7 @@
 		B2C3D4E5F60718293A4B5C71 /* WidgetDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataStore.swift; sourceTree = "<group>"; };
 		C3D4E5F60718293A4B5C6D81 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
 		D4E5F60718293A4B5C6D7E91 /* RankingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingsView.swift; sourceTree = "<group>"; };
+		A15E77135E7713005E771301 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		E5F60718293A4B5C6D7E8F02 /* WidgetsCollectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetsCollectionView.swift; sourceTree = "<group>"; };
 		CF5F523F402A409197FADC20 /* TourPreferenceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TourPreferenceView.swift; sourceTree = "<group>"; };
 		DE78DDB0206F46168BA5AE16 /* OnboardingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModels.swift; sourceTree = "<group>"; };
@@ -241,6 +243,7 @@
 				9C0D1E2F3045567F8193A4C1 /* HomeDashboardView.swift */,
 				C3D4E5F60718293A4B5C6D81 /* ScheduleView.swift */,
 				D4E5F60718293A4B5C6D7E91 /* RankingsView.swift */,
+				A15E77135E7713005E771301 /* SettingsView.swift */,
 				E5F60718293A4B5C6D7E8F02 /* WidgetsCollectionView.swift */,
 			);
 			path = Views;
@@ -421,6 +424,7 @@
 				B2C3D4E5F60718293A4B5C70 /* WidgetDataStore.swift in Sources */,
 				C3D4E5F60718293A4B5C6D80 /* ScheduleView.swift in Sources */,
 				D4E5F60718293A4B5C6D7E90 /* RankingsView.swift in Sources */,
+				A15E77135E7713005E771300 /* SettingsView.swift in Sources */,
 				E5F60718293A4B5C6D7E8F01 /* WidgetsCollectionView.swift in Sources */,
 				F2A3B4C5D6E7589901B2C3D4 /* AppGroupConstants.swift in Sources */,
 				F3A4B5C6D7E8690012C3D4E5 /* WidgetDataModels.swift in Sources */,
