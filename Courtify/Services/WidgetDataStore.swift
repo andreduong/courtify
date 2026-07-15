@@ -49,6 +49,23 @@ final class WidgetDataStore: ObservableObject {
         await task.value
     }
 
+    /// One-time fetch so onboarding can show real rankings on the very first
+    /// app open (API cost: a single Worker request, ever). Skipped when a
+    /// cached payload already exists; the success flag prevents refetching if
+    /// the user re-runs onboarding after the cache was cleared.
+    func refreshOnceForOnboarding() async {
+        loadCachedPayload()
+        guard payload == nil else { return }
+
+        let flagKey = AppGroupConstants.Keys.didFetchOnboardingRankings
+        guard !AppGroupConstants.userDefaults.bool(forKey: flagKey) else { return }
+
+        await refresh()
+        if payload != nil {
+            AppGroupConstants.userDefaults.set(true, forKey: flagKey)
+        }
+    }
+
     func rankings(for tour: TourPreference) -> [WidgetRankingEntry] {
         guard let payload else { return [] }
         switch tour {

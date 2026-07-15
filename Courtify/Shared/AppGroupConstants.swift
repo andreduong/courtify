@@ -23,6 +23,7 @@ enum AppGroupConstants {
         static let tourPreference = "tourPreference"
         static let favoriteGrandSlam = "favoriteGrandSlam"
         static let useMockWidgetData = "useMockWidgetData"
+        static let didFetchOnboardingRankings = "didFetchOnboardingRankings"
         static let widgetDataPayloadCache = "widgetDataPayloadCache"
         static let referralBypassActive = "referralBypassActive"
         static let widgetAccessEnabled = "widgetAccessEnabled"

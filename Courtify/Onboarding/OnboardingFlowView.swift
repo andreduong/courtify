@@ -62,6 +62,11 @@ struct OnboardingFlowView: View {
             }
         }
         .courtifyBackground()
+        .task {
+            // First-ever open: fetch real rankings once so the favorite-player
+            // step shows the actual top 10 instead of bundled placeholders.
+            await WidgetDataStore.shared.refreshOnceForOnboarding()
+        }
         .onAppear {
             openSpecialOfferPaywallIfNeeded()
             openPaywallIfNeeded()

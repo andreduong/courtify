@@ -3,13 +3,66 @@ import SwiftUI
 struct FavoritePlayersView: View {
     let tourPreference: TourPreference
     @Binding var favoritePlayerID: String
+    @ObservedObject private var dataStore = WidgetDataStore.shared
     @State private var selectedPlayerIDs: Set<String> = []
     @State private var showCustomPlayerSheet = false
 
     let onContinue: () -> Void
 
+    /// Real top-10 rankings fetched once on first launch; bundled players are
+    /// only a fallback when that fetch failed (offline first open).
     private var featuredPlayers: [TennisPlayer] {
-        TennisPlayer.topFive(for: tourPreference)
+        let real = realRankedPlayers
+        return real.isEmpty ? TennisPlayer.topFive(for: tourPreference) : real
+    }
+
+    private var realRankedPlayers: [TennisPlayer] {
+        guard let payload = dataStore.payload else { return [] }
+        switch tourPreference {
+        case .atp:
+            return rankedPlayers(from: payload.rankings.atp, tour: .atp, limit: 10)
+        case .wta:
+            return rankedPlayers(from: payload.rankings.wta, tour: .wta, limit: 10)
+        case .both:
+            return rankedPlayers(from: payload.rankings.atp, tour: .atp, limit: 5)
+                + rankedPlayers(from: payload.rankings.wta, tour: .wta, limit: 5)
+        }
+    }
+
+    private func rankedPlayers(from entries: [WidgetRankingEntry], tour: TourPreference, limit: Int) -> [TennisPlayer] {
+        entries
+            .filter { $0.rank != nil }
+            .prefix(limit)
+            .map { entry in
+                let rank = entry.rank ?? 0
+                if let bundled = bundledPlayer(matching: entry.player.name, tour: tour) {
+                    // Real rank, bundled photo asset.
+                    return TennisPlayer(id: bundled.id, name: bundled.name, tour: tour, imageName: bundled.imageName, ranking: rank)
+                }
+                return TennisPlayer(
+                    id: TennisPlayer.makeCustomID(name: entry.player.name, tour: tour),
+                    name: entry.player.name,
+                    tour: tour,
+                    imageName: nil,
+                    ranking: rank
+                )
+            }
+    }
+
+    /// Diacritic-insensitive match on last name + first initial so API
+    /// spellings ("Iga Swiatek", "Cori Gauff") match bundled players
+    /// ("Iga Świątek", "Coco Gauff").
+    private func bundledPlayer(matching name: String, tour: TourPreference) -> TennisPlayer? {
+        func fold(_ string: String) -> String {
+            string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US"))
+        }
+        let parts = fold(name).split(separator: " ")
+        guard let lastName = parts.last, let firstInitial = parts.first?.first else { return nil }
+        return TennisPlayer.topPlayers.first { candidate in
+            guard candidate.tour == tour else { return false }
+            let candidateParts = fold(candidate.name).split(separator: " ")
+            return candidateParts.last == lastName && candidateParts.first?.first == firstInitial
+        }
     }
 
     var body: some View {

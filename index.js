@@ -1,7 +1,7 @@
 /**
  * Courtify Tennis Widget Worker
  *
- * Fetches live scores + ATP/WTA top-10 rankings from the Tennis API
+ * Fetches live scores + ATP/WTA top-20 rankings from the Tennis API
  * (tennis-api-atp-wta-itf on RapidAPI), caches a lightweight payload in KV,
  * and serves it at GET /api/widget-data.
  */
@@ -18,8 +18,8 @@ const MAX_RETRIES = 1; // Retries multiply quota usage on BASIC plans
 const ENDPOINTS = {
   // Equivalent to fixtures?live=all on this API
   liveEvents: "/tennis/v2/extend/api/events/live",
-  atpRankings: "/tennis/v2/atp/ranking/singles?pageSize=10",
-  wtaRankings: "/tennis/v2/wta/ranking/singles?pageSize=10",
+  atpRankings: "/tennis/v2/atp/ranking/singles?pageSize=20",
+  wtaRankings: "/tennis/v2/wta/ranking/singles?pageSize=20",
   atpFixtures: "/tennis/v2/atp/fixtures?pageSize=100&filter=PlayerGroup:singles",
   wtaFixtures: "/tennis/v2/wta/fixtures?pageSize=100&filter=PlayerGroup:singles",
 };
@@ -431,7 +431,7 @@ function parseRankings(data, tour) {
   const rows = extractArray(data, ["data", "rankings", "results"]);
 
   return rows
-    .slice(0, 10)
+    .slice(0, 20)
     .map((row) => {
       const player = row.player ?? row;
       const playerId = player?.id ?? row?.id ?? null;
