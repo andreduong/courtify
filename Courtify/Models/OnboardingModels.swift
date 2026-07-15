@@ -72,9 +72,8 @@ struct TennisPlayer: Identifiable, Hashable {
     }
 
     /// Pre-blurred full-screen background baked at asset build time (no runtime blur).
-    var paywallImageName: String {
-        if isCustom { return placeholderImageName }
-        guard let imageName else { return placeholderImageName }
+    var paywallImageName: String? {
+        guard let imageName else { return nil }
         return "\(imageName)-paywall"
     }
 
@@ -132,6 +131,50 @@ enum PlayerSearchCatalog {
         let tour: TourPreference
 
         var id: String { "\(tour.rawValue)-\(name)" }
+
+        var atpTourCode: String? {
+            guard tour == .atp else { return nil }
+            return PlayerSearchCatalog.atpTourCode(for: name)
+        }
+    }
+
+    private static let atpTourCodes: [String: String] = [
+        "Novak Djokovic": "d643",
+        "Jannik Sinner": "s0ag",
+        "Carlos Alcaraz": "a0e2",
+        "Daniil Medvedev": "mm58",
+        "Alexander Zverev": "z355",
+        "Taylor Fritz": "fb98",
+        "Ben Shelton": "s0n0",
+        "Hubert Hurkacz": "hb64",
+        "Casper Ruud": "r0dg",
+        "Andrey Rublev": "re44",
+        "Stefanos Tsitsipas": "te51",
+        "Tommy Paul": "pl56",
+        "Grigor Dimitrov": "d875",
+        "Frances Tiafoe": "td51",
+        "Holger Rune": "r0la",
+        "Sebastian Korda": "kb05",
+        "Alex de Minaur": "dh58",
+        "Felix Auger-Aliassime": "ag37",
+        "Lorenzo Musetti": "m0ej",
+        "Matteo Berrettini": "bh60",
+    ]
+
+    static func atpTourCode(for name: String) -> String? {
+        let folded = fold(name)
+        if let exact = atpTourCodes[name] { return exact }
+        return atpTourCodes.first { fold($0.key) == folded }?.value
+    }
+
+    static func entry(matching name: String, tour: TourPreference) -> Entry? {
+        let folded = fold(name)
+        return entries.first { $0.tour == tour && fold($0.name) == folded }
+            ?? entries.first { fold($0.name) == folded }
+    }
+
+    private static func fold(_ string: String) -> String {
+        string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US"))
     }
 
     /// Bundled name list for zero-API autocomplete in onboarding.
@@ -184,7 +227,7 @@ enum PlayerSearchCatalog {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 
-        let needle = trimmed.lowercased()
+        let needle = fold(trimmed)
         let pool: [Entry]
         switch tourPreference {
         case .atp:
@@ -195,11 +238,24 @@ enum PlayerSearchCatalog {
             pool = entries
         }
 
+        let queryParts = needle.split(separator: " ").map(String.init)
+
         let ranked = pool.filter { entry in
-            entry.name.lowercased().contains(needle)
+            let name = fold(entry.name)
+            if name.contains(needle) { return true }
+            guard queryParts.count >= 2 else { return false }
+            let nameParts = name.split(separator: " ").map(String.init)
+            guard let queryLast = queryParts.last, let nameLast = nameParts.last else { return false }
+            let firstMatches = queryParts.dropLast().allSatisfy { part in
+                nameParts.contains { $0.hasPrefix(part) || part.hasPrefix($0) }
+            }
+            let lastMatches = nameLast.hasPrefix(queryLast)
+                || queryLast.hasPrefix(nameLast)
+                || levenshtein(nameLast, queryLast) <= 1
+            return firstMatches && lastMatches
         }.sorted { lhs, rhs in
-            let ll = lhs.name.lowercased()
-            let rl = rhs.name.lowercased()
+            let ll = fold(lhs.name)
+            let rl = fold(rhs.name)
             let lStarts = ll.hasPrefix(needle)
             let rStarts = rl.hasPrefix(needle)
             if lStarts != rStarts { return lStarts }
@@ -208,6 +264,25 @@ enum PlayerSearchCatalog {
         }
 
         return Array(ranked.prefix(limit))
+    }
+
+    private static func levenshtein(_ lhs: String, _ rhs: String) -> Int {
+        if lhs == rhs { return 0 }
+        if lhs.isEmpty { return rhs.count }
+        if rhs.isEmpty { return lhs.count }
+
+        var previous = Array(0 ... rhs.count)
+        for (i, leftChar) in lhs.enumerated() {
+            var current = [i + 1]
+            for (j, rightChar) in rhs.enumerated() {
+                let insertions = previous[j + 1] + 1
+                let deletions = current[j] + 1
+                let substitutions = previous[j] + (leftChar == rightChar ? 0 : 1)
+                current.append(min(insertions, deletions, substitutions))
+            }
+            previous = current
+        }
+        return previous.last ?? max(lhs.count, rhs.count)
     }
 }
 

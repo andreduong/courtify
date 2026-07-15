@@ -51,6 +51,7 @@ private struct AppRootView: View {
         .animation(CourtifyMotion.screen, value: shouldShowHome)
         .background(ThemeManager.midnightGreen.ignoresSafeArea())
         .task {
+            AppGroupConstants.migratePlayerCachesIfNeeded()
             await revenueCat.prepareForLaunch()
             await OfferNotificationManager.refreshAuthorizationState()
             BundledImageCache.warmOnboardingAssets()

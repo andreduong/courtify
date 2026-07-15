@@ -20,48 +20,12 @@ struct FavoritePlayersView: View {
         guard let payload = dataStore.payload else { return [] }
         switch tourPreference {
         case .atp:
-            return rankedPlayers(from: payload.rankings.atp, tour: .atp, limit: 10)
+            return FavoritePlayerCatalog.rankedPlayers(from: payload.rankings.atp, tour: .atp, limit: 10)
         case .wta:
-            return rankedPlayers(from: payload.rankings.wta, tour: .wta, limit: 10)
+            return FavoritePlayerCatalog.rankedPlayers(from: payload.rankings.wta, tour: .wta, limit: 10)
         case .both:
-            return rankedPlayers(from: payload.rankings.atp, tour: .atp, limit: 5)
-                + rankedPlayers(from: payload.rankings.wta, tour: .wta, limit: 5)
-        }
-    }
-
-    private func rankedPlayers(from entries: [WidgetRankingEntry], tour: TourPreference, limit: Int) -> [TennisPlayer] {
-        entries
-            .filter { $0.rank != nil }
-            .prefix(limit)
-            .map { entry in
-                let rank = entry.rank ?? 0
-                if let bundled = bundledPlayer(matching: entry.player.name, tour: tour) {
-                    // Real rank, bundled photo asset.
-                    return TennisPlayer(id: bundled.id, name: bundled.name, tour: tour, imageName: bundled.imageName, ranking: rank)
-                }
-                return TennisPlayer(
-                    id: TennisPlayer.makeCustomID(name: entry.player.name, tour: tour),
-                    name: entry.player.name,
-                    tour: tour,
-                    imageName: nil,
-                    ranking: rank
-                )
-            }
-    }
-
-    /// Diacritic-insensitive match on last name + first initial so API
-    /// spellings ("Iga Swiatek", "Cori Gauff") match bundled players
-    /// ("Iga Świątek", "Coco Gauff").
-    private func bundledPlayer(matching name: String, tour: TourPreference) -> TennisPlayer? {
-        func fold(_ string: String) -> String {
-            string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US"))
-        }
-        let parts = fold(name).split(separator: " ")
-        guard let lastName = parts.last, let firstInitial = parts.first?.first else { return nil }
-        return TennisPlayer.topPlayers.first { candidate in
-            guard candidate.tour == tour else { return false }
-            let candidateParts = fold(candidate.name).split(separator: " ")
-            return candidateParts.last == lastName && candidateParts.first?.first == firstInitial
+            return FavoritePlayerCatalog.rankedPlayers(from: payload.rankings.atp, tour: .atp, limit: 5)
+                + FavoritePlayerCatalog.rankedPlayers(from: payload.rankings.wta, tour: .wta, limit: 5)
         }
     }
 
@@ -134,7 +98,7 @@ struct FavoritePlayersView: View {
                 tourPreference: tourPreference,
                 onSelect: { entry in
                     let player = customPlayer(from: entry)
-                    selectCustomPlayer(player)
+                    Task { await selectCustomPlayer(player) }
                     showCustomPlayerSheet = false
                 }
             )
@@ -148,11 +112,38 @@ struct FavoritePlayersView: View {
     }
 
     private func customPlayer(from entry: PlayerSearchCatalog.Entry) -> TennisPlayer {
-        let id = TennisPlayer.makeCustomID(name: entry.name, tour: entry.tour)
-        return TennisPlayer(id: id, name: entry.name, tour: entry.tour, imageName: nil, ranking: 0)
+        FavoritePlayerCatalog.player(from: entry)
     }
 
-    private func selectCustomPlayer(_ player: TennisPlayer) {
+    @MainActor
+    private func selectCustomPlayer(_ player: TennisPlayer) async {
+        dataStore.loadCachedPayload()
+        PlayerPhotoStore.clearCachedPhotos(for: player.id)
+        PlayerRankCache.remove(for: player.id)
+
+        let meta = await PlayerRemoteLookup.fetch(for: player, payload: dataStore.payload)
+        if let meta {
+            PlayerRankCache.store(
+                rank: meta.rank,
+                apiId: meta.id,
+                name: meta.name,
+                photosVerified: false,
+                for: player.id
+            )
+        }
+
+        let photosSaved = await PlayerPhotoFetcher.ensurePhotos(
+            for: player,
+            payload: dataStore.payload,
+            apiId: meta?.id
+        )
+        if photosSaved {
+            PlayerRankCache.markPhotosVerified(for: player.id)
+        } else {
+            PlayerRankCache.remove(for: player.id)
+            PlayerPhotoStore.clearCachedPhotos(for: player.id)
+        }
+
         CourtifyMotion.animateSelection {
             selectedPlayerIDs.insert(player.id)
             favoritePlayerID = player.id
@@ -246,9 +237,7 @@ private struct PlayerAvatarCard: View {
         Button(action: onTap) {
             VStack(spacing: 12) {
                 ZStack(alignment: .topTrailing) {
-                    CachedBundledImage(name: player.resolvedImageName, contentMode: .fill)
-                        .frame(width: 88, height: 88)
-                        .clipShape(Circle())
+                    TennisPlayerPhotoView(player: player, style: .headshot, size: 88)
                         .overlay {
                             Circle()
                                 .strokeBorder(
@@ -343,9 +332,11 @@ private struct CustomPlayerSearchSheet: View {
                                 onSelect(entry)
                             } label: {
                                 HStack(spacing: 12) {
-                                    CachedBundledImage(name: entry.tour == .wta ? "placeholder-female" : "placeholder-male", contentMode: .fill)
-                                        .frame(width: 36, height: 36)
-                                        .clipShape(Circle())
+                                    TennisPlayerPhotoView(
+                                        player: FavoritePlayerCatalog.player(from: entry),
+                                        style: .headshot,
+                                        size: 36
+                                    )
 
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(entry.name)
@@ -374,9 +365,16 @@ private struct CustomPlayerSearchSheet: View {
                         onSelect(PlayerSearchCatalog.Entry(name: trimmed, tour: resolvedManualTour))
                     } label: {
                         HStack(spacing: 12) {
-                            CachedBundledImage(name: resolvedManualTour == .wta ? "placeholder-female" : "placeholder-male", contentMode: .fill)
-                                .frame(width: 36, height: 36)
-                                .clipShape(Circle())
+                            TennisPlayerPhotoView(
+                                player: FavoritePlayerCatalog.player(
+                                    from: PlayerSearchCatalog.Entry(
+                                        name: query.trimmingCharacters(in: .whitespacesAndNewlines),
+                                        tour: resolvedManualTour
+                                    )
+                                ),
+                                style: .headshot,
+                                size: 36
+                            )
 
                             Text("Add \"\(query.trimmingCharacters(in: .whitespacesAndNewlines))\"")
                                 .font(ThemeManager.roundedFont(.body, weight: .semibold))

@@ -21,9 +21,7 @@ enum WidgetPayloadReader {
     }
 
     static func favoritePlayer() -> TennisPlayer? {
-        let id = AppGroupConstants.userDefaults.string(forKey: AppGroupConstants.Keys.favoritePlayerID) ?? ""
-        guard !id.isEmpty else { return nil }
-        return TennisPlayer.player(for: id)
+        FavoritePlayerCatalog.resolvedFavoritePlayer()
     }
 
     static func nextRefreshDate(after date: Date = .now) -> Date {

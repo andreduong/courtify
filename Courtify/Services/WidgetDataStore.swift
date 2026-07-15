@@ -7,15 +7,19 @@ final class WidgetDataStore: ObservableObject {
     @Published private(set) var payload: WidgetDataPayload?
     @Published private(set) var isLoading = false
     @Published private(set) var lastError: String?
+    @Published private(set) var quotaExceededOnLastRefresh = false
 
     private static let cacheKey = AppGroupConstants.Keys.widgetDataPayloadCache
     private var refreshTask: Task<Void, Never>?
 
     var lastUpdated: Date? { payload?.updatedAt }
 
+    var hasCachedPayload: Bool {
+        payload != nil || AppGroupConstants.userDefaults.data(forKey: Self.cacheKey) != nil
+    }
+
     func loadCachedPayload() {
-        guard payload == nil,
-              let data = AppGroupConstants.userDefaults.data(forKey: Self.cacheKey) else { return }
+        guard let data = AppGroupConstants.userDefaults.data(forKey: Self.cacheKey) else { return }
         payload = try? JSONDecoder().decode(WidgetDataPayload.self, from: data)
     }
 
@@ -28,6 +32,7 @@ final class WidgetDataStore: ObservableObject {
         let task = Task { @MainActor in
             isLoading = true
             lastError = nil
+            quotaExceededOnLastRefresh = false
             defer {
                 isLoading = false
                 self.refreshTask = nil
@@ -41,7 +46,13 @@ final class WidgetDataStore: ObservableObject {
                 AppGroupConstants.userDefaults.set(data, forKey: Self.cacheKey)
             } catch {
                 guard !RefreshErrorFilter.isBenignCancellation(error) else { return }
+                if let apiError = error as? WidgetAPIError, apiError.isQuotaExceeded {
+                    quotaExceededOnLastRefresh = true
+                    loadCachedPayload()
+                    return
+                }
                 lastError = userFacingMessage(for: error)
+                loadCachedPayload()
             }
         }
 
@@ -79,7 +90,11 @@ final class WidgetDataStore: ObservableObject {
         if let apiError = error as? WidgetAPIError {
             switch apiError {
             case .invalidResponse: return "Could not reach Courtify servers."
-            case .httpStatus(let code): return "Server error (\(code)). Try again shortly."
+            case .httpStatus(let code):
+                if apiError.isQuotaExceeded {
+                    return "Tennis API quota reached. Showing your last saved rankings."
+                }
+                return "Server error (\(code)). Try again shortly."
             }
         }
         if let urlError = error as? URLError {

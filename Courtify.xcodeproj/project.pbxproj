@@ -53,6 +53,21 @@
 		G7B2C3D4E5F60718293A4B65 /* WidgetPreviewSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = G7A2B3C4D5E6478890A1B2C7 /* WidgetPreviewSamples.swift */; };
 		G8B2C3D4E5F60718293A4B66 /* WidgetCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = G8A2B3C4D5E6478890A1B2C8 /* WidgetCanvas.swift */; };
 		H2B2C3D4E5F60718293A4B68 /* CourtifyDeepLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = H2A2B3C4D5E6478890A1B2C9 /* CourtifyDeepLinks.swift */; };
+		J1B2C3D4E5F60718293A4B69 /* FavoritePlayerCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = J1A2B3C4D5E6478890A1B2CC /* FavoritePlayerCatalog.swift */; };
+		J3B2C3D4E5F60718293A4B6B /* FavoritePlayerPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = J3A2B3C4D5E6478890A1B2CE /* FavoritePlayerPickerSheet.swift */; };
+		K1B2C3D4E5F60718293A4B6D /* PlayerPhotoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = K1A2B3C4D5E6478890A1B2D1 /* PlayerPhotoStore.swift */; };
+		K2B2C3D4E5F60718293A4B6E /* PlayerPhotoFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = K2A2B3C4D5E6478890A1B2D2 /* PlayerPhotoFetcher.swift */; };
+		K4B2C3D4E5F60718293A4B70 /* PlayerRankCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = K4A2B3C4D5E6478890A1B2D4 /* PlayerRankCache.swift */; };
+		K5B2C3D4E5F60718293A4B71 /* PlayerRemoteLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = K5A2B3C4D5E6478890A1B2D5 /* PlayerRemoteLookup.swift */; };
+		K4W2B3C4D5E6478890A1B2D6 /* PlayerRankCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = K4A2B3C4D5E6478890A1B2D4 /* PlayerRankCache.swift */; };
+		K3B2C3D4E5F60718293A4B6F /* TennisPlayerPhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */; };
+		K3W2B3C4D5E6478890A1B2D7 /* TennisPlayerPhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */; };
+		L1B2C3D4E5F60718293A4B72 /* AssetCatalogImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */; };
+		L2B2C3D4E5F60718293A4B73 /* PlayerSilhouetteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */; };
+		M1B2C3D4E5F60718293A4B74 /* CourtifyMarqueeBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */; };
+		L2W2B3C4D5E6478890A1B2D8 /* PlayerSilhouetteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */; };
+		K1W2B3C4D5E6478890A1B2D4 /* PlayerPhotoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = K1A2B3C4D5E6478890A1B2D1 /* PlayerPhotoStore.swift */; };
+		J4B2C3D4E5F60718293A4B6C /* FavoritePlayerWidgetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = J4A2B3C4D5E6478890A1B2CF /* FavoritePlayerWidgetIntent.swift */; };
 		H1B2C3D4E5F60718293A4B64 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = H1A2B3C4D5E6478890A1B2C6 /* Color+Hex.swift */; };
 		W7F8A9B0C1D2E3045567F819 /* WidgetMockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */; };
 		W8A9B0C1D2E3F4056677F81A /* WidgetTimelineRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */; };
@@ -73,6 +88,8 @@
 		G7W2B3C4D5E6478890A1B2C6 /* WidgetPreviewSamples.swift in Sources */ = {isa = PBXBuildFile; fileRef = G7A2B3C4D5E6478890A1B2C7 /* WidgetPreviewSamples.swift */; };
 		G8W2B3C4D5E6478890A1B2C7 /* WidgetCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = G8A2B3C4D5E6478890A1B2C8 /* WidgetCanvas.swift */; };
 		H2W2B3C4D5E6478890A1B2CA /* CourtifyDeepLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = H2A2B3C4D5E6478890A1B2C9 /* CourtifyDeepLinks.swift */; };
+		J1W2B3C4D5E6478890A1B2CB /* FavoritePlayerCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = J1A2B3C4D5E6478890A1B2CC /* FavoritePlayerCatalog.swift */; };
+		J4W2B3C4D5E6478890A1B2CC /* FavoritePlayerWidgetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = J4A2B3C4D5E6478890A1B2CF /* FavoritePlayerWidgetIntent.swift */; };
 		H1W2B3C4D5E6478890A1B2C5 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = H1A2B3C4D5E6478890A1B2C6 /* Color+Hex.swift */; };
 		G3W2B3C4D5E6478890A1B2C5 /* FavoritePlayerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = G3A4B5C6D7E8690012C3D4E6 /* FavoritePlayerWidget.swift */; };
 		G4W2B3C4D5E6478890A1B2C6 /* TournamentWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = G4A5B6C7D8E9701123D4E5F7 /* TournamentWidgets.swift */; };
@@ -153,6 +170,17 @@
 		G8A2B3C4D5E6478890A1B2C8 /* WidgetCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCanvas.swift; sourceTree = "<group>"; };
 		H1A2B3C4D5E6478890A1B2C6 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
 		H2A2B3C4D5E6478890A1B2C9 /* CourtifyDeepLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyDeepLinks.swift; sourceTree = "<group>"; };
+		J1A2B3C4D5E6478890A1B2CC /* FavoritePlayerCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerCatalog.swift; sourceTree = "<group>"; };
+		K1A2B3C4D5E6478890A1B2D1 /* PlayerPhotoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerPhotoStore.swift; sourceTree = "<group>"; };
+		K2A2B3C4D5E6478890A1B2D2 /* PlayerPhotoFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerPhotoFetcher.swift; sourceTree = "<group>"; };
+		K4A2B3C4D5E6478890A1B2D4 /* PlayerRankCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRankCache.swift; sourceTree = "<group>"; };
+		K5A2B3C4D5E6478890A1B2D5 /* PlayerRemoteLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRemoteLookup.swift; sourceTree = "<group>"; };
+		L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetCatalogImage.swift; sourceTree = "<group>"; };
+		L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSilhouetteView.swift; sourceTree = "<group>"; };
+		M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyMarqueeBackground.swift; sourceTree = "<group>"; };
+		K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisPlayerPhotoView.swift; sourceTree = "<group>"; };
+		J3A2B3C4D5E6478890A1B2CE /* FavoritePlayerPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerPickerSheet.swift; sourceTree = "<group>"; };
+		J4A2B3C4D5E6478890A1B2CF /* FavoritePlayerWidgetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerWidgetIntent.swift; sourceTree = "<group>"; };
 		I1A2B3C4D5E6478890A1B2CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		G3A4B5C6D7E8690012C3D4E6 /* FavoritePlayerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerWidget.swift; sourceTree = "<group>"; };
 		G4A5B6C7D8E9701123D4E5F7 /* TournamentWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentWidgets.swift; sourceTree = "<group>"; };
@@ -312,6 +340,16 @@
 				F9B0C1D2E3F4056677F81991 /* WidgetMockData.swift */,
 				F0D1E2F3045567F8193A4C6E /* WidgetTimelineRefresher.swift */,
 				H2A2B3C4D5E6478890A1B2C9 /* CourtifyDeepLinks.swift */,
+				J1A2B3C4D5E6478890A1B2CC /* FavoritePlayerCatalog.swift */,
+				K1A2B3C4D5E6478890A1B2D1 /* PlayerPhotoStore.swift */,
+				K2A2B3C4D5E6478890A1B2D2 /* PlayerPhotoFetcher.swift */,
+				K4A2B3C4D5E6478890A1B2D4 /* PlayerRankCache.swift */,
+				K5A2B3C4D5E6478890A1B2D5 /* PlayerRemoteLookup.swift */,
+				L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */,
+				L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */,
+				M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */,
+				K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */,
+				J3A2B3C4D5E6478890A1B2CE /* FavoritePlayerPickerSheet.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -321,6 +359,7 @@
 			children = (
 				W9C0D1E2F3045567F8193A4B /* CourtifyWidgetBundle.swift */,
 				G3A4B5C6D7E8690012C3D4E6 /* FavoritePlayerWidget.swift */,
+				J4A2B3C4D5E6478890A1B2CF /* FavoritePlayerWidgetIntent.swift */,
 				G4A5B6C7D8E9701123D4E5F7 /* TournamentWidgets.swift */,
 				G5A6B7C8D9E0812234E5F608 /* RankingsWidgets.swift */,
 				G6A7B8C9D0E1923345F60719 /* LiveScoresWidget.swift */,
@@ -479,6 +518,17 @@
 				G7B2C3D4E5F60718293A4B65 /* WidgetPreviewSamples.swift in Sources */,
 				G8B2C3D4E5F60718293A4B66 /* WidgetCanvas.swift in Sources */,
 				H2B2C3D4E5F60718293A4B68 /* CourtifyDeepLinks.swift in Sources */,
+				J1B2C3D4E5F60718293A4B69 /* FavoritePlayerCatalog.swift in Sources */,
+				K1B2C3D4E5F60718293A4B6D /* PlayerPhotoStore.swift in Sources */,
+				K2B2C3D4E5F60718293A4B6E /* PlayerPhotoFetcher.swift in Sources */,
+				K4B2C3D4E5F60718293A4B70 /* PlayerRankCache.swift in Sources */,
+				K5B2C3D4E5F60718293A4B71 /* PlayerRemoteLookup.swift in Sources */,
+				L1B2C3D4E5F60718293A4B72 /* AssetCatalogImage.swift in Sources */,
+				M1B2C3D4E5F60718293A4B74 /* CourtifyMarqueeBackground.swift in Sources */,
+				L2B2C3D4E5F60718293A4B73 /* PlayerSilhouetteView.swift in Sources */,
+				K3B2C3D4E5F60718293A4B6F /* TennisPlayerPhotoView.swift in Sources */,
+				J3B2C3D4E5F60718293A4B6B /* FavoritePlayerPickerSheet.swift in Sources */,
+				J4B2C3D4E5F60718293A4B6C /* FavoritePlayerWidgetIntent.swift in Sources */,
 				H1B2C3D4E5F60718293A4B64 /* Color+Hex.swift in Sources */,
 				F7A8B9C0D1E2934456F70829 /* FavoritePlayerResolver.swift in Sources */,
 				F8A9B0C1D2E3045567F81990 /* WidgetMockData.swift in Sources */,
@@ -492,6 +542,12 @@
 			files = (
 				W8B9C0D1E2F3045567F8193A /* CourtifyWidgetBundle.swift in Sources */,
 				G3W2B3C4D5E6478890A1B2C5 /* FavoritePlayerWidget.swift in Sources */,
+				J1W2B3C4D5E6478890A1B2CB /* FavoritePlayerCatalog.swift in Sources */,
+				K4W2B3C4D5E6478890A1B2D6 /* PlayerRankCache.swift in Sources */,
+				K3W2B3C4D5E6478890A1B2D7 /* TennisPlayerPhotoView.swift in Sources */,
+				L2W2B3C4D5E6478890A1B2D8 /* PlayerSilhouetteView.swift in Sources */,
+				K1W2B3C4D5E6478890A1B2D4 /* PlayerPhotoStore.swift in Sources */,
+				J4W2B3C4D5E6478890A1B2CC /* FavoritePlayerWidgetIntent.swift in Sources */,
 				G4W2B3C4D5E6478890A1B2C6 /* TournamentWidgets.swift in Sources */,
 				G5W2B3C4D5E6478890A1B2C7 /* RankingsWidgets.swift in Sources */,
 				G6W2B3C4D5E6478890A1B2C8 /* LiveScoresWidget.swift in Sources */,
@@ -653,7 +709,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -686,7 +742,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -718,7 +774,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -745,7 +801,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;

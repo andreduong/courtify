@@ -13,11 +13,12 @@ struct HomeDashboardView: View {
     @State private var showPaywall = false
     @State private var showSettings = false
     @State private var now = Date()
+    @State private var photoRefreshToken = 0
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private var favoritePlayer: TennisPlayer? {
-        TennisPlayer.player(for: favoritePlayerID)
+        FavoritePlayerCatalog.resolvedPlayer(id: favoritePlayerID, payload: dataStore.payload)
     }
 
     private var selectedTour: TourPreference {
@@ -30,11 +31,7 @@ struct HomeDashboardView: View {
     }
 
     private var liveRank: Int? {
-        if let payload = dataStore.payload,
-           let resolved = FavoritePlayerResolver.ranking(for: payload) {
-            return resolved.rank
-        }
-        return favoritePlayer?.ranking
+        FavoritePlayerCatalog.displayRank(for: favoritePlayerID, payload: dataStore.payload)
     }
 
     var body: some View {
@@ -60,6 +57,10 @@ struct HomeDashboardView: View {
                 showSettings = true
             }
             #endif
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.favoritePlayerDidChange)) { _ in
+            photoRefreshToken += 1
+            dataStore.loadCachedPayload()
         }
         .onReceive(timer) { now = $0 }
         .settingsSheet(isPresented: $showSettings)
@@ -113,7 +114,8 @@ struct HomeDashboardView: View {
             )
 
             if let player = favoritePlayer {
-                CachedBundledImage(name: player.heroImageName, contentMode: .fit)
+                PlayerTorsoPhotoView(player: player, contentMode: .fit)
+                    .id("\(favoritePlayerID)-\(photoRefreshToken)")
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(.top, safeTop + 8)
 
@@ -266,7 +268,7 @@ struct HomeDashboardView: View {
         ThemeManager.midnightGreen
             .overlay {
                 if let slam = nextGrandSlam, let imageName = slam.heroImageName {
-                    CachedBundledImage(name: imageName, contentMode: .fill)
+                    AssetCatalogImage(name: imageName, contentMode: .fill)
                         .blur(radius: 14)
                         .scaleEffect(1.1)
                         .opacity(0.28)

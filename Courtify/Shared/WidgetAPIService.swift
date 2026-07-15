@@ -3,6 +3,8 @@ import Foundation
 enum WidgetAPIService {
     /// Set this to your deployed Worker URL (`wrangler deploy` → `https://<name>.<subdomain>.workers.dev/api/widget-data`).
     static let widgetDataURL = URL(string: "https://courtify-tennis-worker.courtify.workers.dev/api/widget-data")!
+    static let playerPhotoURL = URL(string: "https://courtify-tennis-worker.courtify.workers.dev/api/player-photo")!
+    static let playerLookupURL = URL(string: "https://courtify-tennis-worker.courtify.workers.dev/api/player-lookup")!
 
     static func fetchWidgetData() async throws -> WidgetDataPayload {
         let data = try await fetchWidgetDataBytes()
@@ -35,4 +37,11 @@ enum WidgetAPIService {
 enum WidgetAPIError: Error {
     case invalidResponse
     case httpStatus(Int)
+
+    var isQuotaExceeded: Bool {
+        if case .httpStatus(let code) = self {
+            return code == 429 || code == 503
+        }
+        return false
+    }
 }

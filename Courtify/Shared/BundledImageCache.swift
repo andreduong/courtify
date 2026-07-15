@@ -26,8 +26,12 @@ enum BundledImageCache {
     static func warmOnboardingAssets() {
         let names = TennisPlayer.topPlayers.flatMap { player -> [String] in
             guard let imageName = player.imageName else { return [] }
-            return [imageName, player.paywallImageName, player.heroImageName]
-        } + GrandSlam.allCases.map(\.logoImageName) + [
+            var assets = [imageName, player.heroImageName]
+            if let paywall = player.paywallImageName {
+                assets.append(paywall)
+            }
+            return assets
+        } + [
             "placeholder-male",
             "placeholder-female",
             "marquee-widget-strip",
@@ -35,6 +39,9 @@ enum BundledImageCache {
         ]
         for name in Set(names) {
             _ = uiImage(named: name)
+        }
+        for slam in GrandSlam.allCases {
+            storage.removeValue(forKey: slam.logoImageName)
         }
     }
 }

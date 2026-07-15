@@ -18,10 +18,10 @@ private enum WidgetGallerySize: String {
 
 private enum WidgetGalleryFilter: String, CaseIterable, Identifiable {
     case all = "All"
-    case free = "Free"
     case small = "Small"
     case medium = "Medium"
     case large = "Large"
+    case free = "Free"
 
     var id: String { rawValue }
 }
@@ -69,7 +69,7 @@ struct WidgetsCollectionView: View {
     }
 
     private var favoritePlayer: TennisPlayer? {
-        TennisPlayer.player(for: favoritePlayerID)
+        FavoritePlayerCatalog.resolvedPlayer(id: favoritePlayerID, payload: dataStore.payload)
     }
 
     private var preferredTour: TourPreference {
@@ -165,7 +165,20 @@ struct WidgetsCollectionView: View {
         .refreshable {
             await dataStore.refresh()
         }
-        .onAppear { dataStore.loadCachedPayload() }
+        .onAppear {
+            dataStore.loadCachedPayload()
+            #if DEBUG
+            if UITestLaunchArgs.opensFavoritePicker {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.5))
+                    showPlayerPicker = true
+                }
+            }
+            #endif
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.favoritePlayerDidChange)) { _ in
+            dataStore.loadCachedPayload()
+        }
         .settingsSheet(isPresented: $showSettings)
         .sheet(isPresented: $showPaywall) {
             PaywallView(
@@ -232,9 +245,7 @@ struct WidgetsCollectionView: View {
                 } else if row[0].size == .small {
                     HStack(alignment: .top, spacing: 16) {
                         widgetCard(for: row[0])
-                        Color.clear
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 1)
+                        Spacer(minLength: 0)
                     }
                 } else {
                     widgetCard(for: row[0])
@@ -278,6 +289,7 @@ struct WidgetsCollectionView: View {
     @ViewBuilder
     private func widgetCard(for item: WidgetGalleryItem) -> some View {
         let locked = isLocked(item)
+        let isSquareSmall = item.size == .small
         VStack(spacing: 8) {
             Button {
                 if locked {
@@ -288,7 +300,8 @@ struct WidgetsCollectionView: View {
             } label: {
                 ZStack(alignment: .topTrailing) {
                     previewContent(for: item)
-                        .frame(maxWidth: .infinity)
+                        .frame(width: isSquareSmall ? item.size.previewHeight : nil)
+                        .frame(maxWidth: isSquareSmall ? nil : .infinity)
                         .frame(height: item.size.previewHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
@@ -338,7 +351,9 @@ struct WidgetsCollectionView: View {
     @ViewBuilder
     private func previewContent(for item: WidgetGalleryItem) -> some View {
         switch item.id {
-        case "favorite": FavoritePlayerWidgetView(player: favoritePlayer)
+        case "favorite":
+            FavoritePlayerWidgetView(player: favoritePlayer)
+                .id(favoritePlayerID)
         case "next-small": NextTournamentSmallView(tour: preferredTour)
         case "countdown": TournamentCountdownView(tour: preferredTour)
         case "next-large": NextTournamentLargeView(tour: preferredTour)
@@ -356,64 +371,4 @@ struct WidgetsCollectionView: View {
 
 #Preview {
     WidgetsCollectionView()
-}
-
-private struct FavoritePlayerPickerSheet: View {
-    @Binding var favoritePlayerID: String
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(TennisPlayer.topPlayers) { player in
-                        Button {
-                            favoritePlayerID = player.id
-                            AppGroupConstants.updateFavoritePlayer(player.id)
-                            dismiss()
-                        } label: {
-                            HStack(spacing: 14) {
-                                CachedBundledImage(name: player.resolvedImageName, contentMode: .fill)
-                                    .frame(width: 44, height: 44)
-                                    .clipShape(Circle())
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(player.name)
-                                        .font(ThemeManager.roundedFont(.body, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                    Text("\(player.tour.rawValue) · No. \(player.ranking)")
-                                        .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                                        .foregroundStyle(ThemeManager.courtGreen)
-                                }
-
-                                Spacer()
-
-                                if favoritePlayerID == player.id {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(ThemeManager.opticYellow)
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .contentShape(Rectangle())
-                        }
-                        .courtifyButton(.card)
-
-                        CourtifyTileDivider()
-                    }
-                }
-                .padding(.top, 8)
-            }
-            .background(ThemeManager.midnightGreen.ignoresSafeArea())
-            .navigationTitle("Favorite player")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(ThemeManager.opticYellow)
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
 }

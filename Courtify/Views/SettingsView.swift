@@ -106,7 +106,7 @@ struct SettingsView: View {
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showPlayerPicker) {
-            FavoritePlayerPickerSheet(selectedID: $favoritePlayerID)
+            FavoritePlayerPickerSheet(favoritePlayerID: $favoritePlayerID)
         }
         .sheet(isPresented: $showSlamPicker) {
             FavoriteSlamPickerSheet(selectedRaw: $favoriteGrandSlamRaw)
@@ -393,53 +393,6 @@ private struct SettingsButtonRow: View {
 
 // MARK: - Pickers
 
-private struct FavoritePlayerPickerSheet: View {
-    @Binding var selectedID: String
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        PickerSheetShell(title: "Favorite player") {
-            ForEach(TennisPlayer.topPlayers) { player in
-                Button {
-                    CourtifyMotion.animateSelection {
-                        selectedID = player.id
-                    }
-                    AppGroupConstants.updateFavoritePlayer(player.id)
-                    dismiss()
-                } label: {
-                    HStack(spacing: 14) {
-                        CachedBundledImage(name: player.resolvedImageName, contentMode: .fill)
-                            .frame(width: 44, height: 44)
-                            .clipShape(Circle())
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(player.name)
-                                .font(ThemeManager.roundedFont(.headline, weight: .semibold))
-                                .foregroundStyle(.white)
-                            Text(player.tour.rawValue)
-                                .font(ThemeManager.roundedFont(.caption, weight: .semibold))
-                                .foregroundStyle(ThemeManager.courtGreen)
-                        }
-
-                        Spacer()
-
-                        if player.id == selectedID {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(ThemeManager.opticYellow)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .contentShape(Rectangle())
-                }
-                .courtifyButton(.card)
-
-                CourtifyTileDivider()
-            }
-        }
-    }
-}
-
 private struct FavoriteSlamPickerSheet: View {
     @Binding var selectedRaw: String
     @Environment(\.dismiss) private var dismiss
@@ -455,7 +408,7 @@ private struct FavoriteSlamPickerSheet: View {
                     dismiss()
                 } label: {
                     HStack(spacing: 14) {
-                        CachedBundledImage(name: slam.logoImageName, contentMode: .fit)
+                        AssetCatalogImage(name: slam.logoImageName, contentMode: .fit)
                             .frame(width: 44, height: 44)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 

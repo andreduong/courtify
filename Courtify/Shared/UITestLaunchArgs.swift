@@ -32,6 +32,11 @@ enum UITestLaunchArgs {
         value(after: "-UITestWidgetOnly")
     }
 
+    /// Opens the favorite-player picker sheet (Widgets tab).
+    static var opensFavoritePicker: Bool {
+        ProcessInfo.processInfo.arguments.contains("-UITestFavoritePicker")
+    }
+
     static func value(after flag: String) -> String? {
         let args = ProcessInfo.processInfo.arguments
         guard let index = args.firstIndex(of: flag), index + 1 < args.count else { return nil }

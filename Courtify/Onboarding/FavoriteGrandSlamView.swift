@@ -58,7 +58,7 @@ private struct GrandSlamRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 16) {
-                CachedBundledImage(name: slam.logoImageName, contentMode: .fit)
+                AssetCatalogImage(name: slam.logoImageName, contentMode: .fit)
                     .frame(width: 48, height: 48)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay {

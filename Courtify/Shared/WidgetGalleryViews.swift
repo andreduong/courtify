@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Favorite player (free, bundled)
 
@@ -24,13 +25,7 @@ struct FavoritePlayerWidgetView: View {
             )
 
             if let player {
-                Image(player.heroImageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(.leading, 78)
-                    .offset(x: 16)
-                    .opacity(0.95)
+                FavoritePlayerHeroImage(player: player)
             }
 
             VStack(alignment: .leading, spacing: 2) {
@@ -59,6 +54,38 @@ struct FavoritePlayerWidgetView: View {
             .padding(14)
         }
         .courtifyWidgetCanvas()
+    }
+}
+
+struct FavoritePlayerHeroImage: View {
+    let player: TennisPlayer
+
+    var body: some View {
+        Group {
+            if let bundled = player.imageName {
+                Image("\(bundled)-hero")
+                    .resizable()
+                    .scaledToFit()
+            } else if PlayerRankCache.photosVerified(for: player.id),
+                      PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
+                      let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
+                      let uiImage = UIImage(contentsOfFile: path) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+            } else if PlayerRankCache.photosVerified(for: player.id),
+                      PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
+                      let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head),
+                      let uiImage = UIImage(contentsOfFile: path) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .padding(.leading, 78)
+        .offset(x: 16)
+        .opacity(0.95)
     }
 }
 

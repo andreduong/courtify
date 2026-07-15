@@ -52,13 +52,9 @@ struct PaywallView: View {
     let onClose: () -> Void
     var onSkip: (() -> Void)?
 
-    private var favoritePlayer: TennisPlayer? {
-        TennisPlayer.player(for: favoritePlayerID)
-    }
-
     var body: some View {
         ZStack {
-            playerBackground
+            paywallBackground
 
             Color.black.opacity(0.45).ignoresSafeArea()
 
@@ -192,24 +188,13 @@ struct PaywallView: View {
     }
 
     @ViewBuilder
-    private var playerBackground: some View {
-        GeometryReader { geo in
-            Group {
-                if let player = favoritePlayer {
-                    CachedBundledImage(name: player.paywallImageName, contentMode: .fill)
-                } else {
-                    ThemeManager.midnightGreen
-                        .overlay {
-                            Image(systemName: "tennisball.fill")
-                                .font(.system(size: 120, weight: .bold, design: .rounded))
-                                .foregroundStyle(ThemeManager.emeraldGreen.opacity(0.3))
-                        }
-                }
-            }
-            .frame(width: geo.size.width, height: geo.size.height)
-            .clipped()
+    private var paywallBackground: some View {
+        ZStack {
+            ThemeManager.midnightGreen.ignoresSafeArea()
+            CourtifyMarqueeBackground()
+                .allowsHitTesting(false)
+                .ignoresSafeArea()
         }
-        .ignoresSafeArea()
     }
 
     private func packagePrice(for plan: SubscriptionPlan) -> String? {

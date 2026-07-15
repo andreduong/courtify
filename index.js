@@ -42,6 +42,14 @@ export default {
       return serveWidgetData(env);
     }
 
+    if (request.method === "GET" && url.pathname === "/api/player-photo") {
+      return servePlayerPhoto(url, env);
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/player-lookup") {
+      return servePlayerLookup(url, env);
+    }
+
     return jsonResponse({ error: "Not found" }, 404);
   },
 };
@@ -209,10 +217,11 @@ async function fetchSequentially(env, requests) {
   return results;
 }
 
-async function fetchWithRetry(env, path, label) {
+async function fetchWithRetry(env, path, label, maxRetries = MAX_RETRIES, options = {}) {
+  const noRetryOn429 = options.noRetryOn429 === true;
   let attempt = 0;
 
-  while (attempt < MAX_RETRIES) {
+  while (attempt < maxRetries) {
     attempt += 1;
     console.log(`[fetch] ${label} attempt ${attempt}: ${path}`);
 
@@ -222,9 +231,13 @@ async function fetchWithRetry(env, path, label) {
     });
 
     if (response.status === 429) {
+      console.warn(`[fetch] ${label} rate limited (429)`);
+      if (noRetryOn429) {
+        return { ok: false, status: 429, data: null };
+      }
       const retryAfter = parseInt(response.headers.get("Retry-After") || "5", 10);
       const backoffMs = Math.max(retryAfter, attempt) * 1000;
-      console.warn(`[fetch] ${label} rate limited (429) — waiting ${backoffMs}ms`);
+      console.warn(`[fetch] ${label} waiting ${backoffMs}ms before retry`);
       await sleep(backoffMs);
       continue;
     }
@@ -263,6 +276,190 @@ function playerImageUrl(tour, playerId) {
   if (!playerId) return null;
   const paddedId = String(playerId).padStart(5, "0");
   return `${API_BASE}/tennis/v2/ms-api/uploads/Photo/${tour.toLowerCase()}/${paddedId}.jpg`;
+}
+
+function foldPlayerName(name) {
+  return String(name)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function lastNameOf(name) {
+  const parts = foldPlayerName(name).split(/\s+/);
+  return parts.length ? parts[parts.length - 1] : "";
+}
+
+async function lookupPlayerMeta(env, tour, name) {
+  if (!env.RAPID_API_KEY || !name) return null;
+
+  const cacheKey = `player-meta:${tour}:${foldPlayerName(name)}`;
+  const cached = await env.TENNIS_DATA?.get?.(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch {
+      // Ignore corrupt cache entries.
+    }
+  }
+
+  // Legacy cache from earlier builds.
+  const legacyId = await env.TENNIS_DATA?.get?.(`player-id:${tour}:${foldPlayerName(name)}`);
+  if (legacyId) {
+    const meta = { id: String(legacyId), rank: null, name };
+    await cachePlayerMeta(env, cacheKey, meta);
+    return meta;
+  }
+
+  const meta = await fetchPlayerMetaFromRankings(env, tour, name);
+  if (!meta) return null;
+
+  await cachePlayerMeta(env, cacheKey, meta);
+  return meta;
+}
+
+async function cachePlayerMeta(env, cacheKey, meta) {
+  if (!env.TENNIS_DATA) return;
+  await env.TENNIS_DATA.put(cacheKey, JSON.stringify(meta), {
+    expirationTtl: 60 * 60 * 24 * 30,
+  });
+}
+
+/// One RapidAPI call (top-100 rankings) per uncached player name; KV caches for 30 days.
+async function fetchPlayerMetaFromRankings(env, tour, name) {
+  const path = `/tennis/v2/${tour}/ranking/singles?pageSize=100`;
+  const result = await fetchWithRetry(env, path, `rankings-meta-${tour}`, 1, { noRetryOn429: true });
+  if (!result.ok) return null;
+  return findPlayerInRankingsRows(
+    extractArray(result.data, ["data", "rankings", "results"]),
+    name,
+  );
+}
+
+function findPlayerInRankingsRows(rows, name) {
+  const match = rows.find((row) => {
+    const player = row.player ?? row;
+    const rowName = player?.name ?? row?.name ?? row?.player_name ?? "";
+    return namesMatch(rowName, name);
+  });
+  if (!match) return null;
+
+  const player = match.player ?? match;
+  const playerId = player?.id ?? match?.id ?? match?.player_id ?? null;
+  const rank = match.position ?? match.racePosition ?? match.rank ?? null;
+  const playerName = player?.name ?? match?.name ?? name;
+  if (!playerId || rank == null) return null;
+
+  return {
+    id: String(playerId),
+    rank: Number(rank),
+    name: playerName,
+  };
+}
+
+function namesMatch(candidate, target) {
+  const foldedCandidate = foldPlayerName(candidate);
+  const foldedTarget = foldPlayerName(target);
+  if (foldedCandidate === foldedTarget) return true;
+  const candidateLast = lastNameOf(candidate);
+  const targetLast = lastNameOf(target);
+  return candidateLast.length > 0 && candidateLast === targetLast;
+}
+
+function isImageBuffer(buffer) {
+  if (!buffer || buffer.byteLength < 4) return false;
+  const bytes = new Uint8Array(buffer.slice(0, 4));
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return true;
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return true;
+  return false;
+}
+
+async function servePlayerLookup(url, env) {
+  const tour = (url.searchParams.get("tour") || "atp").toLowerCase();
+  const name = url.searchParams.get("name");
+  if (!name) return jsonResponse({ error: "Missing name" }, 400);
+
+  if (!env.RAPID_API_KEY) {
+    return jsonResponse({ error: "Service unavailable" }, 503);
+  }
+
+  const meta = await lookupPlayerMeta(env, tour, name);
+  if (!meta?.id) {
+    return jsonResponse({ error: "Player not found" }, 404);
+  }
+
+  return jsonResponse({
+    id: Number(meta.id),
+    rank: meta.rank ?? null,
+    name: meta.name ?? name,
+    source: meta.rank != null ? "rankings-top-100" : "kv",
+  });
+}
+
+async function servePlayerPhoto(url, env) {
+  const tour = (url.searchParams.get("tour") || "atp").toLowerCase();
+  const apiId = url.searchParams.get("apiId");
+  const name = url.searchParams.get("name");
+  const code = url.searchParams.get("code");
+  const variant = url.searchParams.get("variant") || "head";
+
+  let upstream = null;
+  let useRapidHeaders = false;
+  let resolvedId = apiId;
+
+  if (!resolvedId && name) {
+    const meta = await lookupPlayerMeta(env, tour, name);
+    resolvedId = meta?.id ?? null;
+  }
+
+  if (resolvedId) {
+    upstream = playerImageUrl(tour, resolvedId);
+    useRapidHeaders = true;
+  } else if (code && tour === "atp") {
+    const alias =
+      variant === "hero"
+        ? `player-bodyshot/${code}`
+        : `player-gladiator-headshot/${code}`;
+    upstream = `https://www.atptour.com/-/media/alias/${alias}`;
+  }
+
+  if (!upstream) {
+    return jsonResponse({ error: "Missing apiId, name, or code" }, 400);
+  }
+
+  if (!env.RAPID_API_KEY && useRapidHeaders) {
+    return jsonResponse({ error: "Photo proxy unavailable" }, 503);
+  }
+
+  const headers = useRapidHeaders
+    ? buildHeaders(env.RAPID_API_KEY)
+    : {
+        Accept: "image/*",
+        Referer: "https://www.atptour.com/",
+        Origin: "https://www.atptour.com",
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      };
+
+  const upstreamResponse = await fetch(upstream, { headers });
+  if (!upstreamResponse.ok) {
+    return jsonResponse({ error: "Upstream photo unavailable" }, upstreamResponse.status);
+  }
+
+  const contentType = upstreamResponse.headers.get("Content-Type") || "image/jpeg";
+  const buffer = await upstreamResponse.arrayBuffer();
+  if (!isImageBuffer(buffer)) {
+    return jsonResponse({ error: "Upstream photo unavailable" }, 502);
+  }
+  return new Response(buffer, {
+    status: 200,
+    headers: {
+      ...CORS_HEADERS,
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=604800",
+    },
+  });
 }
 
 function parsePlayer(player, tour, fallbackId) {

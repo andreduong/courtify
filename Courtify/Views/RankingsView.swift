@@ -7,6 +7,7 @@ struct RankingsView: View {
 
     @State private var selectedTour: TourPreference = .atp
     @State private var showSettings = false
+    @State private var showQuotaAlert = false
 
     private var rankings: [WidgetRankingEntry] {
         dataStore.rankings(for: selectedTour)
@@ -25,14 +26,21 @@ struct RankingsView: View {
         )
         .refreshable {
             await dataStore.refresh()
+            if dataStore.quotaExceededOnLastRefresh {
+                showQuotaAlert = true
+            }
         }
         .tint(ThemeManager.opticYellow)
         .onAppear {
             if let pref = TourPreference(rawValue: tourPreferenceRaw), pref != .both {
                 selectedTour = pref == .wta ? .wta : .atp
             }
-            // Cache only — live data refreshes exclusively on pull-to-refresh.
             dataStore.loadCachedPayload()
+        }
+        .alert("API quota reached", isPresented: $showQuotaAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("We've hit the Tennis API quota for now. Your last saved rankings are still shown below.")
         }
         .settingsSheet(isPresented: $showSettings)
     }
@@ -97,6 +105,8 @@ struct RankingsView: View {
                         Text("· Pull down to refresh")
                             .font(ThemeManager.roundedFont(.caption2, weight: .medium))
                             .foregroundStyle(.white.opacity(0.35))
+                    } else if !rankings.isEmpty {
+                        EmptyView()
                     }
                 }
             }
@@ -113,7 +123,7 @@ struct RankingsView: View {
                 if dataStore.isLoading {
                     ProgressView()
                         .tint(ThemeManager.opticYellow)
-                } else {
+                } else if dataStore.lastUpdated == nil {
                     PullToRefreshHint(message: "Pull down to load \(selectedTour.rawValue) rankings")
 
                     if let error = dataStore.lastError {
@@ -123,6 +133,12 @@ struct RankingsView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
                     }
+                } else {
+                    Text("No \(selectedTour.rawValue) rankings in your saved cache.")
+                        .font(ThemeManager.roundedFont(.footnote))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
                 }
             }
             .frame(maxWidth: .infinity)

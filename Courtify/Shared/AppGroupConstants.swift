@@ -18,8 +18,13 @@ enum AppGroupConstants {
         containerURL?.appendingPathComponent("player-images", isDirectory: true)
     }
 
+    static let favoritePlayerDidChange = Notification.Name("favoritePlayerDidChange")
+
     enum Keys {
         static let favoritePlayerID = "favoritePlayerID"
+        static let favoritePlayerRevision = "favoritePlayerRevision"
+        static let favoritePlayerWidgetIntentID = "favoritePlayerWidgetIntentID"
+        static let favoritePlayerWidgetRevision = "favoritePlayerWidgetRevision"
         static let tourPreference = "tourPreference"
         static let favoriteGrandSlam = "favoriteGrandSlam"
         static let useMockWidgetData = "useMockWidgetData"
@@ -115,8 +120,34 @@ enum AppGroupConstants {
     }
 
     static func updateFavoritePlayer(_ playerID: String) {
+        let revision = userDefaults.integer(forKey: Keys.favoritePlayerRevision) + 1
         userDefaults.set(playerID, forKey: Keys.favoritePlayerID)
+        userDefaults.set(revision, forKey: Keys.favoritePlayerRevision)
         WidgetTimelineRefresher.reloadAll()
+        NotificationCenter.default.post(name: favoritePlayerDidChange, object: playerID)
+    }
+
+    static var favoritePlayerRevision: Int {
+        userDefaults.integer(forKey: Keys.favoritePlayerRevision)
+    }
+
+    static var favoritePlayerWidgetRevision: Int {
+        userDefaults.integer(forKey: Keys.favoritePlayerWidgetRevision)
+    }
+
+    static func markFavoritePlayerWidgetRevisionSynced() {
+        userDefaults.set(favoritePlayerRevision, forKey: Keys.favoritePlayerWidgetRevision)
+    }
+
+    /// Clears stale player photo/rank caches from earlier builds or failed API lookups.
+    static func migratePlayerCachesIfNeeded() {
+        let versionKey = "playerCacheSchemaVersion"
+        let currentVersion = 2
+        guard userDefaults.integer(forKey: versionKey) < currentVersion else { return }
+
+        PlayerRankCache.clearAll()
+        PlayerPhotoStore.clearAllCachedPhotos()
+        userDefaults.set(currentVersion, forKey: versionKey)
     }
 
     static func clearWidgetFavorites() {

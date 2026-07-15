@@ -23,7 +23,11 @@ This repo has two parts:
 | Full-bleed layouts | `Courtify/Shared/CourtifyLayout.swift` | Hand-roll `ignoresSafeArea` on a `GeometryReader`; offset hero backgrounds inside a `ScrollView` |
 | Live tennis data | `WidgetDataStore` + Worker KV cache | Add on-appear `refresh()`, timers, or per-screen fetch logic |
 | Tournament calendar | `TournamentCalendar` (bundled 2026) | Hit RapidAPI for schedule / slam dates |
-| Player photos (in-app) | `player-{id}-hero` assets + `TennisPlayer.heroImageName` | Fetch ATP/WTA CDN at runtime or use paid API images on free surfaces |
+| Player photos (in-app) | `player-{id}-hero` assets + `PlayerTorsoPhotoView` / `TennisPlayerPhotoView` | Use `placeholder-male` / `placeholder-female` letter assets for custom players |
+| Custom favorite rank/photo | `FavoritePlayerCatalog` + `PlayerRankCache` + `PlayerRemoteLookup` | Expand `/api/widget-data` to top 100 on every refresh; show unverified cache |
+| Paywall / splash backdrop | `CourtifyMarqueeBackground` | Per-player paywall photos or silhouettes on paywall |
+| Grand Slam logos | `AssetCatalogImage` in pickers | `CachedBundledImage` for slam assets (in-memory cache goes stale) |
+| Settings favorite cards | `CachedBundledImage` + original `FavoriteCard` layout | `FavoritePlayerHeroImage` (widget padding breaks the cards) |
 | Tab chrome | `ProfileIconButton`, `TourPillToggle`, `LastUpdatedLabel`, `CourtifyTileDivider` | Duplicate profile/settings entry points or introduce new haptic/animation curves |
 | Settings / favorites | `SettingsView` + `AppGroupConstants` | Write prefs outside app group (widgets won't see them) |
 | Simulator screenshots | `UITestLaunchArgs` + `simctl launch` flags | Install tap/scroll automation (none available) |
@@ -78,7 +82,24 @@ https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/ms-api/uploads/Photo/{at
 
 (`paddedId` = 5-digit zero-padded player ID, e.g. `05992`)
 
-### Widget JSON schema
+### On-demand player lookup & photos (quota-sensitive)
+
+Additional endpoints for **custom favorites** outside the bundled top-10 catalog:
+
+| Endpoint | Purpose | RapidAPI cost |
+|----------|---------|---------------|
+| `GET /api/player-lookup?tour=atp\|wta&name=…` | Rank + API id from top-100 rankings | **One** rankings call per uncached name; KV `player-meta:{tour}:{name}` TTL 30 days |
+| `GET /api/player-photo?tour=…&apiId=…&variant=head\|hero` | Proxy player JPEG from RapidAPI | One image fetch per variant |
+
+**Quota rules (learned the hard way):**
+
+- Do **not** expand `/api/widget-data` refresh to `pageSize=100` — keep top 20 for the shared payload.
+- `lookupPlayerMeta` uses a **single** `/ranking/singles?pageSize=100` call; no search/fixtures/ms-api chains.
+- Lookup fetches pass `noRetryOn429: true` — do not burn retries when quota is exhausted.
+- **Deploy Worker only when quota allows**; test lookup/photo paths sparingly in dev.
+
+iOS only calls lookup when the user **picks** a custom favorite (picker / onboarding). Display surfaces read cache only.
+
 
 ```json
 {
@@ -150,10 +171,11 @@ These steps are **not done** until the user completes them:
 
 | Type | Class / file | Role |
 |------|-------------|------|
-| Fetch + cache | `WidgetDataStore` | Single `@MainActor` store; KV cache key `widgetDataPayloadCache` in app group |
+| Fetch + cache | `WidgetDataStore` | Single `@MainActor` store; KV cache key `widgetDataPayloadCache` in app group; quota alert on 429/503 |
 | Models | `WidgetDataModels.swift` | Codable types matching Worker JSON |
-| API URL | `WidgetAPIService.widgetDataURL` | Production Worker endpoint |
-| Prefs | `AppGroupConstants` | `favoritePlayerID`, `tourPreference`, `widgetAccessEnabled`, `didFetchOnboardingRankings`, etc. |
+| API URL | `WidgetAPIService` | `widgetDataURL`, `playerLookupURL`, `playerPhotoURL` |
+| Prefs | `AppGroupConstants` | `favoritePlayerID`, `favoritePlayerRevision`, `favoritePlayerWidgetIntentID`, `playerRankCache`, etc. |
+| Favorites | `FavoritePlayerCatalog` | Resolve custom IDs, search, display rank |
 
 When changing the JSON schema, update `index.js`, `WidgetDataModels.swift`, and any widget preview code together.
 
@@ -187,9 +209,12 @@ If a new screen needs a full-bleed top, **extend one of these** — do not hand-
 
 - Uses `CourtifyFullBleedScreen` — never the old `GeometryReader` + `.ignoresSafeArea(.top)` pattern.
 - **Layout:** hero flexes (`maxHeight: .infinity`); Grand Slam countdown is `fixedSize` at the bottom — no fixed 48/52 split (that caused the gap under the player name).
-- **Hero image:** `TennisPlayer.heroImageName` → `player-{id}-hero` transparent torso (not the circular `player-{id}` avatar).
+- **Favorite resolve:** `FavoritePlayerCatalog.resolvedPlayer(id:payload:)` — supports `custom:` IDs and `PlayerRankCache` when photos verified.
+- **Hero image:** bundled `player-{id}-hero` for featured players; `PlayerTorsoPhotoView` for custom picks (verified API cache) or `PlayerSilhouetteView` (ATP/WTA) — **never** letter placeholders.
+- **Rank:** `FavoritePlayerCatalog.displayRank` — widget payload top 20 first, then `PlayerRankCache` only when `photosVerified`.
 - **Get Premium:** single pill beside "Next Grand Slam" only (not in the status-bar toolbar).
 - **Data:** `loadCachedPayload()` on appear only — no automatic Worker refresh.
+- **Grand Slam countdown bg:** `AssetCatalogImage` for slam logos (not `CachedBundledImage`).
 
 ### Schedule tab (`ScheduleView`)
 
@@ -201,9 +226,10 @@ If a new screen needs a full-bleed top, **extend one of these** — do not hand-
 ### Rankings tab (`RankingsView`)
 
 - `CourtifyHeroScrollScreen`; hero shows World No. 1 name + bundled `heroImageName` torso on the right.
-- Full top 10 as dark tiles (`RankingTile` + `CourtifyTileDivider`).
-- **Refresh:** `.refreshable { await dataStore.refresh() }` only; on appear → `loadCachedPayload()` only.
-- Hero shows `LastUpdatedLabel` + "· Pull down to refresh" when cache exists; empty cache shows `PullToRefreshHint`.
+- Full top 20 as dark tiles (`RankingTile` + `CourtifyTileDivider`).
+- **Refresh:** `.refreshable { await dataStore.refresh() }` only; on appear → `loadCachedPayload()` (always reloads from app-group disk).
+- Hero shows `LastUpdatedLabel` + "· Pull down to refresh" when cache exists; `PullToRefreshHint` only when **no cache at all**.
+- On pull-to-refresh with HTTP **429/503**, `WidgetDataStore.quotaExceededOnLastRefresh` → alert; **keep showing last cached rankings**.
 - WTA points come from Worker already normalized (see points normalization above).
 
 ### Settings (profile) screen
@@ -212,7 +238,9 @@ Every tab shows `ProfileIconButton` (top-right) → `SettingsView` sheet via
 `.settingsSheet(isPresented:)`. Contains:
 
 - **Your favorites** — player + Grand Slam cards with **Change** → picker sheets
-  (writes `AppGroupConstants` / `WidgetTimelineRefresher.reloadAll()`).
+  (`FavoritePlayerPickerSheet`, `FavoriteSlamPickerSheet`; writes `AppGroupConstants` / `WidgetTimelineRefresher.reloadAll()`).
+- **Favorite cards layout:** `CachedBundledImage` inside `FavoriteCard` — do **not** reuse `FavoritePlayerHeroImage` (widget-specific padding breaks the 158pt cards).
+- **Slam picker logos:** `AssetCatalogImage` (fresh from asset catalog).
 - **Personal** — time zone (display only), 24h format toggle, Premium activate
   (paywall), Restore purchase (RevenueCat).
 - **Help** — `mailto:support@courtify.xyz`, How to add widgets (in-app guide),
@@ -232,7 +260,7 @@ other animation curves or haptic calls.
 ### Widgets tab (gallery)
 
 `WidgetsCollectionView` is an F1-app-style gallery: filter pills
-(All / **Free** / Small / Medium / Large), sections with captions under each
+(All / Small / Medium / Large / **Free**), sections with captions under each
 card. Catalog: Favorite player (small, **free**), Next tournament
 (small + large), Tournament countdown (medium), Season calendar (large),
 ATP/WTA standings (medium top-5 + large top-10), Live scores (small),
@@ -243,10 +271,9 @@ Gating rules:
 - **Every widget is Pro-gated except Favorite player.** Entitled means
   `RevenueCatManager.isProUser || AppGroupConstants.referralBypassActive`.
 - Locked cards show a `PRO 🎾` badge and the whole card opens the paywall.
-- The Favorite player widget uses **bundled data only** (hardcoded
-  `TennisPlayer.ranking`, `seasonRecord`, hero asset) so free users never
-  trigger API calls. Its paintbrush button opens a picker that writes
-  `favoritePlayerID` via `AppGroupConstants.updateFavoritePlayer`.
+- The Favorite player widget uses **bundled season record** + `FavoritePlayerCatalog.resolvedPlayer` for rank when available; bundled `-hero` for featured players. Custom picks show verified API photos or empty hero (no letter placeholders).
+- **Gallery small widgets** are **165×165 pt squares** (`previewHeight` width = height); lone small cards align leading, not full-width.
+- Paintbrush on favorite card opens `FavoritePlayerPickerSheet` → writes `favoritePlayerID` via `AppGroupConstants.updateFavoritePlayer`.
 - Rankings / live / order-of-play cards read `WidgetDataStore` (cached payload;
   pull-to-refresh only). Tournament cards read the bundled
   `TournamentCalendar` (zero API cost).
@@ -263,7 +290,31 @@ auto-refresh timers or on-appear `refresh()` without an explicit product request
 | Rankings tab (20 rows/tour) | Cached Worker payload | Pull-to-refresh only |
 | Widgets gallery — rankings / live / order of play | Same cache | Pull-to-refresh only |
 | Widgets gallery — tournaments | `TournamentCalendar` (bundled 2026) | Never |
-| Widgets gallery — favorite player | `TennisPlayer` bundled rank + `seasonRecord` + hero asset | Never |
+| Widgets gallery — favorite player | Bundled season record + optional verified rank/photo cache | Picker select only (lookup + photo fetch) |
+
+### Custom favorite players (outside top 20)
+
+| File | Role |
+|------|------|
+| `FavoritePlayerCatalog` | Resolve `custom:atp\|wta:{name}` IDs; search; display rank |
+| `FavoritePlayerPickerSheet` | Shared picker (Settings + Widgets); search-first UX |
+| `PlayerRemoteLookup` | One `/api/player-lookup` on pick when not in top-20 payload |
+| `PlayerRankCache` | App-group `playerRankCache` — rank + apiId; `photosVerified` gate |
+| `PlayerPhotoFetcher` / `PlayerPhotoStore` | Download + cache head/hero JPEGs under `player-images/` |
+| `PlayerTorsoPhotoView` | Home hero; bundled `-hero` or verified cache or silhouette |
+| `PlayerSilhouetteView` | ATP `figure.tennis` / WTA `figure.dress.line.vertical.figure` fallback |
+| `TennisPlayerPhotoView` | Circular headshots in lists |
+
+**Pick flow:** clear stale photos → lookup → store rank (unverified) → fetch photos → `markPhotosVerified` on success; on failure remove rank cache and show silhouette.
+
+**Cache migration:** `AppGroupConstants.migratePlayerCachesIfNeeded()` (schema v2) wipes stale `playerRankCache` + `player-images/` once on upgrade.
+
+**Widget intent sync:** `FavoritePlayerWidget` only promotes widget-intent → app-group when intent **changes** (`favoritePlayerWidgetIntentID`), not on every reload.
+
+### Paywall
+
+- Background: `CourtifyMarqueeBackground` — same scrolling widget strip as onboarding splash (`SplashScreenView`), **not** per-player photos.
+- `BundledImageCache.warmOnboardingAssets()` on appear (includes `marquee-widget-strip`).
 | Onboarding favorite-player row | Worker top 10 (or top 5+5 for Both) | **Once ever** on first app open |
 | Home-screen widget extension | Worker (Pro/bypass only) | Widget timeline refresh |
 
@@ -300,9 +351,30 @@ them at runtime and do NOT use the paid RapidAPI for images:
   for `Torso`. Supports `?width=&height=` resizing.
 
 The old `player-{id}` imagesets are small circular avatar cutouts still used by
-onboarding/rankings; `player-{id}-paywall` are pre-blurred paywall backgrounds.
+onboarding/rankings; `player-{id}-paywall` are pre-blurred paywall backgrounds for **bundled** players only.
 
-### Previewing tabs & Settings (DEBUG launch args)
+**Never use `placeholder-male` / `placeholder-female`** for custom player surfaces — use `PlayerSilhouetteView` or verified API cache.
+
+### Bundled assets & image caching
+
+| Component | Use |
+|-----------|-----|
+| `CachedBundledImage` | Player onboarding cards, paywall bundled `-paywall` assets — **in-memory cache** |
+| `AssetCatalogImage` | Grand Slam logos in pickers / Home countdown — always reads asset catalog (avoids stale slam logos after asset swaps) |
+
+`BundledImageCache.warmOnboardingAssets()` preloads player + marquee assets; **does not** preload slam logos.
+
+### Simulator stale-state trap
+
+After changing **asset catalog PNGs** or **Swift UI logic**, agents must **uninstall** the app before re-installing — otherwise old in-memory `BundledImageCache` entries and app-group photo files can make fixes look broken:
+
+```bash
+xcrun simctl uninstall <udid> com.courtify.xyz
+# rebuild, install, launch
+```
+
+Seed rankings for UI tests: `defaults write … widgetDataPayloadCache -data "$(xxd -p /tmp/widget-data.json | tr -d '\n')"` on `group.com.courtify.xyz`.
+
 
 All hooks are parsed from `ProcessInfo.processInfo.arguments` via
 `Courtify/Shared/UITestLaunchArgs.swift` — pass flags to `simctl launch`, not
@@ -426,13 +498,20 @@ after TestFlight install.
 - Slam logo in Schedule hero at `.fill` in a small frame (assets are wide — use typography or `.fit`).
 - Per-row `.padding` inside `ForEach` passed to `CourtifyHeroScrollScreen` listContent (wrap rows in a single `VStack` in the container instead).
 - `AsyncImage` on Home or Schedule (bundled only on those surfaces).
+- `placeholder-male` / `placeholder-female` for custom favorites (use `PlayerSilhouetteView`).
+- `FavoritePlayerHeroImage` inside Settings `FavoriteCard` (widget padding breaks layout).
+- `CachedBundledImage` for Grand Slam logos after asset updates (use `AssetCatalogImage`).
+- Full-width small widget gallery cards (small = 165×165 square, leading-aligned).
+- Per-player photo/silhouette on paywall (use `CourtifyMarqueeBackground`).
 
 ### UI/UX building blocks
 
 - **Design reference:** F1-style sports app — dark tiles, gradient heroes, no white cards.
 - **Reuse:** `CourtifyLayout` containers, `TourPillToggle`, `ProfileIconButton`,
-  `.settingsSheet`, `LastUpdatedLabel`, `PullToRefreshHint`, `GetPremiumPill`.
-- **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Free/Small/Medium/Large;
+  `.settingsSheet`, `LastUpdatedLabel`, `PullToRefreshHint`, `GetPremiumPill`,
+  `FavoritePlayerCatalog`, `FavoritePlayerPickerSheet`, `PlayerTorsoPhotoView`, `PlayerSilhouetteView`,
+  `CourtifyMarqueeBackground`, `AssetCatalogImage`.
+- **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Small/Medium/Large/Free;
   sectioned catalog; only **Favorite player** is free (bundled). All other cards Pro-gated
   (`PRO 🎾` badge → paywall). Reserve ~56pt trailing inset in widget previews so PRO badges
   don't overlap row 1.
