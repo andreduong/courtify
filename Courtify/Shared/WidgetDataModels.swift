@@ -14,7 +14,14 @@ struct WidgetDataPayload: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let updatedAtString = try container.decode(String.self, forKey: .updatedAt)
-        updatedAt = ISO8601DateFormatter().date(from: updatedAtString) ?? Date()
+        guard let parsedUpdatedAt = WidgetDataPayload.date(fromISO8601: updatedAtString) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .updatedAt,
+                in: container,
+                debugDescription: "Invalid ISO-8601 date: \(updatedAtString)"
+            )
+        }
+        updatedAt = parsedUpdatedAt
         liveMatches = try container.decodeIfPresent([WidgetLiveMatch].self, forKey: .liveMatches) ?? []
         upcomingMatches = try container.decodeIfPresent([WidgetUpcomingMatch].self, forKey: .upcomingMatches) ?? []
         rankings = try container.decode(WidgetRankings.self, forKey: .rankings)
@@ -112,8 +119,7 @@ struct WidgetUpcomingMatch: Codable, Identifiable {
         player2 = try container.decode(WidgetPlayer.self, forKey: .player2)
 
         if let startTimeString = try container.decodeIfPresent(String.self, forKey: .startTime) {
-            startTime = ISO8601DateFormatter().date(from: startTimeString)
-                ?? WidgetDataPayload.dateFormatter.date(from: startTimeString)
+            startTime = WidgetDataPayload.date(fromISO8601: startTimeString)
         } else {
             startTime = nil
         }
@@ -156,12 +162,31 @@ struct WidgetMetaSources: Codable {
 }
 
 extension WidgetDataPayload {
-    static let dateFormatter: DateFormatter = {
+    private static let iso8601WithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let iso8601: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    private static let legacyDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
         return formatter
     }()
+
+    /// Worker `updatedAt` values use `toISOString()` (fractional seconds).
+    static func date(fromISO8601 string: String) -> Date? {
+        iso8601WithFractionalSeconds.date(from: string)
+            ?? iso8601.date(from: string)
+            ?? legacyDateFormatter.date(from: string)
+    }
 }
 
 private extension KeyedDecodingContainer {
