@@ -62,7 +62,13 @@ struct TennisPlayer: Identifiable, Hashable {
         return seasonRecord
     }
 
-    /// Bundled 2026 season W/L through current tour stop (placeholder until live stats API).
+    /// Prefer bundled featured W/L; custom favorites use Worker-backed `PlayerSeasonRecordCache`.
+    var displaySeasonRecord: (wins: Int, losses: Int)? {
+        if let bundled = bundledSeasonRecord { return bundled }
+        return PlayerSeasonRecordCache.record(for: id)
+    }
+
+    /// Bundled 2026 season W/L through current tour stop (featured catalog only).
     var seasonRecord: (wins: Int, losses: Int) {
         switch id {
         case "djokovic": return (28, 7)

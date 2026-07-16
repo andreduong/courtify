@@ -24,19 +24,22 @@ Full context lives in `AGENTS.md` (start with **Agent quick start**). Do not re-
 
 ## API cost (strict)
 
+**Upstream plan:** RapidAPI Matchstat **Pro ($29/mo)** on Tennis API - ATP WTA ITF. Basic (50 req/day) is **not** viable for custom photos / season W/L. Do not migrate vendors without an explicit product decision.
+
 | Data | Source | When it fetches |
 |------|--------|-----------------|
 | Favorite player hero (bundled) | `player-*-hero` assets | Never at runtime |
-| Custom favorite rank/photo | `/api/player-lookup` + `/api/player-photo` | **On pick only**; KV-cached 30d on Worker |
+| Custom favorite rank/photo | `/api/player-lookup` + `/api/player-photo` | **On pick only**; Worker KV 30d + Cloudflare edge photo cache 30d |
+| Custom favorite season W/L | `/api/player-season-record` → `PlayerSeasonRecordCache` | **On pick only**; Worker KV 24h |
 | Tournament schedule | `TournamentCalendar` | Never |
 | Rankings / live / order of play | Worker via `WidgetDataStore` | Pull-to-refresh only |
 | Onboarding top-10 player row | Worker | **Once ever** via `refreshOnceForOnboarding()` |
 
 On appear: `loadCachedPayload()` only (always reload from app-group disk). No `refresh()` without user pull or the one-time onboarding exception.
 
-**Quota:** Do not expand widget-data to top 100. Lookup = one rankings call per uncached name, no 429 retries. On 429/503 refresh, show alert and keep cached rankings. Custom photo failure → helper UX, not a blank broken hero.
+**Quota:** Do not expand widget-data to top 100. Do not fetch season W/L inside shared refresh. Lookup = one rankings call per uncached name, no 429 retries. Photos go through Worker edge cache. On 429/503 refresh, show alert and keep cached rankings. Custom photo failure → helper UX, not a blank broken hero. Worker skips RapidAPI when remaining quota is below reserve (5 on Basic-sized limits, 100 on Pro+).
 
-Worker: on-demand KV refresh (max every 6 h), ATP/WTA top 20 (`pageSize=20`). Deploy: `npx wrangler deploy` when quota allows.
+Worker: on-demand KV refresh (max every 6 h), **5** upstream calls (live + ATP/WTA rankings + ATP/WTA fixtures), ATP/WTA top 20 (`pageSize=20`). Deploy: `npx wrangler deploy` when quota allows (prefer after Pro upgrade).
 
 ## Simulator testing (no tap automation)
 

@@ -5,6 +5,7 @@ enum WidgetAPIService {
     static let widgetDataURL = URL(string: "https://courtify-tennis-worker.courtify.workers.dev/api/widget-data")!
     static let playerPhotoURL = URL(string: "https://courtify-tennis-worker.courtify.workers.dev/api/player-photo")!
     static let playerLookupURL = URL(string: "https://courtify-tennis-worker.courtify.workers.dev/api/player-lookup")!
+    static let playerSeasonRecordURL = URL(string: "https://courtify-tennis-worker.courtify.workers.dev/api/player-season-record")!
 
     static func fetchWidgetData() async throws -> WidgetDataPayload {
         let data = try await fetchWidgetDataBytes()

@@ -148,6 +148,7 @@ enum AppGroupConstants {
         guard userDefaults.integer(forKey: versionKey) < currentVersion else { return }
 
         PlayerRankCache.clearAll()
+        PlayerSeasonRecordCache.clearAll()
         PlayerPhotoStore.clearAllCachedPhotos()
         userDefaults.set(currentVersion, forKey: versionKey)
     }

@@ -24,7 +24,7 @@ This repo has two parts:
 | Live tennis data | `WidgetDataStore` + Worker KV cache | Add on-appear `refresh()`, timers, or per-screen fetch logic |
 | Tournament calendar | `TournamentCalendar` (bundled 2026) | Hit RapidAPI for schedule / slam dates |
 | Player photos (in-app) | `player-{id}-hero` assets + `PlayerTorsoPhotoView` / `TennisPlayerPhotoView` | Use `placeholder-male` / `placeholder-female` letter assets for custom players |
-| Custom favorite rank/photo | `FavoritePlayerCatalog` + `PlayerRankCache` + `PlayerRemoteLookup` | Expand `/api/widget-data` to top 100 on every refresh; show unverified cache |
+| Custom favorite rank/photo/W/L | `FavoritePlayerCatalog` + `PlayerRankCache` + `PlayerRemoteLookup` + `PlayerSeasonRecordCache` | Expand `/api/widget-data` to top 100 on every refresh; show unverified cache; fetch W/L inside shared refresh |
 | Paywall / splash backdrop | `CourtifyMarqueeBackground` | Per-player paywall photos or silhouettes on paywall |
 | Grand Slam logos | `AssetCatalogImage` in pickers | `CachedBundledImage` for slam assets (in-memory cache goes stale) |
 | Settings favorite cards | Equal-width `FavoriteCard` + `FavoriteSlamLogoBadge` (circular) + `PlayerTorsoPhotoView` | `FavoritePlayerHeroImage`; oversized silhouette with gradient wash; rectangular slam logos |
@@ -36,7 +36,7 @@ This repo has two parts:
 
 **UI language:** F1-app dark mode — `midnightGreen` base, `emeraldGreen`→`midnightGreen` gradient heroes, white rounded type, `opticYellow` highlights, `courtGreen` tile subtitles, hairline dividers. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)`.
 
-**API cost rule:** Worker data refreshes on **user pull-to-refresh** (Rankings, Widgets) or the **one-time onboarding exception**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
+**API cost rule:** RapidAPI Matchstat **Pro ($29/mo)** is required — Basic 50/day is insufficient. Worker data refreshes on **user pull-to-refresh** (Rankings, Widgets) or the **one-time onboarding exception**. Custom lookup / photo / season-record only on favorite **pick**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
 
 **Verify your work:** build → `simctl install` → `simctl launch … -UITestHome [-UITestTab …]` → wait ~7s (bootstrap spinner) → screenshot. See [Simulator testing](#simulator-testing-for-agents) below.
 
@@ -48,21 +48,42 @@ This repo has two parts:
 
 An on-demand Worker that:
 
-1. Serves **`GET /api/widget-data`** from KV with CORS + `Cache-Control: public, max-age=300`
+1. Serves **`GET /api/widget-data`** from KV with CORS + `Cache-Control: public, max-age=3600`
 2. Refreshes from RapidAPI at most every **6 hours** when a client request finds stale cache (`MIN_REFRESH_INTERVAL_MS`)
-3. Calls the **Tennis API - ATP WTA ITF** on RapidAPI (rankings, live, fixtures)
+3. Calls the **Tennis API - ATP WTA ITF** on RapidAPI (rankings, live, ATP+WTA fixtures)
 4. Writes a lightweight JSON payload to **KV** (`TENNIS_DATA` binding, key `widget-data`)
+5. Proxies **custom favorite** lookup / photos / season W/L with KV + Cloudflare edge caching
 
 There is **no cron** (see `wrangler.toml`). iOS pull-to-refresh and the one-time onboarding fetch hit this endpoint; free-tier surfaces must not poll it automatically.
 
+### RapidAPI plan (required)
+
+Courtify uses Matchstat’s umbrella product **[Tennis API - ATP WTA ITF](https://rapidapi.com/jjrm365-kIFr3Nx_odV/api/tennis-api-atp-wta-itf/pricing)**.
+
+| Plan | Price | Quota | Verdict |
+|------|-------|-------|---------|
+| **Basic (Free)** | $0 | **50 req/day** hard limit | **Insufficient** — custom photo + season W/L burns this instantly |
+| **Pro (required)** | **$29/mo** | 150,000 req/mo (~5k/day), 10 req/sec | **Canonical Courtify plan** |
+| Ultra | $59/mo | 1.2M req/mo | Only if live/odds/PBP needed beyond Pro |
+| Mega | $99/mo | 3.8M + WebSocket | Overkill for Courtify |
+
+**Do not migrate vendors** (API-Sports, Sportmonks, Sportradar) for cost: Pro keeps native hero/torso photo IDs and surface-summary W/L without rewriting Worker mappers. Hybrid scraping of ATP/WTA CDNs for WTA heroes is brittle — silhouette fallback is OK when photos fail, not as the primary path.
+
+**Expected burn under Courtify refresh model (~Pro):**
+
+- Shared widget-data refresh ≤ every 6h × **5** upstream calls (live + ATP rank + WTA rank + ATP fixtures + WTA fixtures) ≈ **20 req/day**
+- Sparse custom picks: lookup + 2 photos + 1 season-record ≈ **4 req/pick** (then KV/edge cached)
+- Stay well under 10% of Pro daily quota at indie scale
+
 ### Files
 
-- `index.js` — fetch handler + KV read/write + RapidAPI mapping
+- `index.js` — fetch handler + KV read/write + RapidAPI mapping + photo edge cache + season-record
 - `wrangler.toml` — Worker config, KV binding
 
 ### External API
 
 - **Provider**: [Tennis API - ATP WTA ITF](https://rapidapi.com/jjrm365-kIFr3Nx_odV/api/tennis-api-atp-wta-itf)
+- **Docs**: [tennisapidoc.matchstat.com](https://tennisapidoc.matchstat.com/)
 - **Base URL**: `https://tennis-api-atp-wta-itf.p.rapidapi.com`
 - **Auth**: `RAPID_API_KEY` secret (Wrangler) — passed as `x-rapidapi-key` header
 - **Host header**: `x-rapidapi-host: tennis-api-atp-wta-itf.p.rapidapi.com`
@@ -75,6 +96,9 @@ There is **no cron** (see `wrangler.toml`). iOS pull-to-refresh and the one-time
 | Live fallback | `GET /tennis/v2/{atp\|wta}/fixtures` — filter rows where `live` is non-null |
 | ATP top 20 | `GET /tennis/v2/atp/ranking/singles?pageSize=20` |
 | WTA top 20 | `GET /tennis/v2/wta/ranking/singles?pageSize=20` |
+| ATP upcoming | `GET /tennis/v2/atp/fixtures?pageSize=100&filter=PlayerGroup:singles` |
+| WTA upcoming | `GET /tennis/v2/wta/fixtures?pageSize=100&filter=PlayerGroup:singles` |
+| Season W/L | `GET /tennis/v2/ms-api/{atp\|wta}/player/surface-summary/{playerId}` |
 
 Player headshots are constructed as:
 
@@ -84,23 +108,35 @@ https://tennis-api-atp-wta-itf.p.rapidapi.com/tennis/v2/ms-api/uploads/Photo/{at
 
 (`paddedId` = 5-digit zero-padded player ID, e.g. `05992`)
 
-### On-demand player lookup & photos (quota-sensitive)
+### On-demand player lookup, photos & season W/L (quota-sensitive)
 
 Additional endpoints for **custom favorites** outside the bundled top-10 catalog:
 
 | Endpoint | Purpose | RapidAPI cost |
 |----------|---------|---------------|
 | `GET /api/player-lookup?tour=atp\|wta&name=…` | Rank + API id from top-100 rankings | **One** rankings call per uncached name; KV `player-meta:{tour}:{name}` TTL 30 days |
-| `GET /api/player-photo?tour=…&apiId=…&variant=head\|hero` | Proxy player JPEG from RapidAPI | One image fetch per variant |
+| `GET /api/player-photo?tour=…&apiId=…&variant=head\|hero` | Proxy player JPEG from RapidAPI | One image fetch per variant **on miss**; Cloudflare `caches.default` + `Cache-Control: max-age=30d` |
+| `GET /api/player-season-record?tour=atp\|wta&apiId=…` | Current-season wins/losses | **One** `surface-summary` call per uncached player; KV `player-season:{tour}:{apiId}` TTL **24h** |
+
+**Season record response:**
+
+```json
+{ "wins": 22, "losses": 14, "season": 2026, "source": "surface-summary" }
+```
+
+Worker sums `courtWins` / `courtLosses` across all surfaces for the current UTC year (falls back to prior year / first row if needed).
 
 **Quota rules (learned the hard way):**
 
 - Do **not** expand `/api/widget-data` refresh to `pageSize=100` — keep top 20 for the shared payload.
+- Do **not** fetch season W/L inside the shared widget-data refresh (would be N players × refresh).
 - `lookupPlayerMeta` uses a **single** `/ranking/singles?pageSize=100` call; no search/fixtures/ms-api chains.
-- Lookup fetches pass `noRetryOn429: true` — do not burn retries when quota is exhausted.
-- **Deploy Worker only when quota allows**; test lookup/photo paths sparingly in dev.
+- Lookup / season-record fetches pass `noRetryOn429: true` — do not burn retries when quota is exhausted.
+- Worker tracks `x-ratelimit-requests-remaining` (and limit); when remaining is below a reserve (**5** on Basic-sized limits, **100** on Pro+), skip RapidAPI and serve stale KV / return 429 on photo/season.
+- Photos: always via Worker proxy (never put `x-rapidapi-key` in iOS). Edge cache means thousands of clients = one RapidAPI hit per image/month.
+- **Deploy Worker only when quota allows**; test lookup/photo/season paths sparingly on Basic; prefer Pro.
 
-iOS only calls lookup when the user **picks** a custom favorite (picker / onboarding). Display surfaces read cache only.
+iOS only calls lookup / photo / season-record when the user **picks** a custom favorite (`FavoritePlayerEnricher`). Display surfaces + WidgetKit read app-group cache only.
 
 
 ```json
@@ -116,47 +152,61 @@ iOS only calls lookup when the user **picks** a custom favorite (picker / onboar
     "sources": {
       "live": "events/live | fixtures-filter",
       "atpRankings": "ok | error:STATUS",
-      "wtaRankings": "ok | error:STATUS"
+      "wtaRankings": "ok | error:STATUS",
+      "upcoming": "ok | atp-only | wta-only | empty"
     }
   }
 }
 ```
 
 - `server`: `1` = player1 serving, `2` = player2 serving, `null` if unknown (fixtures fallback has no server data)
-- Rate limits: Worker retries on 429/5xx with backoff; 250ms delay between sequential API calls
+- Rate limits: Worker retries on 429/5xx with backoff (except `noRetryOn429` paths); 250ms delay between sequential API calls
 - **Points normalization**: the WTA feed reports points scaled ×100 (e.g. `855000` for 8,550). `normalizeRankingPoints` fixes this at parse time *and* at serve time (`normalizeCachedPayload`), so stale KV payloads are corrected without extra RapidAPI calls.
 - Refresh model is **on-demand**: `/api/widget-data` refreshes from RapidAPI at most every 6 h when a request finds the KV cache stale. No scheduled cron.
+- Shared refresh is **5** RapidAPI calls (adds WTA fixtures vs earlier ATP-only upcoming).
+
+### Explicit do-nots (API cost)
+
+- Do **not** poll live every minute (or any timer) from iOS or Worker cron.
+- Do **not** expand shared rankings to top-100 on every refresh.
+- Do **not** fetch photos or season W/L on every WidgetKit timeline tick — widgets read app-group only.
+- Do **not** migrate TournamentCalendar to the network — keep bundled.
+- Do **not** expose RapidAPI keys in the Swift client.
+- Do **not** stay on RapidAPI Basic (50/day) if custom favorites / photos / W/L are product requirements.
 
 ### Deployment checklist (user action required)
 
 These steps are **not done** until the user completes them:
 
-1. **Rotate RapidAPI key** — a key was pasted in chat during initial setup; treat it as compromised
-2. **Create KV namespaces**:
+1. **Upgrade RapidAPI to Pro ($29/mo)** on [Tennis API - ATP WTA ITF pricing](https://rapidapi.com/jjrm365-kIFr3Nx_odV/api/tennis-api-atp-wta-itf/pricing) — Basic is not viable
+2. **Rotate RapidAPI key** if it was ever pasted in chat; update Wrangler secret
+3. **Create KV namespaces** (if not already):
    ```bash
    wrangler kv namespace create TENNIS_DATA
    wrangler kv namespace create TENNIS_DATA --preview
    ```
-3. **Update `wrangler.toml`** — replace `REPLACE_WITH_PRODUCTION_KV_NAMESPACE_ID` and `REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID`
-4. **Set secret**:
+4. **Update `wrangler.toml`** — replace placeholder KV namespace IDs if still present
+5. **Set secret**:
    ```bash
    wrangler secret put RAPID_API_KEY
    ```
-5. **Deploy**:
+6. **Deploy** after `index.js` changes:
    ```bash
    npx wrangler deploy   # wrangler CLI may not be on PATH; npx works
    ```
-6. **Verify**:
+7. **Verify**:
    ```bash
-   wrangler tail                          # watch logs
-   curl https://courtify-tennis-worker.courtify.workers.dev/api/widget-data
+   npx wrangler tail
+   curl -s https://courtify-tennis-worker.courtify.workers.dev/api/widget-data | head -c 400
+   curl -s "https://courtify-tennis-worker.courtify.workers.dev/api/player-season-record?tour=atp&apiId=68074"
    ```
 
 ### Known limitations
 
-- **Live events endpoint** may require a higher RapidAPI plan (Ultra/Mega for some live features). If it fails, the Worker falls back to fixtures filtering.
-- **Player images** from the API proxy may require RapidAPI headers when fetched directly by the iOS widget — consider proxying images through the Worker or bundling fallbacks.
+- **Live events endpoint** may require a higher RapidAPI plan (Ultra/Mega for some live features). If it fails, the Worker falls back to fixtures filtering (ATP + WTA).
+- **Player images** require RapidAPI headers upstream — always use Worker `/api/player-photo` (edge-cached). ATP Tour public CDN remains a fallback when `code` is supplied without `apiId`.
 - **KV placeholder IDs** in `wrangler.toml` will block deploy until replaced.
+- Season W/L for **featured top-10** remains bundled in `TennisPlayer.seasonRecord`; live Worker W/L is for **custom** favorites via `PlayerSeasonRecordCache`.
 
 ---
 
@@ -175,7 +225,7 @@ These steps are **not done** until the user completes them:
 |------|-------------|------|
 | Fetch + cache | `WidgetDataStore` | Single `@MainActor` store; KV cache key `widgetDataPayloadCache` in app group; quota alert on 429/503 |
 | Models | `WidgetDataModels.swift` | Codable types matching Worker JSON |
-| API URL | `WidgetAPIService` | `widgetDataURL`, `playerLookupURL`, `playerPhotoURL` |
+| API URL | `WidgetAPIService` | `widgetDataURL`, `playerLookupURL`, `playerPhotoURL`, `playerSeasonRecordURL` |
 | Prefs | `AppGroupConstants` | `favoritePlayerID`, `favoritePlayerRevision`, `favoritePlayerWidgetIntentID`, `playerRankCache`, etc. |
 | Favorites | `FavoritePlayerCatalog` | Resolve custom IDs, search, display rank |
 
@@ -292,7 +342,7 @@ auto-refresh timers or on-appear `refresh()` without an explicit product request
 | Rankings tab (20 rows/tour) | Cached Worker payload | Pull-to-refresh only |
 | Widgets gallery — rankings / live / order of play | Same cache | Pull-to-refresh only |
 | Widgets gallery — tournaments | `TournamentCalendar` (bundled 2026) | Never |
-| Widgets gallery — favorite player | Bundled season record + optional verified rank/photo cache | Picker select only (lookup + photo fetch) |
+| Widgets gallery — favorite player | Bundled season record **or** `PlayerSeasonRecordCache` + optional verified rank/photo cache | Picker select only (lookup + photo + season-record) |
 
 ### Custom favorite players (outside top 20)
 
@@ -303,11 +353,14 @@ auto-refresh timers or on-appear `refresh()` without an explicit product request
 | `PlayerRemoteLookup` | One `/api/player-lookup` on pick when not in top-20 payload |
 | `PlayerRankCache` | App-group `playerRankCache` — rank + apiId; `photosVerified` gate |
 | `PlayerPhotoFetcher` / `PlayerPhotoStore` | Download + cache head/hero JPEGs under `player-images/` |
+| `PlayerSeasonRecordFetcher` / `PlayerSeasonRecordCache` | One `/api/player-season-record` on pick; app-group W/L for widgets + Home |
 | `PlayerTorsoPhotoView` | Home hero; bundled `-hero` or verified cache or silhouette |
 | `PlayerSilhouetteView` | ATP `figure.tennis` / WTA `figure.dress.line.vertical.figure` fallback |
 | `TennisPlayerPhotoView` | Circular headshots in lists |
 
-**Pick flow:** clear stale photos → lookup → store rank (unverified) → fetch photos → `markPhotosVerified` on success; on failure remove rank cache and show silhouette.
+**Pick flow:** clear stale photos / rank / season cache → lookup → store rank (unverified) → fetch photos → `markPhotosVerified` on success → fetch season W/L into `PlayerSeasonRecordCache`; on photo failure remove unverified rank display path / show silhouette.
+
+**Display:** `TennisPlayer.displaySeasonRecord` prefers bundled featured W/L, else `PlayerSeasonRecordCache`.
 
 **Cache migration:** `AppGroupConstants.migratePlayerCachesIfNeeded()` (schema v2) wipes stale `playerRankCache` + `player-images/` once on upgrade.
 
@@ -549,7 +602,7 @@ after TestFlight install.
 - **Reuse:** `CourtifyLayout` containers, `TourPillToggle`, `ProfileIconButton`,
   `.settingsSheet`, `LastUpdatedLabel`, `PullToRefreshHint`, `GetPremiumPill`,
   `FavoritePlayerCatalog`, `FavoritePlayerPickerSheet`, `FavoritePlayerEnricher`,
-  `PlayerTorsoPhotoView`, `PlayerSilhouetteView`, `FavoriteSlamLogoBadge`,
+  `PlayerTorsoPhotoView`, `PlayerSilhouetteView`, `PlayerSeasonRecordCache`, `FavoriteSlamLogoBadge`,
   `WidgetColorStyle`, `WidgetColorPickerSheet`, `CourtifyMarqueeBackground`, `AssetCatalogImage`.
 - **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Small/Medium/Large/Free;
   sectioned catalog; only **Favorite player** is free (bundled). All other cards Pro-gated

@@ -181,16 +181,18 @@ struct HomeDashboardView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 18) {
                 statChip(icon: "chart.bar.fill", label: "Rank", value: rankLabel)
-                if let record = favoritePlayer?.bundledSeasonRecord {
+                if let record = favoritePlayer?.displaySeasonRecord {
+                    let year = PlayerSeasonRecordCache.entry(for: favoritePlayer?.id ?? "")?.season
+                        ?? Calendar.current.component(.year, from: Date())
                     statChip(
                         icon: "sportscourt.fill",
-                        label: "2026",
+                        label: "\(year)",
                         value: "\(record.wins)-\(record.losses)"
                     )
                 } else if favoritePlayer?.isCustom == true {
                     statChip(
                         icon: "sportscourt.fill",
-                        label: "2026",
+                        label: "\(Calendar.current.component(.year, from: Date()))",
                         value: "—"
                     )
                 }
@@ -228,8 +230,9 @@ struct HomeDashboardView: View {
 
     private var showsFavoriteMediaHint: Bool {
         guard let player = favoritePlayer, player.isCustom else { return false }
-        return player.bundledSeasonRecord == nil
-            || !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
+        if FavoritePlayerEnricher.mediaUnavailable { return true }
+        return player.displaySeasonRecord == nil
+            && !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
     private var rankLabel: String {

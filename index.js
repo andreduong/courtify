@@ -4,16 +4,24 @@
  * Fetches live scores + ATP/WTA top-20 rankings from the Tennis API
  * (tennis-api-atp-wta-itf on RapidAPI), caches a lightweight payload in KV,
  * and serves it at GET /api/widget-data.
+ *
+ * Plan assumption: RapidAPI Matchstat **Pro** ($29/mo, 150k req/mo).
+ * Free Basic (50 req/day) is insufficient for custom photos + season W/L.
  */
 
 const API_HOST = "tennis-api-atp-wta-itf.p.rapidapi.com";
 const API_BASE = `https://${API_HOST}`;
 const KV_KEY = "widget-data";
 const KV_META_KEY = "widget-data-meta";
+const KV_QUOTA_KEY = "rapidapi-quota";
 const CACHE_MAX_AGE_SECONDS = 3600; // 1 hour — clients read KV, not RapidAPI
+const PHOTO_CACHE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days at Cloudflare edge
+const SEASON_RECORD_TTL_SECONDS = 60 * 60 * 24; // 24 hours in KV
 const MIN_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours between RapidAPI refreshes
 const REQUEST_DELAY_MS = 250;
-const MAX_RETRIES = 1; // Retries multiply quota usage on BASIC plans
+const MAX_RETRIES = 1; // Retries multiply quota usage — keep low
+const QUOTA_RESERVE_PRO = 100; // Skip upstream when remaining RapidAPI quota is below this (Pro+)
+const QUOTA_RESERVE_BASIC = 5; // Basic is 50/day — a 100 reserve would lock the Worker forever
 
 const ENDPOINTS = {
   // Equivalent to fixtures?live=all on this API
@@ -31,7 +39,7 @@ const CORS_HEADERS = {
 };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
@@ -43,11 +51,15 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/player-photo") {
-      return servePlayerPhoto(url, env);
+      return servePlayerPhoto(url, env, ctx);
     }
 
     if (request.method === "GET" && url.pathname === "/api/player-lookup") {
       return servePlayerLookup(url, env);
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/player-season-record") {
+      return servePlayerSeasonRecord(url, env);
     }
 
     return jsonResponse({ error: "Not found" }, 404);
@@ -144,15 +156,27 @@ async function refreshWidgetData(env, { force = false } = {}) {
     }
   }
 
+  if (await isQuotaTooLow(env)) {
+    console.warn("[cron] Skipping refresh — RapidAPI quota reserve exhausted; serving stale KV");
+    return;
+  }
+
   console.log("[cron] Starting tennis data refresh");
 
   try {
-    // 3 RapidAPI calls per refresh (was 5–7 every 15 min — burned BASIC quota in hours)
-    const [liveResult, atpRankingsResult, wtaRankingsResult, atpFixturesResult] = await fetchSequentially(env, [
+    // 5 RapidAPI calls per refresh (ATP + WTA fixtures). Shared payload stays top-20.
+    const [
+      liveResult,
+      atpRankingsResult,
+      wtaRankingsResult,
+      atpFixturesResult,
+      wtaFixturesResult,
+    ] = await fetchSequentially(env, [
       { label: "live-events", path: ENDPOINTS.liveEvents },
       { label: "atp-rankings", path: ENDPOINTS.atpRankings },
       { label: "wta-rankings", path: ENDPOINTS.wtaRankings },
       { label: "atp-fixtures", path: ENDPOINTS.atpFixtures },
+      { label: "wta-fixtures", path: ENDPOINTS.wtaFixtures },
     ]);
 
     let liveMatches = [];
@@ -164,14 +188,34 @@ async function refreshWidgetData(env, { force = false } = {}) {
     }
 
     if (atpFixturesResult.ok) {
-      if (liveMatches.length === 0) {
-        liveMatches = parseLiveFixtures(atpFixturesResult.data, "atp");
-        console.log(`[cron] Fixtures fallback returned ${liveMatches.length} live matches`);
-      }
-      upcomingMatches = parseUpcomingFixtures(atpFixturesResult.data, "atp").slice(0, 20);
+      upcomingMatches = upcomingMatches.concat(
+        parseUpcomingFixtures(atpFixturesResult.data, "atp"),
+      );
     } else {
       console.warn(`[cron] ATP fixtures failed: ${atpFixturesResult.status}`);
     }
+
+    if (wtaFixturesResult.ok) {
+      upcomingMatches = upcomingMatches.concat(
+        parseUpcomingFixtures(wtaFixturesResult.data, "wta"),
+      );
+    } else {
+      console.warn(`[cron] WTA fixtures failed: ${wtaFixturesResult.status}`);
+    }
+
+    // Live-events preferred; otherwise merge ATP + WTA fixtures where live != null.
+    if (!liveResult.ok || liveMatches.length === 0) {
+      const fromAtp = atpFixturesResult.ok
+        ? parseLiveFixtures(atpFixturesResult.data, "atp")
+        : [];
+      const fromWta = wtaFixturesResult.ok
+        ? parseLiveFixtures(wtaFixturesResult.data, "wta")
+        : [];
+      liveMatches = fromAtp.concat(fromWta);
+      console.log(`[cron] Fixtures fallback returned ${liveMatches.length} live matches`);
+    }
+
+    upcomingMatches = sortUpcomingByStart(upcomingMatches).slice(0, 20);
 
     const payload = {
       updatedAt: new Date().toISOString(),
@@ -186,7 +230,16 @@ async function refreshWidgetData(env, { force = false } = {}) {
           live: liveResult.ok ? "events/live" : "fixtures-filter",
           atpRankings: atpRankingsResult.ok ? "ok" : `error:${atpRankingsResult.status}`,
           wtaRankings: wtaRankingsResult.ok ? "ok" : `error:${wtaRankingsResult.status}`,
-          upcoming: upcomingMatches.length > 0 ? "ok" : "empty",
+          upcoming:
+            upcomingMatches.length > 0
+              ? atpFixturesResult.ok && wtaFixturesResult.ok
+                ? "ok"
+                : atpFixturesResult.ok
+                  ? "atp-only"
+                  : wtaFixturesResult.ok
+                    ? "wta-only"
+                    : "empty"
+              : "empty",
         },
       },
     };
@@ -194,15 +247,24 @@ async function refreshWidgetData(env, { force = false } = {}) {
     await env.TENNIS_DATA.put(KV_KEY, JSON.stringify(payload));
     await env.TENNIS_DATA.put(
       KV_META_KEY,
-      JSON.stringify({ lastRefresh: Date.now(), apiCalls: 4 }),
+      JSON.stringify({ lastRefresh: Date.now(), apiCalls: 5 }),
     );
     console.log(
       `[cron] Cached widget data — ${liveMatches.length} live, ` +
-        `${payload.rankings.atp.length} ATP rankings, ${upcomingMatches.length} upcoming`,
+        `${payload.rankings.atp.length} ATP / ${payload.rankings.wta.length} WTA rankings, ` +
+        `${upcomingMatches.length} upcoming`,
     );
   } catch (error) {
     console.error("[cron] Refresh failed:", error);
   }
+}
+
+function sortUpcomingByStart(matches) {
+  return matches.slice().sort((a, b) => {
+    const aMs = a.startTime ? Date.parse(a.startTime) : Number.POSITIVE_INFINITY;
+    const bMs = b.startTime ? Date.parse(b.startTime) : Number.POSITIVE_INFINITY;
+    return aMs - bMs;
+  });
 }
 
 async function fetchSequentially(env, requests) {
@@ -217,9 +279,59 @@ async function fetchSequentially(env, requests) {
   return results;
 }
 
+async function isQuotaTooLow(env) {
+  try {
+    const raw = await env.TENNIS_DATA.get(KV_QUOTA_KEY);
+    if (!raw) return false;
+    const meta = JSON.parse(raw);
+    if (typeof meta.remaining !== "number") return false;
+    const limit = typeof meta.limit === "number" ? meta.limit : null;
+    // Missing limit (legacy KV) or small daily caps → Basic-style reserve.
+    // Pro+ monthly allotments report large limits (e.g. 150000).
+    const reserve =
+      limit == null || limit <= 100 ? QUOTA_RESERVE_BASIC : QUOTA_RESERVE_PRO;
+    return meta.remaining < reserve;
+  } catch {
+    return false;
+  }
+}
+
+async function recordQuotaFromResponse(env, response) {
+  const remainingRaw =
+    response.headers.get("x-ratelimit-requests-remaining") ||
+    response.headers.get("X-RateLimit-Requests-Remaining");
+  const limitRaw =
+    response.headers.get("x-ratelimit-requests-limit") ||
+    response.headers.get("X-RateLimit-Requests-Limit");
+  if (remainingRaw == null) return;
+
+  const remaining = Number.parseInt(remainingRaw, 10);
+  if (!Number.isFinite(remaining)) return;
+  const limit = limitRaw != null ? Number.parseInt(limitRaw, 10) : null;
+
+  try {
+    await env.TENNIS_DATA.put(
+      KV_QUOTA_KEY,
+      JSON.stringify({
+        remaining,
+        limit: Number.isFinite(limit) ? limit : null,
+        updatedAt: Date.now(),
+      }),
+      { expirationTtl: 60 * 60 * 48 },
+    );
+  } catch (error) {
+    console.warn("[quota] Failed to persist remaining:", error);
+  }
+}
+
 async function fetchWithRetry(env, path, label, maxRetries = MAX_RETRIES, options = {}) {
   const noRetryOn429 = options.noRetryOn429 === true;
   let attempt = 0;
+
+  if (await isQuotaTooLow(env)) {
+    console.warn(`[fetch] ${label} skipped — RapidAPI quota reserve low`);
+    return { ok: false, status: 429, data: null };
+  }
 
   while (attempt < maxRetries) {
     attempt += 1;
@@ -229,6 +341,8 @@ async function fetchWithRetry(env, path, label, maxRetries = MAX_RETRIES, option
       method: "GET",
       headers: buildHeaders(env.RAPID_API_KEY),
     });
+
+    await recordQuotaFromResponse(env, response);
 
     if (response.status === 429) {
       console.warn(`[fetch] ${label} rate limited (429)`);
@@ -409,12 +523,133 @@ async function servePlayerLookup(url, env) {
   });
 }
 
-async function servePlayerPhoto(url, env) {
+async function servePlayerSeasonRecord(url, env) {
+  const tour = (url.searchParams.get("tour") || "atp").toLowerCase();
+  const apiId = url.searchParams.get("apiId");
+  if (!apiId) return jsonResponse({ error: "Missing apiId" }, 400);
+  if (tour !== "atp" && tour !== "wta") {
+    return jsonResponse({ error: "Invalid tour" }, 400);
+  }
+
+  if (!env.RAPID_API_KEY) {
+    return jsonResponse({ error: "Service unavailable" }, 503);
+  }
+
+  const cacheKey = `player-season:${tour}:${apiId}`;
+  const cached = await env.TENNIS_DATA.get(cacheKey);
+  if (cached) {
+    return new Response(cached, {
+      status: 200,
+      headers: {
+        ...CORS_HEADERS,
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, max-age=3600",
+        "X-Courtify-Cache": "kv",
+      },
+    });
+  }
+
+  const seasonYear = new Date().getUTCFullYear();
+  const path = `/tennis/v2/ms-api/${tour}/player/surface-summary/${apiId}`;
+  const result = await fetchWithRetry(env, path, `surface-summary-${tour}-${apiId}`, 1, {
+    noRetryOn429: true,
+  });
+
+  if (!result.ok) {
+    if (result.status === 429) {
+      return jsonResponse(
+        { error: "Season record unavailable", status: 429 },
+        429,
+        { "Retry-After": "3600" },
+      );
+    }
+    // 404 from RapidAPI often means plan/endpoint gap (surface-summary needs Pro+) or unknown id.
+    const status = result.status === 404 ? 404 : 502;
+    return jsonResponse(
+      { error: "Season record unavailable", status: result.status || status },
+      status,
+    );
+  }
+
+  const parsed = parseSeasonRecord(result.data, seasonYear);
+  if (!parsed) {
+    return jsonResponse({ error: "Season record empty" }, 404);
+  }
+
+  const body = JSON.stringify({
+    wins: parsed.wins,
+    losses: parsed.losses,
+    season: parsed.season,
+    source: "surface-summary",
+  });
+
+  await env.TENNIS_DATA.put(cacheKey, body, { expirationTtl: SEASON_RECORD_TTL_SECONDS });
+
+  return new Response(body, {
+    status: 200,
+    headers: {
+      ...CORS_HEADERS,
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
+      "X-Courtify-Cache": "miss",
+    },
+  });
+}
+
+function parseSeasonRecord(data, preferredYear) {
+  const rows = extractArray(data, ["data", "results"]);
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+
+  const yearStr = String(preferredYear);
+  let yearRow =
+    rows.find((row) => String(row?.year) === yearStr) ??
+    rows.find((row) => String(row?.year) === String(preferredYear - 1)) ??
+    rows[0];
+
+  const surfaces = yearRow?.surfaces;
+  if (!Array.isArray(surfaces)) return null;
+
+  let wins = 0;
+  let losses = 0;
+  for (const surface of surfaces) {
+    wins += Number.parseInt(surface?.courtWins ?? surface?.wins ?? 0, 10) || 0;
+    losses += Number.parseInt(surface?.courtLosses ?? surface?.losses ?? 0, 10) || 0;
+  }
+
+  if (wins === 0 && losses === 0) return null;
+
+  return {
+    wins,
+    losses,
+    season: Number.parseInt(String(yearRow?.year), 10) || preferredYear,
+  };
+}
+
+async function servePlayerPhoto(url, env, ctx) {
   const tour = (url.searchParams.get("tour") || "atp").toLowerCase();
   const apiId = url.searchParams.get("apiId");
   const name = url.searchParams.get("name");
   const code = url.searchParams.get("code");
   const variant = url.searchParams.get("variant") || "head";
+
+  // Cache key ignores optional name/code once apiId is known — stable edge cache.
+  const cacheUrl = new URL(url.toString());
+  cacheUrl.searchParams.delete("name");
+  cacheUrl.searchParams.delete("code");
+  if (apiId) {
+    cacheUrl.searchParams.set("apiId", apiId);
+  }
+  cacheUrl.searchParams.set("tour", tour);
+  cacheUrl.searchParams.set("variant", variant);
+  const cacheRequest = new Request(cacheUrl.toString(), { method: "GET" });
+
+  const cache = caches.default;
+  const cached = await cache.match(cacheRequest);
+  if (cached) {
+    const headers = new Headers(cached.headers);
+    headers.set("X-Courtify-Cache", "edge");
+    return new Response(cached.body, { status: cached.status, headers });
+  }
 
   let upstream = null;
   let useRapidHeaders = false;
@@ -423,6 +658,9 @@ async function servePlayerPhoto(url, env) {
   if (!resolvedId && name) {
     const meta = await lookupPlayerMeta(env, tour, name);
     resolvedId = meta?.id ?? null;
+    if (resolvedId) {
+      cacheUrl.searchParams.set("apiId", String(resolvedId));
+    }
   }
 
   if (resolvedId) {
@@ -444,6 +682,12 @@ async function servePlayerPhoto(url, env) {
     return jsonResponse({ error: "Photo proxy unavailable" }, 503);
   }
 
+  if (useRapidHeaders && (await isQuotaTooLow(env))) {
+    return jsonResponse({ error: "Photo proxy quota exhausted" }, 429, {
+      "Retry-After": "3600",
+    });
+  }
+
   const headers = useRapidHeaders
     ? buildHeaders(env.RAPID_API_KEY)
     : {
@@ -455,6 +699,9 @@ async function servePlayerPhoto(url, env) {
       };
 
   const upstreamResponse = await fetch(upstream, { headers });
+  if (useRapidHeaders) {
+    await recordQuotaFromResponse(env, upstreamResponse);
+  }
   if (!upstreamResponse.ok) {
     return jsonResponse({ error: "Upstream photo unavailable" }, upstreamResponse.status);
   }
@@ -464,14 +711,28 @@ async function servePlayerPhoto(url, env) {
   if (!isImageBuffer(buffer)) {
     return jsonResponse({ error: "Upstream photo unavailable" }, 502);
   }
-  return new Response(buffer, {
+
+  const responseHeaders = {
+    ...CORS_HEADERS,
+    "Content-Type": contentType,
+    "Cache-Control": `public, max-age=${PHOTO_CACHE_MAX_AGE_SECONDS}`,
+    "X-Courtify-Cache": "miss",
+  };
+
+  const response = new Response(buffer, {
     status: 200,
-    headers: {
-      ...CORS_HEADERS,
-      "Content-Type": contentType,
-      "Cache-Control": "public, max-age=604800",
-    },
+    headers: responseHeaders,
   });
+
+  // Store under the apiId-normalized key so later requests hit edge cache.
+  const storeRequest = new Request(cacheUrl.toString(), { method: "GET" });
+  if (ctx?.waitUntil) {
+    ctx.waitUntil(cache.put(storeRequest, response.clone()));
+  } else {
+    await cache.put(storeRequest, response.clone());
+  }
+
+  return response;
 }
 
 function parsePlayer(player, tour, fallbackId) {

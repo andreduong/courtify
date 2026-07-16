@@ -40,7 +40,7 @@ struct FavoritePlayerWidgetView: View {
 
                 Spacer(minLength: 0)
 
-                if let record = player?.bundledSeasonRecord {
+                if let record = player?.displaySeasonRecord {
                     Text("\(record.wins)-\(record.losses) season")
                         .font(WidgetTheme.roundedFont(.caption2, weight: .medium))
                         .foregroundStyle(.white.opacity(0.7))

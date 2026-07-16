@@ -39,14 +39,16 @@ enum FavoritePlayerEnricher {
 
         let hadRank = (FavoritePlayerCatalog.displayRank(for: playerID, payload: payload) ?? 0) > 0
         let hadPhotos = PlayerPhotoStore.hasCachedPhotos(playerID: playerID)
+        let hadSeason = PlayerSeasonRecordCache.record(for: playerID) != nil
 
         await enrich(player, payload: payload, clearExisting: false)
 
         let hasRank = (FavoritePlayerCatalog.displayRank(for: playerID, payload: payload) ?? 0) > 0
         let hasPhotos = PlayerPhotoStore.hasCachedPhotos(playerID: playerID)
+        let hasSeason = PlayerSeasonRecordCache.record(for: playerID) != nil
         mediaUnavailable = !hasPhotos
 
-        guard (!hadRank && hasRank) || (!hadPhotos && hasPhotos) else { return }
+        guard (!hadRank && hasRank) || (!hadPhotos && hasPhotos) || (!hadSeason && hasSeason) else { return }
 
         WidgetTimelineRefresher.reloadAll()
         NotificationCenter.default.post(name: AppGroupConstants.favoritePlayerDidChange, object: nil)
@@ -66,6 +68,7 @@ enum FavoritePlayerEnricher {
         if clearExisting {
             PlayerPhotoStore.clearCachedPhotos(for: player.id)
             PlayerRankCache.remove(for: player.id)
+            PlayerSeasonRecordCache.remove(for: player.id)
             clearMediaUnavailableAlertMarker()
         }
 
@@ -94,11 +97,13 @@ enum FavoritePlayerEnricher {
             }
         }
 
+        let resolvedApiId = apiId ?? PlayerRankCache.apiId(for: player.id)
+
         if !PlayerPhotoStore.hasCachedPhotos(playerID: player.id) {
             let photosSaved = await PlayerPhotoFetcher.ensurePhotos(
                 for: player,
                 payload: payload,
-                apiId: apiId ?? PlayerRankCache.apiId(for: player.id)
+                apiId: resolvedApiId
             )
             if photosSaved {
                 PlayerRankCache.markPhotosVerified(for: player.id)
@@ -109,6 +114,21 @@ enum FavoritePlayerEnricher {
         } else {
             mediaUnavailable = false
         }
+
+        await ensureSeasonRecord(playerID: player.id, tour: player.tour, apiId: resolvedApiId)
+    }
+
+    /// Sparse on-demand W/L — never part of shared widget-data refresh.
+    private static func ensureSeasonRecord(playerID: String, tour: TourPreference, apiId: Int?) async {
+        if PlayerSeasonRecordCache.isFresh(for: playerID) { return }
+        guard let apiId, apiId > 0 else { return }
+        guard let record = await PlayerSeasonRecordFetcher.fetch(tour: tour, apiId: apiId) else { return }
+        PlayerSeasonRecordCache.store(
+            wins: record.wins,
+            losses: record.losses,
+            season: record.season,
+            for: playerID
+        )
     }
 
     private static func seedFromPayloadIfNeeded(

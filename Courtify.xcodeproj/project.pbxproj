@@ -63,7 +63,10 @@
 		K4B2C3D4E5F60718293A4B70 /* PlayerRankCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = K4A2B3C4D5E6478890A1B2D4 /* PlayerRankCache.swift */; };
 		K5B2C3D4E5F60718293A4B71 /* PlayerRemoteLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = K5A2B3C4D5E6478890A1B2D5 /* PlayerRemoteLookup.swift */; };
 		K6B2C3D4E5F60718293A4B75 /* FavoritePlayerEnricher.swift in Sources */ = {isa = PBXBuildFile; fileRef = K6A2B3C4D5E6478890A1B2D9 /* FavoritePlayerEnricher.swift */; };
+		K7B2C3D4E5F60718293A4B76 /* PlayerSeasonRecordCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = K7A2B3C4D5E6478890A1B2DA /* PlayerSeasonRecordCache.swift */; };
+		K8B2C3D4E5F60718293A4B77 /* PlayerSeasonRecordFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = K8A2B3C4D5E6478890A1B2DB /* PlayerSeasonRecordFetcher.swift */; };
 		K4W2B3C4D5E6478890A1B2D6 /* PlayerRankCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = K4A2B3C4D5E6478890A1B2D4 /* PlayerRankCache.swift */; };
+		K7W2B3C4D5E6478890A1B2DC /* PlayerSeasonRecordCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = K7A2B3C4D5E6478890A1B2DA /* PlayerSeasonRecordCache.swift */; };
 		K3B2C3D4E5F60718293A4B6F /* TennisPlayerPhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */; };
 		K3W2B3C4D5E6478890A1B2D7 /* TennisPlayerPhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */; };
 		L1B2C3D4E5F60718293A4B72 /* AssetCatalogImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */; };
@@ -184,6 +187,8 @@
 		K4A2B3C4D5E6478890A1B2D4 /* PlayerRankCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRankCache.swift; sourceTree = "<group>"; };
 		K5A2B3C4D5E6478890A1B2D5 /* PlayerRemoteLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerRemoteLookup.swift; sourceTree = "<group>"; };
 		K6A2B3C4D5E6478890A1B2D9 /* FavoritePlayerEnricher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerEnricher.swift; sourceTree = "<group>"; };
+		K7A2B3C4D5E6478890A1B2DA /* PlayerSeasonRecordCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSeasonRecordCache.swift; sourceTree = "<group>"; };
+		K8A2B3C4D5E6478890A1B2DB /* PlayerSeasonRecordFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSeasonRecordFetcher.swift; sourceTree = "<group>"; };
 		L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetCatalogImage.swift; sourceTree = "<group>"; };
 		L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSilhouetteView.swift; sourceTree = "<group>"; };
 		M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyMarqueeBackground.swift; sourceTree = "<group>"; };
@@ -356,6 +361,8 @@
 				K1A2B3C4D5E6478890A1B2D1 /* PlayerPhotoStore.swift */,
 				K2A2B3C4D5E6478890A1B2D2 /* PlayerPhotoFetcher.swift */,
 				K4A2B3C4D5E6478890A1B2D4 /* PlayerRankCache.swift */,
+				K7A2B3C4D5E6478890A1B2DA /* PlayerSeasonRecordCache.swift */,
+				K8A2B3C4D5E6478890A1B2DB /* PlayerSeasonRecordFetcher.swift */,
 				K5A2B3C4D5E6478890A1B2D5 /* PlayerRemoteLookup.swift */,
 				K6A2B3C4D5E6478890A1B2D9 /* FavoritePlayerEnricher.swift */,
 				L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */,
@@ -538,6 +545,8 @@
 				K1B2C3D4E5F60718293A4B6D /* PlayerPhotoStore.swift in Sources */,
 				K2B2C3D4E5F60718293A4B6E /* PlayerPhotoFetcher.swift in Sources */,
 				K4B2C3D4E5F60718293A4B70 /* PlayerRankCache.swift in Sources */,
+				K7B2C3D4E5F60718293A4B76 /* PlayerSeasonRecordCache.swift in Sources */,
+				K8B2C3D4E5F60718293A4B77 /* PlayerSeasonRecordFetcher.swift in Sources */,
 				K5B2C3D4E5F60718293A4B71 /* PlayerRemoteLookup.swift in Sources */,
 				K6B2C3D4E5F60718293A4B75 /* FavoritePlayerEnricher.swift in Sources */,
 				L1B2C3D4E5F60718293A4B72 /* AssetCatalogImage.swift in Sources */,
@@ -561,6 +570,7 @@
 				G3W2B3C4D5E6478890A1B2C5 /* FavoritePlayerWidget.swift in Sources */,
 				J1W2B3C4D5E6478890A1B2CB /* FavoritePlayerCatalog.swift in Sources */,
 				K4W2B3C4D5E6478890A1B2D6 /* PlayerRankCache.swift in Sources */,
+				K7W2B3C4D5E6478890A1B2DC /* PlayerSeasonRecordCache.swift in Sources */,
 				K3W2B3C4D5E6478890A1B2D7 /* TennisPlayerPhotoView.swift in Sources */,
 				L2W2B3C4D5E6478890A1B2D8 /* PlayerSilhouetteView.swift in Sources */,
 				K1W2B3C4D5E6478890A1B2D4 /* PlayerPhotoStore.swift in Sources */,
@@ -727,7 +737,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -760,7 +770,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -792,7 +802,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -819,7 +829,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 19;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;

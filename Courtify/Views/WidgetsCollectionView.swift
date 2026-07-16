@@ -281,8 +281,9 @@ struct WidgetsCollectionView: View {
 
     private var showsFavoriteMediaHint: Bool {
         guard let player = favoritePlayer, player.isCustom else { return false }
-        return player.bundledSeasonRecord == nil
-            || !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
+        if FavoritePlayerEnricher.mediaUnavailable { return true }
+        return player.displaySeasonRecord == nil
+            && !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
     /// Small widgets pair up two per row; medium/large span the full width.
