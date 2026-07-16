@@ -312,7 +312,7 @@ async function lookupPlayerMeta(env, tour, name) {
     return meta;
   }
 
-  const meta = await fetchPlayerMetaFromRankings(env, tour, name);
+  let meta = await fetchPlayerMetaFromRankings(env, tour, name);
   if (!meta) return null;
 
   await cachePlayerMeta(env, cacheKey, meta);
@@ -349,22 +349,34 @@ function findPlayerInRankingsRows(rows, name) {
   const playerId = player?.id ?? match?.id ?? match?.player_id ?? null;
   const rank = match.position ?? match.racePosition ?? match.rank ?? null;
   const playerName = player?.name ?? match?.name ?? name;
-  if (!playerId || rank == null) return null;
+  if (!playerId) return null;
 
   return {
     id: String(playerId),
-    rank: Number(rank),
+    rank: rank != null ? Number(rank) : null,
     name: playerName,
   };
 }
 
+function normalizeFoldedName(name) {
+  return foldPlayerName(name).replace(/-/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function namesMatch(candidate, target) {
-  const foldedCandidate = foldPlayerName(candidate);
-  const foldedTarget = foldPlayerName(target);
+  const foldedCandidate = normalizeFoldedName(candidate);
+  const foldedTarget = normalizeFoldedName(target);
   if (foldedCandidate === foldedTarget) return true;
-  const candidateLast = lastNameOf(candidate);
-  const targetLast = lastNameOf(target);
-  return candidateLast.length > 0 && candidateLast === targetLast;
+
+  const candidateParts = foldedCandidate.split(/\s+/);
+  const targetParts = foldedTarget.split(/\s+/);
+  const candidateLast = candidateParts[candidateParts.length - 1] ?? "";
+  const targetLast = targetParts[targetParts.length - 1] ?? "";
+  if (candidateLast.length === 0 || candidateLast !== targetLast) return false;
+
+  if (candidateParts.length > 1 && targetParts.length > 1) {
+    return candidateParts[0][0] === targetParts[0][0];
+  }
+  return true;
 }
 
 function isImageBuffer(buffer) {

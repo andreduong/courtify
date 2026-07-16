@@ -254,21 +254,34 @@ enum FavoritePlayerCatalog {
         tour: TourPreference,
         payload: WidgetDataPayload? = WidgetPayloadReader.loadCached()
     ) -> Int? {
+        payloadRankingEntry(name: name, tour: tour, payload: payload)?.rank
+    }
+
+    /// Top-20 payload row for a player name (seeds apiId without an extra lookup call).
+    static func payloadRankingEntry(
+        for player: TennisPlayer,
+        payload: WidgetDataPayload?
+    ) -> WidgetRankingEntry? {
+        payloadRankingEntry(name: player.name, tour: player.tour, payload: payload)
+    }
+
+    static func payloadRankingEntry(
+        name: String,
+        tour: TourPreference,
+        payload: WidgetDataPayload?
+    ) -> WidgetRankingEntry? {
         guard let payload else { return nil }
         let entries = tour == .wta ? payload.rankings.wta : payload.rankings.atp
         let foldedName = name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US"))
         let lastName = foldedName.split(separator: " ").last.map(String.init)
 
-        if let match = entries.first(where: {
-            let entryName = $0.player.name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US"))
+        return entries.first { entry in
+            let entryName = entry.player.name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US"))
             let entryLast = entryName.split(separator: " ").last.map(String.init)
             return entryName == foldedName
                 || (lastName != nil && entryLast == lastName)
                 || (lastName != nil && entryLast != nil && levenshtein(entryLast!, lastName!) <= 1)
-        }) {
-            return match.rank
         }
-        return nil
     }
 
     private static func levenshtein(_ lhs: String, _ rhs: String) -> Int {

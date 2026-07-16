@@ -40,24 +40,14 @@ struct PlayerSilhouetteView: View {
     }
 
     private var torsoBody: some View {
-        ZStack(alignment: .bottomTrailing) {
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0.02),
-                    Color.white.opacity(0.1),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            Image(systemName: symbolName)
-                .font(.system(size: 168, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.28))
-                .symbolRenderingMode(.hierarchical)
-                .padding(.trailing, 12)
-                .padding(.bottom, 4)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Image(systemName: symbolName)
+            .font(.system(size: 120, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.28))
+            .symbolRenderingMode(.monochrome)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .padding(.trailing, 4)
+            .padding(.bottom, 2)
+            .allowsHitTesting(false)
     }
 
     private var symbolName: String {

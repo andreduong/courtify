@@ -220,31 +220,11 @@ struct FavoritePlayerPickerSheet: View {
         guard !isSaving else { return }
         isSaving = true
         dataStore.loadCachedPayload()
-        PlayerPhotoStore.clearCachedPhotos(for: player.id)
-        PlayerRankCache.remove(for: player.id)
-
-        let meta = await PlayerRemoteLookup.fetch(for: player, payload: dataStore.payload)
-        if let meta {
-            PlayerRankCache.store(
-                rank: meta.rank,
-                apiId: meta.id,
-                name: meta.name,
-                photosVerified: false,
-                for: player.id
-            )
-        }
-
-        let photosSaved = await PlayerPhotoFetcher.ensurePhotos(
-            for: player,
+        await FavoritePlayerEnricher.enrich(
+            player,
             payload: dataStore.payload,
-            apiId: meta?.id
+            clearExisting: true
         )
-        if photosSaved {
-            PlayerRankCache.markPhotosVerified(for: player.id)
-        } else {
-            PlayerRankCache.remove(for: player.id)
-            PlayerPhotoStore.clearCachedPhotos(for: player.id)
-        }
 
         AppGroupConstants.updateFavoritePlayer(player.id)
         favoritePlayerID = player.id

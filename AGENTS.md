@@ -27,7 +27,9 @@ This repo has two parts:
 | Custom favorite rank/photo | `FavoritePlayerCatalog` + `PlayerRankCache` + `PlayerRemoteLookup` | Expand `/api/widget-data` to top 100 on every refresh; show unverified cache |
 | Paywall / splash backdrop | `CourtifyMarqueeBackground` | Per-player paywall photos or silhouettes on paywall |
 | Grand Slam logos | `AssetCatalogImage` in pickers | `CachedBundledImage` for slam assets (in-memory cache goes stale) |
-| Settings favorite cards | `CachedBundledImage` + original `FavoriteCard` layout | `FavoritePlayerHeroImage` (widget padding breaks the cards) |
+| Settings favorite cards | Equal-width `FavoriteCard` + `FavoriteSlamLogoBadge` (circular) + `PlayerTorsoPhotoView` | `FavoritePlayerHeroImage`; oversized silhouette with gradient wash; rectangular slam logos |
+| Widget content inset | `WidgetTheme.contentInset` (28pt) on all small/medium widget copy | Per-widget ad-hoc `.padding(14)` that drifts left/right |
+| Widget colors (Premium) | `WidgetColorStyle` + `WidgetColorPickerSheet` (app group) | Recoloring tournament widgets (`next-*`, `countdown`, `calendar`) |
 | Tab chrome | `ProfileIconButton`, `TourPillToggle`, `LastUpdatedLabel`, `CourtifyTileDivider` | Duplicate profile/settings entry points or introduce new haptic/animation curves |
 | Settings / favorites | `SettingsView` + `AppGroupConstants` | Write prefs outside app group (widgets won't see them) |
 | Simulator screenshots | `UITestLaunchArgs` + `simctl launch` flags | Install tap/scroll automation (none available) |
@@ -239,8 +241,8 @@ Every tab shows `ProfileIconButton` (top-right) → `SettingsView` sheet via
 
 - **Your favorites** — player + Grand Slam cards with **Change** → picker sheets
   (`FavoritePlayerPickerSheet`, `FavoriteSlamPickerSheet`; writes `AppGroupConstants` / `WidgetTimelineRefresher.reloadAll()`).
-- **Favorite cards layout:** `CachedBundledImage` inside `FavoriteCard` — do **not** reuse `FavoritePlayerHeroImage` (widget-specific padding breaks the 158pt cards).
-- **Slam picker logos:** `AssetCatalogImage` (fresh from asset catalog).
+- **Favorite cards layout:** equal-width `FavoriteCard`s with overlay artwork (`PlayerTorsoPhotoView` / silhouette / `FavoriteSlamLogoBadge`) — do **not** reuse `FavoritePlayerHeroImage`. Artwork must not drive intrinsic height or Change gets clipped.
+- **Slam picker logos:** `AssetCatalogImage` (fresh from asset catalog). Settings cards use circular `FavoriteSlamLogoBadge`.
 - **Personal** — time zone (display only), 24h format toggle, Premium activate
   (paywall), Restore purchase (RevenueCat).
 - **Help** — `mailto:support@courtify.xyz`, How to add widgets (in-app guide),
@@ -464,6 +466,37 @@ Use this loop every session — do not rediscover setup:
 
 **Simulator:** iPhone 17 Pro `744F6ACA-F0CC-4105-8794-D798EF7726CC`
 
+### Local dev modes (agents)
+
+**Default: use the Simulator for everything** — UI, data, backend, screenshots. Courtify loads a large asset catalog (`player-*-hero`, slam logos, marquee), RevenueCat, and app-group state; SwiftUI Canvas re-indexes all of that and often shows stuck **"empty catalog import…"** while making Xcode slow and CPU-heavy. Prefer `scripts/dev-sim-hot-reload.sh` and close Xcode Canvas when not archiving.
+
+#### Simulator hot reload (default)
+
+**Use for:** all UI tweaks, `index.js` / Worker JSON, `WidgetDataStore`, app-group cache, custom-favorite lookup, launch-arg screen states, screenshots, E2E before TestFlight.
+
+| Step | Action |
+|------|--------|
+| Start | `bash scripts/dev-sim-hot-reload.sh` |
+| Optional tab | `bash scripts/dev-sim-hot-reload.sh -UITestHome -UITestTab widgets` |
+| Skip first build | `SKIP_INITIAL_BUILD=1 bash scripts/dev-sim-hot-reload.sh` (if app already installed) |
+| Iterate | Save any `.swift` under `Courtify/` or `CourtifyWidget/` → incremental build + reinstall + relaunch (~20–30s) |
+| Build log | `/tmp/courtify-dev-build.log` |
+| Seed rankings | See step 5 below (`widgetDataPayloadCache` hex) |
+| Keep cool | Edit in Cursor; quit Xcode (or disable Canvas) while the watcher runs |
+
+Default launch: `-UITestHome -UITestTab rankings`. After **asset catalog** or **in-memory cache** changes, `simctl uninstall … com.courtify.xyz` before reinstall.
+
+#### SwiftUI Canvas (optional — rarely)
+
+Only if you need sub-second iteration on a **single isolated view** with no bundled assets. Avoid for Courtify tab screens (they pull the full catalog). If Canvas shows "empty catalog import…", stop using it and switch to the simulator script above.
+
+| Step | Action |
+|------|--------|
+| Start | `bash scripts/dev-ui-preview.sh` |
+| Hub file | `Courtify/Views/UITweakPreviews.swift` |
+
+**Not valid in Canvas:** `WidgetDataStore.refresh()`, seeded cache, `-UITest*` launch args, widget extension, onboarding, paywall.
+
 ### TestFlight release
 
 1. Bump `CURRENT_PROJECT_VERSION` in `Courtify.xcodeproj/project.pbxproj` (all targets).
@@ -503,18 +536,29 @@ after TestFlight install.
 - `CachedBundledImage` for Grand Slam logos after asset updates (use `AssetCatalogImage`).
 - Full-width small widget gallery cards (small = 165×165 square, leading-aligned).
 - Per-player photo/silhouette on paywall (use `CourtifyMarqueeBackground`).
+- **Settings `FavoriteCard` taller than `Change`:** oversized torso/silhouette intrinsic size + `.frame(height:)` centers content → title and Change get clipped. Keep artwork overlay-only (no huge intrinsic size); pad Change above the 20pt corner radius; both cards `minWidth: 0` + equal `maxWidth: .infinity`.
+- **Silhouette “half white gradient” on widgets:** never put a `LinearGradient` / fill behind `PlayerSilhouetteView` torso — when the hero is leading-padded, the wash only covers the trailing half and looks broken. Use monochrome SF Symbol only.
+- **Gallery chrome expanding small cards:** palette/person overlays must live *inside* a ZStack framed to the preview size (165×165). `frame(maxWidth: .infinity)` on overlay buttons pushes a lone small card to the trailing edge.
+- **Ad-hoc widget padding:** always use `WidgetTheme.contentInset` for small/medium copy. Favorite may add trailing air for silhouette, but leading/top/bottom stay on the shared inset.
+- **Rectangular slam logos in Settings:** wrap with `FavoriteSlamLogoBadge` — `scaledToFill` + `clipShape(Circle())` so AO / RG / Wimbledon / US Open all read as round badges (wide US Open wordmark fills then clips).
+- **Quota UX:** when custom favorite photos fail (RapidAPI 429), show silhouette + helper copy / one-shot alert — don’t leave blank heroes or look “broken.”
 
 ### UI/UX building blocks
 
 - **Design reference:** F1-style sports app — dark tiles, gradient heroes, no white cards.
 - **Reuse:** `CourtifyLayout` containers, `TourPillToggle`, `ProfileIconButton`,
   `.settingsSheet`, `LastUpdatedLabel`, `PullToRefreshHint`, `GetPremiumPill`,
-  `FavoritePlayerCatalog`, `FavoritePlayerPickerSheet`, `PlayerTorsoPhotoView`, `PlayerSilhouetteView`,
-  `CourtifyMarqueeBackground`, `AssetCatalogImage`.
+  `FavoritePlayerCatalog`, `FavoritePlayerPickerSheet`, `FavoritePlayerEnricher`,
+  `PlayerTorsoPhotoView`, `PlayerSilhouetteView`, `FavoriteSlamLogoBadge`,
+  `WidgetColorStyle`, `WidgetColorPickerSheet`, `CourtifyMarqueeBackground`, `AssetCatalogImage`.
 - **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Small/Medium/Large/Free;
   sectioned catalog; only **Favorite player** is free (bundled). All other cards Pro-gated
-  (`PRO 🎾` badge → paywall). Reserve ~56pt trailing inset in widget previews so PRO badges
-  don't overlap row 1.
+  (`Premium 🎾` badge → paywall). Small = 165×165 leading-aligned. Overlay chrome:
+  color control (top-trailing, Premium) on customizable ids; person control (bottom-trailing)
+  on favorite for player pick. Tournament ids (`next-small`, `countdown`, `next-large`,
+  `calendar`) keep surface/brand gradients — no recolor.
+- **Widget color prefs:** app-group key `widgetColorStyles` via `WidgetColorStyle`;
+  preset accent + gradient level; free users tapping color → paywall.
 - **Onboarding player cards:** horizontal scroll, star on primary pick, bundled search sheet
   for out-of-top-10 names.
 

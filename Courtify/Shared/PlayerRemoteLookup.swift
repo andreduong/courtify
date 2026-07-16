@@ -16,7 +16,7 @@ enum PlayerRemoteLookup {
         }
 
         if let cached = PlayerRankCache.entry(for: player.id),
-           let apiId = cached.apiId, cached.rank > 0 {
+           let apiId = cached.apiId, apiId > 0 {
             return Meta(id: apiId, rank: cached.rank, name: cached.name ?? player.name)
         }
 
@@ -24,6 +24,18 @@ enum PlayerRemoteLookup {
             return nil
         }
 
+        if let remote = await fetchFromWorker(for: player) {
+            return remote
+        }
+
+        if let bundledId = PlayerSearchCatalog.bundledApiId(for: player.name, tour: player.tour), bundledId > 0 {
+            return Meta(id: bundledId, rank: 0, name: player.name)
+        }
+
+        return nil
+    }
+
+    private static func fetchFromWorker(for player: TennisPlayer) async -> Meta? {
         var components = URLComponents(string: WidgetAPIService.playerLookupURL.absoluteString)
         components?.queryItems = [
             URLQueryItem(name: "tour", value: player.tour == .wta ? "wta" : "atp"),
@@ -39,8 +51,12 @@ enum PlayerRemoteLookup {
                 return nil
             }
             let decoded = try JSONDecoder().decode(LookupResponse.self, from: data)
-            guard let rank = decoded.rank, rank > 0, decoded.id > 0 else { return nil }
-            return Meta(id: decoded.id, rank: rank, name: decoded.name ?? player.name)
+            guard decoded.id > 0 else { return nil }
+            return Meta(
+                id: decoded.id,
+                rank: decoded.rank ?? 0,
+                name: decoded.name ?? player.name
+            )
         } catch {
             return nil
         }

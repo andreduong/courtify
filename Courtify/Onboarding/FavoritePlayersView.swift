@@ -118,31 +118,11 @@ struct FavoritePlayersView: View {
     @MainActor
     private func selectCustomPlayer(_ player: TennisPlayer) async {
         dataStore.loadCachedPayload()
-        PlayerPhotoStore.clearCachedPhotos(for: player.id)
-        PlayerRankCache.remove(for: player.id)
-
-        let meta = await PlayerRemoteLookup.fetch(for: player, payload: dataStore.payload)
-        if let meta {
-            PlayerRankCache.store(
-                rank: meta.rank,
-                apiId: meta.id,
-                name: meta.name,
-                photosVerified: false,
-                for: player.id
-            )
-        }
-
-        let photosSaved = await PlayerPhotoFetcher.ensurePhotos(
-            for: player,
+        await FavoritePlayerEnricher.enrich(
+            player,
             payload: dataStore.payload,
-            apiId: meta?.id
+            clearExisting: true
         )
-        if photosSaved {
-            PlayerRankCache.markPhotosVerified(for: player.id)
-        } else {
-            PlayerRankCache.remove(for: player.id)
-            PlayerPhotoStore.clearCachedPhotos(for: player.id)
-        }
 
         CourtifyMotion.animateSelection {
             selectedPlayerIDs.insert(player.id)
@@ -151,6 +131,9 @@ struct FavoritePlayersView: View {
     }
 
     private func togglePlayer(_ player: TennisPlayer) {
+        let isAdding = !selectedPlayerIDs.contains(player.id)
+        var becamePrimary = false
+
         CourtifyMotion.animateSelection {
             if selectedPlayerIDs.contains(player.id) {
                 selectedPlayerIDs.remove(player.id)
@@ -161,7 +144,19 @@ struct FavoritePlayersView: View {
                 selectedPlayerIDs.insert(player.id)
                 if favoritePlayerID.isEmpty {
                     favoritePlayerID = player.id
+                    becamePrimary = true
                 }
+            }
+        }
+
+        if isAdding, (becamePrimary || favoritePlayerID == player.id), player.imageName == nil {
+            Task {
+                dataStore.loadCachedPayload()
+                await FavoritePlayerEnricher.enrich(
+                    player,
+                    payload: dataStore.payload,
+                    clearExisting: false
+                )
             }
         }
     }

@@ -45,6 +45,7 @@ struct SettingsView: View {
     private var use24HourFormat = false
 
     @StateObject private var revenueCat = RevenueCatManager.shared
+    @ObservedObject private var dataStore = WidgetDataStore.shared
 
     @State private var showPlayerPicker = false
     @State private var showSlamPicker = false
@@ -53,7 +54,7 @@ struct SettingsView: View {
     @State private var restoreMessage: String?
 
     private var favoritePlayer: TennisPlayer? {
-        TennisPlayer.player(for: favoritePlayerID)
+        FavoritePlayerCatalog.resolvedPlayer(id: favoritePlayerID, payload: dataStore.payload)
     }
 
     private var favoriteSlam: GrandSlam? {
@@ -105,6 +106,15 @@ struct SettingsView: View {
             .toolbarBackground(ThemeManager.midnightGreen, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
+        .onAppear {
+            dataStore.loadCachedPayload()
+        }
+        .task {
+            await FavoritePlayerEnricher.ensureLoaded(
+                playerID: favoritePlayerID,
+                payload: dataStore.payload
+            )
+        }
         .sheet(isPresented: $showPlayerPicker) {
             FavoritePlayerPickerSheet(favoritePlayerID: $favoritePlayerID)
         }
@@ -143,11 +153,12 @@ struct SettingsView: View {
                     action: { showPlayerPicker = true }
                 ) {
                     if let player = favoritePlayer {
-                        CachedBundledImage(name: player.heroImageName, contentMode: .fit)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                            .padding(.top, 26)
+                        PlayerTorsoPhotoView(player: player, contentMode: .fit)
+                            .frame(width: 92, height: 108)
+                            .opacity(0.55)
                     }
                 }
+                .frame(minWidth: 0, maxWidth: .infinity)
 
                 FavoriteCard(
                     title: favoriteSlam?.rawValue.uppercased() ?? "PICK A SLAM",
@@ -155,15 +166,24 @@ struct SettingsView: View {
                     action: { showSlamPicker = true }
                 ) {
                     if let slam = favoriteSlam {
-                        CachedBundledImage(name: slam.logoImageName, contentMode: .fit)
-                            .frame(width: 84, height: 84)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                            .padding([.bottom, .trailing], 10)
-                            .opacity(0.85)
+                        FavoriteSlamLogoBadge(slam: slam)
                     }
                 }
+                .frame(minWidth: 0, maxWidth: .infinity)
+            }
+
+            if showsFavoriteMediaHint {
+                Text("Player photo isn’t available right now (daily API limit). Rank still updates from cache — photo retries automatically later.")
+                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private var showsFavoriteMediaHint: Bool {
+        guard let player = favoritePlayer, player.isCustom else { return false }
+        return !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
     // MARK: Personal
@@ -281,6 +301,50 @@ struct SettingsView: View {
 
 // MARK: - Building blocks
 
+private enum FavoriteCardMetrics {
+    static let height: CGFloat = 176
+    static let slamLogoSize: CGFloat = 86
+}
+
+/// Circular slam mark for Settings favorite cards.
+private struct FavoriteSlamLogoBadge: View {
+    let slam: GrandSlam
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(badgeBackground)
+
+            AssetCatalogImage(
+                name: slam.logoImageName,
+                contentMode: usesFill ? .fill : .fit
+            )
+            .padding(logoInset)
+        }
+        .frame(width: FavoriteCardMetrics.slamLogoSize, height: FavoriteCardMetrics.slamLogoSize)
+        .clipShape(Circle())
+        .overlay {
+            Circle()
+                .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+        }
+        .opacity(0.95)
+    }
+
+    /// Fill for all marks so rectangular assets (US Open) become round badges.
+    private var usesFill: Bool { true }
+
+    private var logoInset: CGFloat { 0 }
+
+    private var badgeBackground: Color {
+        switch slam {
+        case .australianOpen: Color(hex: 0x0085CA).opacity(0.35)
+        case .frenchOpen: Color(hex: 0xE35205).opacity(0.25)
+        case .wimbledon: Color(hex: 0x006633).opacity(0.3)
+        case .usOpen: Color(hex: 0x0C2340)
+        }
+    }
+}
+
 private struct FavoriteCard<Artwork: View>: View {
     let title: String
     let subtitle: String
@@ -296,17 +360,24 @@ private struct FavoriteCard<Artwork: View>: View {
             )
 
             artwork()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(.trailing, 10)
+                .padding(.bottom, 48)
+                .allowsHitTesting(false)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
                     .foregroundStyle(.white)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.trailing, 40)
 
                 Text(subtitle)
                     .font(ThemeManager.roundedFont(.caption, weight: .medium))
                     .foregroundStyle(.white.opacity(0.6))
+                    .padding(.trailing, 48)
 
                 Spacer(minLength: 0)
 
@@ -314,17 +385,21 @@ private struct FavoriteCard<Artwork: View>: View {
                     Text("Change")
                         .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
                         .foregroundStyle(ThemeManager.midnightGreen)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 9)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                         .background(Color.white)
                         .clipShape(Capsule())
                 }
                 .courtifyButton(.ghost)
             }
-            .padding(14)
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 16)
         }
-        .frame(height: 158)
+        .frame(minWidth: 0, maxWidth: .infinity)
+        .frame(height: FavoriteCardMetrics.height)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 

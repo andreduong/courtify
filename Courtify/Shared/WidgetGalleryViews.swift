@@ -5,6 +5,8 @@ import UIKit
 
 struct FavoritePlayerWidgetView: View {
     let player: TennisPlayer?
+    var widgetID: String = "favorite"
+    @State private var colorTick = 0
 
     private var rankLabel: String {
         guard let ranking = player?.ranking, ranking > 0 else { return "—" }
@@ -17,18 +19,15 @@ struct FavoritePlayerWidgetView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            LinearGradient(
-                colors: [WidgetTheme.emeraldGreen, WidgetTheme.midnightGreen],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+        ZStack(alignment: .topLeading) {
+            WidgetColorStyle.gradient(for: widgetID)
+                .id(colorTick)
 
             if let player {
                 FavoritePlayerHeroImage(player: player)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(player?.tour.rawValue ?? "ATP")
                     .font(WidgetTheme.roundedFont(.caption2, weight: .bold))
                     .foregroundStyle(WidgetTheme.opticYellow)
@@ -37,23 +36,32 @@ struct FavoritePlayerWidgetView: View {
                     .font(WidgetTheme.roundedFont(.caption, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.9))
                     .lineLimit(2)
-                    .frame(maxWidth: 90, alignment: .leading)
+                    .minimumScaleFactor(0.85)
 
-                Spacer()
+                Spacer(minLength: 0)
 
-                if let record = player?.seasonRecord {
+                if let record = player?.bundledSeasonRecord {
                     Text("\(record.wins)-\(record.losses) season")
+                        .font(WidgetTheme.roundedFont(.caption2, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.7))
+                } else if player?.isCustom == true {
+                    Text("Season —")
                         .font(WidgetTheme.roundedFont(.caption2, weight: .medium))
                         .foregroundStyle(.white.opacity(0.7))
                 }
 
                 Text(rankLabel)
-                    .font(WidgetTheme.roundedFont(size: 34, weight: .bold))
+                    .font(WidgetTheme.roundedFont(size: 32, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .padding(14)
+            .frame(maxWidth: 108, alignment: .leading)
+            .padding(WidgetTheme.contentInset)
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
     }
 }
 
@@ -66,26 +74,33 @@ struct FavoritePlayerHeroImage: View {
                 Image("\(bundled)-hero")
                     .resizable()
                     .scaledToFit()
-            } else if PlayerRankCache.photosVerified(for: player.id),
-                      PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
+            } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
                       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
                       let uiImage = UIImage(contentsOfFile: path) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
-            } else if PlayerRankCache.photosVerified(for: player.id),
-                      PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
+            } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
                       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head),
                       let uiImage = UIImage(contentsOfFile: path) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
+            } else {
+                Image(systemName: player.tour == .wta
+                      ? "figure.dress.line.vertical.figure"
+                      : "figure.tennis")
+                    .font(.system(size: 78, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.26))
+                    .symbolRenderingMode(.monochrome)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-        .padding(.leading, 78)
-        .offset(x: 16)
+        .padding(.leading, 88)
+        .offset(x: 8, y: 8)
         .opacity(0.95)
+        .allowsHitTesting(false)
     }
 }
 
@@ -128,7 +143,7 @@ struct NextTournamentSmallView: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
-            .padding(14)
+            .padding(WidgetTheme.contentInset)
         }
         .courtifyWidgetCanvas()
     }
@@ -176,7 +191,7 @@ struct TournamentCountdownView: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
-            .padding(16)
+            .padding(WidgetTheme.contentInset)
         }
         .courtifyWidgetCanvas()
     }
@@ -246,7 +261,7 @@ struct NextTournamentLargeView: View {
                 }
                 .frame(width: 150, alignment: .leading)
             }
-            .padding(16)
+            .padding(WidgetTheme.contentInset)
         }
         .courtifyWidgetCanvas()
     }
@@ -278,7 +293,7 @@ struct SeasonCalendarView: View {
                     widgetCalendarColumn(Array(events.dropFirst(midpoint)))
                 }
             }
-            .padding(14)
+            .padding(WidgetTheme.contentInset)
         }
         .courtifyWidgetCanvas()
     }
@@ -319,10 +334,18 @@ struct RankingsWidgetView: View {
     let entries: [WidgetRankingEntry]
     let limit: Int
     var showsRefreshHint = false
+    var widgetID: String = "atp-medium"
+    @State private var colorTick = 0
 
     var body: some View {
         ZStack {
-            rankingsGradient(for: tour, large: false)
+            WidgetColorStyle.gradient(
+                for: widgetID,
+                fallbackAccent: tour == .atp ? Color(hex: 0x0C2340) : Color(hex: 0x3D1E52),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .id(colorTick)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(tour.rawValue) TOP \(limit)")
@@ -341,10 +364,14 @@ struct RankingsWidgetView: View {
                     }
                 }
             }
-            .padding(14)
+            .padding(WidgetTheme.contentInset)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
     }
 }
 
@@ -352,10 +379,18 @@ struct RankingsLargeWidgetView: View {
     let tour: TourPreference
     let entries: [WidgetRankingEntry]
     var showsRefreshHint = false
+    var widgetID: String = "atp-large"
+    @State private var colorTick = 0
 
     var body: some View {
         ZStack {
-            rankingsGradient(for: tour, large: true)
+            WidgetColorStyle.gradient(
+                for: widgetID,
+                fallbackAccent: tour == .atp ? Color(hex: 0x0C2340) : Color(hex: 0x3D1E52),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .id(colorTick)
 
             VStack(spacing: 10) {
                 Text("2026 \(tour.rawValue) RANKINGS")
@@ -375,10 +410,14 @@ struct RankingsLargeWidgetView: View {
                     }
                 }
             }
-            .padding(14)
+            .padding(WidgetTheme.contentInset)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
     }
 
     private func widgetRankingColumn(_ column: [WidgetRankingEntry]) -> some View {
@@ -432,14 +471,18 @@ struct WidgetRankingRow: View {
 struct LiveScoresWidgetView: View {
     let match: WidgetLiveMatch?
     var showsRefreshHint = false
+    var widgetID: String = "live"
+    @State private var colorTick = 0
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [Color(hex: 0x143D2B), WidgetTheme.midnightGreen],
+            WidgetColorStyle.gradient(
+                for: widgetID,
+                fallbackAccent: Color(hex: 0x143D2B),
                 startPoint: .top,
                 endPoint: .bottom
             )
+            .id(colorTick)
 
             if let match {
                 VStack(alignment: .leading, spacing: 5) {
@@ -481,7 +524,7 @@ struct LiveScoresWidgetView: View {
                             .minimumScaleFactor(0.7)
                     }
                 }
-                .padding(14)
+                .padding(WidgetTheme.contentInset)
             } else {
                 VStack(spacing: 6) {
                     Text("No live matches")
@@ -493,12 +536,18 @@ struct LiveScoresWidgetView: View {
             }
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
     }
 }
 
 struct OrderOfPlayListView: View {
     let matches: [WidgetUpcomingMatch]
     var showsRefreshHint = false
+    var widgetID: String = "order"
+    @State private var colorTick = 0
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -509,11 +558,13 @@ struct OrderOfPlayListView: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [Color(hex: 0x0C2340), WidgetTheme.midnightGreen],
+            WidgetColorStyle.gradient(
+                for: widgetID,
+                fallbackAccent: Color(hex: 0x0C2340),
                 startPoint: .leading,
                 endPoint: .bottomTrailing
             )
+            .id(colorTick)
 
             VStack(alignment: .leading, spacing: 12) {
                 Text("ORDER OF PLAY")
@@ -535,41 +586,50 @@ struct OrderOfPlayListView: View {
                     Spacer()
                 } else {
                     ForEach(matches.prefix(6), id: \.displayID) { match in
-                        HStack(spacing: 8) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text(match.court ?? match.tournament ?? match.tour)
-                                    .font(WidgetTheme.roundedFont(.caption2, weight: .bold))
-                                    .foregroundStyle(WidgetTheme.opticYellow)
-                                    .lineLimit(1)
-                                if let startTime = match.startTime {
-                                    Text(Self.timeFormatter.string(from: startTime))
-                                        .font(WidgetTheme.roundedFont(size: 9, weight: .medium))
-                                        .foregroundStyle(.white.opacity(0.5))
-                                }
-                            }
-                            .frame(width: 64, alignment: .leading)
-
-                            Text(match.player1.name)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                            Text("vs")
-                                .foregroundStyle(.white.opacity(0.45))
-                            Text(match.player2.name)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-
-                            Spacer(minLength: 0)
-                        }
-                        .font(WidgetTheme.roundedFont(.caption2, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .frame(maxHeight: .infinity)
+                        orderRow(match)
                     }
+                    Spacer(minLength: 0)
                 }
             }
-            .padding(14)
+            .padding(WidgetTheme.contentInset)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
+    }
+
+    private func orderRow(_ match: WidgetUpcomingMatch) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(match.court ?? match.tournament ?? match.tour)
+                    .font(WidgetTheme.roundedFont(.caption2, weight: .bold))
+                    .foregroundStyle(WidgetTheme.opticYellow)
+                    .lineLimit(1)
+                if let startTime = match.startTime {
+                    Text(Self.timeFormatter.string(from: startTime))
+                        .font(WidgetTheme.roundedFont(size: 9, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            .frame(width: 64, alignment: .leading)
+
+            Text(match.player1.name)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text("vs")
+                .foregroundStyle(.white.opacity(0.45))
+            Text(match.player2.name)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            Spacer(minLength: 0)
+        }
+        .font(WidgetTheme.roundedFont(.caption2, weight: .semibold))
+        .foregroundStyle(.white.opacity(0.9))
+        .frame(maxHeight: .infinity)
     }
 }
 

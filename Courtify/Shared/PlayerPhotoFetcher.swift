@@ -53,56 +53,18 @@ enum PlayerPhotoFetcher {
             return APIPlayerRef(id: cachedApiId, tourKey: tourKey, name: player.name, atpTourCode: code)
         }
 
-        if let match = rankingEntry(matching: player.name, tour: player.tour, payload: payload),
+        if let match = FavoritePlayerCatalog.payloadRankingEntry(for: player, payload: payload),
            let id = match.player.id {
             let code = PlayerSearchCatalog.atpTourCode(for: player.name)
             return APIPlayerRef(id: id, tourKey: tourKey, name: player.name, atpTourCode: code)
         }
 
         let code = PlayerSearchCatalog.atpTourCode(for: player.name)
+        if let bundledId = PlayerSearchCatalog.bundledApiId(for: player.name, tour: player.tour), bundledId > 0 {
+            return APIPlayerRef(id: bundledId, tourKey: tourKey, name: player.name, atpTourCode: code)
+        }
+
         return APIPlayerRef(id: 0, tourKey: tourKey, name: player.name, atpTourCode: code)
-    }
-
-    private static func rankingEntry(
-        matching name: String,
-        tour: TourPreference,
-        payload: WidgetDataPayload?
-    ) -> WidgetRankingEntry? {
-        guard let payload else { return nil }
-        let entries = tour == .wta ? payload.rankings.wta : payload.rankings.atp
-        let foldedName = folded(name)
-        let lastName = foldedName.split(separator: " ").last.map(String.init)
-
-        return entries.first { entry in
-            let entryName = folded(entry.player.name)
-            let entryLast = entryName.split(separator: " ").last.map(String.init)
-            return entryName == foldedName
-                || (lastName != nil && entryLast == lastName)
-                || (lastName != nil && entryLast != nil && levenshtein(entryLast!, lastName!) <= 1)
-        }
-    }
-
-    private static func levenshtein(_ lhs: String, _ rhs: String) -> Int {
-        if lhs == rhs { return 0 }
-        if lhs.isEmpty { return rhs.count }
-        if rhs.isEmpty { return lhs.count }
-
-        var previous = Array(0 ... rhs.count)
-        for (i, leftChar) in lhs.enumerated() {
-            var current = [i + 1]
-            for (j, rightChar) in rhs.enumerated() {
-                let insertions = previous[j + 1] + 1
-                let deletions = current[j] + 1
-                let substitutions = previous[j] + (leftChar == rightChar ? 0 : 1)
-                current.append(min(insertions, deletions, substitutions))
-            }
-            previous = current
-        }
-        return previous.last ?? max(lhs.count, rhs.count)
-    }
-
-    private static func folded(_ string: String) -> String {
-        string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "en_US"))
     }
 
     private static func download(
@@ -118,7 +80,10 @@ enum PlayerPhotoFetcher {
             return true
         }
 
-        guard ref.id > 0, let remoteURL = photoURL(ref: ref, variant: variant) else {
+        guard let remoteURL = photoURL(ref: ref, variant: variant) else {
+            return false
+        }
+        guard ref.id > 0 || (ref.tourKey == "atp" && ref.atpTourCode != nil) else {
             return false
         }
 
@@ -150,8 +115,14 @@ enum PlayerPhotoFetcher {
         var queryItems = [
             URLQueryItem(name: "tour", value: ref.tourKey),
             URLQueryItem(name: "variant", value: variant.rawValue),
-            URLQueryItem(name: "apiId", value: String(ref.id)),
+            URLQueryItem(name: "name", value: ref.name),
         ]
+        if ref.id > 0 {
+            queryItems.append(URLQueryItem(name: "apiId", value: String(ref.id)))
+        }
+        if let code = ref.atpTourCode, !code.isEmpty {
+            queryItems.append(URLQueryItem(name: "code", value: code))
+        }
         components?.queryItems = queryItems
         return components?.url
     }

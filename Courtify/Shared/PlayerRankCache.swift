@@ -12,7 +12,7 @@ enum PlayerRankCache {
     private static let mapKey = "playerRankCache"
 
     static func rank(for playerID: String) -> Int? {
-        guard let entry = entry(for: playerID), entry.photosVerified else { return nil }
+        guard let entry = entry(for: playerID), entry.rank > 0 else { return nil }
         return entry.rank
     }
 
@@ -35,7 +35,7 @@ enum PlayerRankCache {
         photosVerified: Bool,
         for playerID: String
     ) {
-        guard rank > 0 else { return }
+        guard rank > 0 || (apiId != nil && apiId! > 0) else { return }
         var map = loadMap()
         map[playerID] = Entry(rank: rank, apiId: apiId, name: name, photosVerified: photosVerified)
         saveMap(map)

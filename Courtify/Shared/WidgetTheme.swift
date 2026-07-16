@@ -6,6 +6,9 @@ enum WidgetTheme {
     static let emeraldGreen = Color(hex: 0x00703C)
     static let courtGreen = Color(hex: 0x35C77F)
 
+    /// Shared content inset for small + medium gallery/home widgets.
+    static let contentInset: CGFloat = 28
+
     static func roundedFont(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
         .system(style, design: .rounded).weight(weight)
     }

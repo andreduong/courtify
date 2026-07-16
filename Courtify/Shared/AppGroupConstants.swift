@@ -19,6 +19,7 @@ enum AppGroupConstants {
     }
 
     static let favoritePlayerDidChange = Notification.Name("favoritePlayerDidChange")
+    static let widgetColorDidChange = Notification.Name("widgetColorDidChange")
 
     enum Keys {
         static let favoritePlayerID = "favoritePlayerID"
@@ -33,6 +34,7 @@ enum AppGroupConstants {
         static let referralBypassActive = "referralBypassActive"
         static let widgetAccessEnabled = "widgetAccessEnabled"
         static let notificationsEnabled = "notificationsEnabled"
+        static let widgetColorStyles = "widgetColorStyles"
         #if DEBUG
         static let debugProUser = "debugProUser"
         #endif

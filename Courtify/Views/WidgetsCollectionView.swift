@@ -55,6 +55,8 @@ struct WidgetsCollectionView: View {
     @State private var showPaywall = false
     @State private var showPlayerPicker = false
     @State private var showSettings = false
+    @State private var colorPickerItem: WidgetGalleryItem?
+    @State private var colorRefreshTick = 0
 
     /// DEBUG-only: launch with `-UITestWidgetFilter free|small|medium|large` to
     /// preselect a gallery filter (used by agents to screenshot filter states).
@@ -176,6 +178,12 @@ struct WidgetsCollectionView: View {
             }
             #endif
         }
+        .task(id: favoritePlayerID) {
+            await FavoritePlayerEnricher.ensureLoaded(
+                playerID: favoritePlayerID,
+                payload: dataStore.payload
+            )
+        }
         .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.favoritePlayerDidChange)) { _ in
             dataStore.loadCachedPayload()
         }
@@ -193,6 +201,16 @@ struct WidgetsCollectionView: View {
             FavoritePlayerPickerSheet(favoritePlayerID: $favoritePlayerID)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $colorPickerItem) { item in
+            WidgetColorPickerSheet(
+                widgetID: item.id,
+                title: item.title,
+                onRequestPaywall: { showPaywall = true }
+            )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { _ in
+            colorRefreshTick += 1
         }
     }
 
@@ -251,7 +269,20 @@ struct WidgetsCollectionView: View {
                     widgetCard(for: row[0])
                 }
             }
+
+            if section.id == "favorite", showsFavoriteMediaHint {
+                Text("Photo & season record unavailable right now (daily API limit). Rank still updates from cache.")
+                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+    }
+
+    private var showsFavoriteMediaHint: Bool {
+        guard let player = favoritePlayer, player.isCustom else { return false }
+        return player.bundledSeasonRecord == nil
+            || !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
     /// Small widgets pair up two per row; medium/large span the full width.
@@ -290,46 +321,80 @@ struct WidgetsCollectionView: View {
     private func widgetCard(for item: WidgetGalleryItem) -> some View {
         let locked = isLocked(item)
         let isSquareSmall = item.size == .small
-        VStack(spacing: 8) {
-            Button {
-                if locked {
-                    showPaywall = true
-                } else if item.id == "favorite" {
-                    showPlayerPicker = true
-                }
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    previewContent(for: item)
-                        .frame(width: isSquareSmall ? item.size.previewHeight : nil)
-                        .frame(maxWidth: isSquareSmall ? nil : .infinity)
-                        .frame(height: item.size.previewHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        let canRecolor = WidgetColorStyle.isCustomizable(item.id)
+        let previewWidth: CGFloat? = isSquareSmall ? item.size.previewHeight : nil
+        let previewHeight = item.size.previewHeight
 
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .topTrailing) {
+                Button {
                     if locked {
-                        Text("Premium 🎾")
-                            .font(ThemeManager.roundedFont(.caption2, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.black.opacity(0.45))
-                            .clipShape(Capsule())
-                            .padding(10)
+                        showPaywall = true
+                    } else if item.id == "favorite" {
+                        showPlayerPicker = true
                     }
+                } label: {
+                    previewContent(for: item)
+                        .id("\(item.id)-\(colorRefreshTick)")
+                        .frame(width: previewWidth)
+                        .frame(maxWidth: isSquareSmall ? nil : .infinity)
+                        .frame(height: previewHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 }
-                .overlay(alignment: .bottomTrailing) {
-                    if !locked, item.id == "favorite" {
-                        Image(systemName: "paintbrush.fill")
+                .courtifyButton(.card)
+                .disabled(!locked && item.id != "favorite")
+
+                if locked {
+                    Text("Premium 🎾")
+                        .font(ThemeManager.roundedFont(.caption2, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.45))
+                        .clipShape(Capsule())
+                        .padding(10)
+                        .allowsHitTesting(false)
+                }
+
+                if canRecolor {
+                    Button {
+                        if isEntitled {
+                            colorPickerItem = item
+                        } else {
+                            showPaywall = true
+                        }
+                    } label: {
+                        Image(systemName: isEntitled ? "circle.lefthalf.filled" : "lock.fill")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(8)
                             .background(.black.opacity(0.45))
                             .clipShape(Circle())
-                            .padding(8)
                     }
+                    .courtifyButton(.icon)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                }
+
+                if !locked, item.id == "favorite" {
+                    Button {
+                        showPlayerPicker = true
+                    } label: {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(.black.opacity(0.45))
+                            .clipShape(Circle())
+                    }
+                    .courtifyButton(.icon)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 }
             }
-            .courtifyButton(.card)
-            .disabled(!locked && item.id != "favorite")
+            .frame(width: previewWidth)
+            .frame(maxWidth: isSquareSmall ? nil : .infinity)
+            .frame(height: previewHeight)
 
             HStack(spacing: 6) {
                 Text(item.title)
@@ -346,24 +411,61 @@ struct WidgetsCollectionView: View {
             }
             .lineLimit(1)
         }
+        .frame(maxWidth: isSquareSmall ? previewHeight : .infinity, alignment: .leading)
     }
 
     @ViewBuilder
     private func previewContent(for item: WidgetGalleryItem) -> some View {
         switch item.id {
         case "favorite":
-            FavoritePlayerWidgetView(player: favoritePlayer)
+            FavoritePlayerWidgetView(player: favoritePlayer, widgetID: "favorite")
                 .id(favoritePlayerID)
         case "next-small": NextTournamentSmallView(tour: preferredTour)
         case "countdown": TournamentCountdownView(tour: preferredTour)
         case "next-large": NextTournamentLargeView(tour: preferredTour)
         case "calendar": SeasonCalendarView(tour: preferredTour)
-        case "atp-medium": RankingsWidgetView(tour: .atp, entries: dataStore.rankings(for: .atp), limit: 5, showsRefreshHint: true)
-        case "atp-large": RankingsLargeWidgetView(tour: .atp, entries: dataStore.rankings(for: .atp), showsRefreshHint: true)
-        case "wta-medium": RankingsWidgetView(tour: .wta, entries: dataStore.rankings(for: .wta), limit: 5, showsRefreshHint: true)
-        case "wta-large": RankingsLargeWidgetView(tour: .wta, entries: dataStore.rankings(for: .wta), showsRefreshHint: true)
-        case "live": LiveScoresWidgetView(match: dataStore.payload?.liveMatches.first, showsRefreshHint: true)
-        case "order": OrderOfPlayListView(matches: dataStore.payload?.upcomingMatches ?? [], showsRefreshHint: true)
+        case "atp-medium":
+            RankingsWidgetView(
+                tour: .atp,
+                entries: dataStore.rankings(for: .atp),
+                limit: 5,
+                showsRefreshHint: true,
+                widgetID: "atp-medium"
+            )
+        case "atp-large":
+            RankingsLargeWidgetView(
+                tour: .atp,
+                entries: dataStore.rankings(for: .atp),
+                showsRefreshHint: true,
+                widgetID: "atp-large"
+            )
+        case "wta-medium":
+            RankingsWidgetView(
+                tour: .wta,
+                entries: dataStore.rankings(for: .wta),
+                limit: 5,
+                showsRefreshHint: true,
+                widgetID: "wta-medium"
+            )
+        case "wta-large":
+            RankingsLargeWidgetView(
+                tour: .wta,
+                entries: dataStore.rankings(for: .wta),
+                showsRefreshHint: true,
+                widgetID: "wta-large"
+            )
+        case "live":
+            LiveScoresWidgetView(
+                match: dataStore.payload?.liveMatches.first,
+                showsRefreshHint: true,
+                widgetID: "live"
+            )
+        case "order":
+            OrderOfPlayListView(
+                matches: dataStore.payload?.upcomingMatches ?? [],
+                showsRefreshHint: true,
+                widgetID: "order"
+            )
         default: EmptyView()
         }
     }

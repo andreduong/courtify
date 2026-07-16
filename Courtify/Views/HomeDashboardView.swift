@@ -14,6 +14,7 @@ struct HomeDashboardView: View {
     @State private var showSettings = false
     @State private var now = Date()
     @State private var photoRefreshToken = 0
+    @State private var showMediaUnavailableAlert = false
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
@@ -58,12 +59,31 @@ struct HomeDashboardView: View {
             }
             #endif
         }
+        .task(id: favoritePlayerID) {
+            await FavoritePlayerEnricher.ensureLoaded(
+                playerID: favoritePlayerID,
+                payload: dataStore.payload
+            )
+            // One-shot per player ID so relaunches don’t re-prompt.
+            // Skip while another modal is up (Settings / paywall) to avoid presentation conflicts.
+            guard !showSettings, !showPaywall else { return }
+            if FavoritePlayerEnricher.mediaUnavailable,
+               FavoritePlayerEnricher.shouldPresentMediaUnavailableAlert(for: favoritePlayerID) {
+                FavoritePlayerEnricher.markMediaUnavailableAlertPresented(for: favoritePlayerID)
+                showMediaUnavailableAlert = true
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.favoritePlayerDidChange)) { _ in
             photoRefreshToken += 1
             dataStore.loadCachedPayload()
         }
         .onReceive(timer) { now = $0 }
         .settingsSheet(isPresented: $showSettings)
+        .alert("Player photo unavailable", isPresented: $showMediaUnavailableAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("We've hit today's tennis API photo limit. Your rank still shows from cache; the photo will load automatically once quota resets.")
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView(
                 favoritePlayerID: favoritePlayerID.isEmpty ? "sinner" : favoritePlayerID,
@@ -161,13 +181,26 @@ struct HomeDashboardView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 18) {
                 statChip(icon: "chart.bar.fill", label: "Rank", value: rankLabel)
-                if let record = favoritePlayer?.seasonRecord {
+                if let record = favoritePlayer?.bundledSeasonRecord {
                     statChip(
                         icon: "sportscourt.fill",
                         label: "2026",
                         value: "\(record.wins)-\(record.losses)"
                     )
+                } else if favoritePlayer?.isCustom == true {
+                    statChip(
+                        icon: "sportscourt.fill",
+                        label: "2026",
+                        value: "—"
+                    )
                 }
+            }
+
+            if showsFavoriteMediaHint {
+                Text("Photo & season record unavailable (API limit). Rank still updates from cache.")
+                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if let rank = liveRank {
@@ -191,6 +224,12 @@ struct HomeDashboardView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var showsFavoriteMediaHint: Bool {
+        guard let player = favoritePlayer, player.isCustom else { return false }
+        return player.bundledSeasonRecord == nil
+            || !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
     private var rankLabel: String {

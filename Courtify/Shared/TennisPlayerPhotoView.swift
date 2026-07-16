@@ -41,7 +41,6 @@ struct PlayerTorsoPhotoView: View {
 
   private func trustedCachedUIImage(variant: PlayerPhotoVariant) -> UIImage? {
     guard player.isCustom else { return nil }
-    guard PlayerRankCache.photosVerified(for: player.id) else { return nil }
     guard PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: variant),
           let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: variant) else {
       return nil
@@ -61,8 +60,9 @@ struct TennisPlayerPhotoView: View {
         Image(bundledName)
           .resizable()
           .scaledToFill()
-      } else if let path = cachedPath, let uiImage = UIImage(contentsOfFile: path),
-                PlayerRankCache.photosVerified(for: player.id) || player.imageName != nil {
+      } else if let path = cachedPath,
+                PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: style == .headshot ? .head : .hero),
+                let uiImage = UIImage(contentsOfFile: path) {
         Image(uiImage: uiImage)
           .resizable()
           .scaledToFill()

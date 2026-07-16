@@ -259,6 +259,18 @@ struct OnboardingFlowView: View {
                 referralBypass: false
             )
         }
+        if let player = FavoritePlayerCatalog.resolvedPlayer(
+            id: draftFavoritePlayerID,
+            payload: WidgetDataStore.shared.payload
+        ), player.imageName == nil {
+            Task {
+                await FavoritePlayerEnricher.enrich(
+                    player,
+                    payload: WidgetDataStore.shared.payload,
+                    clearExisting: false
+                )
+            }
+        }
         hasCompletedOnboarding = true
         showSpecialOfferOnPaywall = false
     }

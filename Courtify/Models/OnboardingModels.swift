@@ -54,6 +54,14 @@ struct TennisPlayer: Identifiable, Hashable {
         return "\(imageName)-hero"
     }
 
+    /// Bundled 2026 season W/L — only for the featured top-10 catalog (not custom/API picks).
+    var bundledSeasonRecord: (wins: Int, losses: Int)? {
+        guard imageName != nil, TennisPlayer.topPlayers.contains(where: { $0.id == id }) else {
+            return nil
+        }
+        return seasonRecord
+    }
+
     /// Bundled 2026 season W/L through current tour stop (placeholder until live stats API).
     var seasonRecord: (wins: Int, losses: Int) {
         switch id {
@@ -160,6 +168,39 @@ enum PlayerSearchCatalog {
         "Lorenzo Musetti": "m0ej",
         "Matteo Berrettini": "bh60",
     ]
+
+    /// RapidAPI numeric ids for bundled search-catalog players (dev-time lookup).
+    /// Used as a zero-cost fallback for photo fetch when live lookup is rate-limited.
+    private static let atpApiIds: [String: Int] = [
+        "Novak Djokovic": 5992,
+        "Jannik Sinner": 47275,
+        "Carlos Alcaraz": 68074,
+        "Daniil Medvedev": 22807,
+        "Alexander Zverev": 24008,
+        "Taylor Fritz": 29932,
+        "Ben Shelton": 87562,
+        "Hubert Hurkacz": 26473,
+        "Casper Ruud": 33648,
+        "Andrey Rublev": 29372,
+        "Stefanos Tsitsipas": 30470,
+        "Tommy Paul": 29935,
+        "Grigor Dimitrov": 28064,
+        "Frances Tiafoe": 29939,
+        "Holger Rune": 69471,
+        "Sebastian Korda": 42451,
+        "Alex de Minaur": 39309,
+        "Felix Auger-Aliassime": 40434,
+        "Felix Auger Aliassime": 40434,
+        "Lorenzo Musetti": 63572,
+        "Matteo Berrettini": 29812,
+    ]
+
+    static func bundledApiId(for name: String, tour: TourPreference) -> Int? {
+        guard tour == .atp else { return nil }
+        let folded = fold(name)
+        if let exact = atpApiIds[name] { return exact }
+        return atpApiIds.first { fold($0.key) == folded }?.value
+    }
 
     static func atpTourCode(for name: String) -> String? {
         let folded = fold(name)
