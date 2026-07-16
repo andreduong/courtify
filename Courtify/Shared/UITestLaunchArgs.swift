@@ -37,6 +37,18 @@ enum UITestLaunchArgs {
         ProcessInfo.processInfo.arguments.contains("-UITestFavoritePicker")
     }
 
+    /// Opens the widget color sheet for a customizable gallery id (default `favorite`).
+    /// Example: `-UITestWidgetColor` or `-UITestWidgetColor live`
+    static var widgetColorItemID: String? {
+        if let value = value(after: "-UITestWidgetColor") {
+            return value
+        }
+        if ProcessInfo.processInfo.arguments.contains("-UITestWidgetColor") {
+            return "favorite"
+        }
+        return nil
+    }
+
     static func value(after flag: String) -> String? {
         let args = ProcessInfo.processInfo.arguments
         guard let index = args.firstIndex(of: flag), index + 1 < args.count else { return nil }

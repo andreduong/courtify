@@ -19,16 +19,16 @@ private struct AppRootView: View {
     @StateObject private var revenueCat = RevenueCatManager.shared
     @State private var isBootstrapped = false
 
+    /// Home requires finished onboarding — not bare Pro/referral.
+    /// Otherwise purchase/bypass can flip `shouldShowHome` before drafts are committed,
+    /// dropping favorite player / Grand Slam picks from a fresh install.
     private var shouldShowHome: Bool {
-        if revenueCat.isProUser { return true }
-        if referralBypassActive { return true }
-        if hasCompletedOnboarding { return true }
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-UITestHome") { return true }
         if ProcessInfo.processInfo.arguments.contains("-UITestPaywall") { return false }
-        if AppGroupConstants.debugProUserEnabled { return true }
+        if ProcessInfo.processInfo.arguments.contains("-UITestHome") { return true }
+        if AppGroupConstants.debugProUserEnabled, hasCompletedOnboarding { return true }
         #endif
-        return false
+        return hasCompletedOnboarding
     }
 
     var body: some View {
@@ -59,14 +59,12 @@ private struct AppRootView: View {
                 isProUser: revenueCat.isProUser,
                 referralBypass: referralBypassActive
             )
-            AppGroupConstants.syncWidgetAccess(
-                isProUser: revenueCat.isProUser,
-                referralBypass: referralBypassActive
-            )
             if ProcessInfo.processInfo.arguments.contains("-UITestPaywall") {
                 hasCompletedOnboarding = false
                 AppGroupConstants.clearOnboardingPreferences()
             }
+            // Returning Pro users still need onboarding once per install to pick favorites.
+            // Do not set hasCompletedOnboarding from entitlement alone.
             isBootstrapped = true
         }
         .onOpenURL { url in

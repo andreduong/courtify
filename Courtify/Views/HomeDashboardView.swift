@@ -286,7 +286,7 @@ struct HomeDashboardView: View {
 
             Spacer(minLength: 0)
 
-            if !revenueCat.isProUser {
+            if !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
                 GetPremiumPill(action: { showPaywall = true })
             }
         }

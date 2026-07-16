@@ -381,9 +381,15 @@ auto-refresh timers or on-appear `refresh()` without an explicit product request
    (even if cache was cleared later).
 3. Else calls `refresh()` once and sets the flag on success.
 
+**Onboarding favorite persistence (important):**
+
+- Tour / favorite player / Grand Slam drafts bind to the **same app-group keys** Home and Settings read (`tourPreference`, `favoritePlayerID`, `favoriteGrandSlam`). Picks are written as the user continues each step (`persistOnboardingDraft`), not only at paywall exit.
+- `AppRootView.shouldShowHome` is gated on **`hasCompletedOnboarding` only** (plus UITest flags). Do **not** treat `isProUser` or `referralBypassActive` alone as “skip onboarding” — that raced ahead of `commitOnboarding` and dropped picks for fresh installs / mid-paywall Pro flips.
+- Final `commitOnboarding` still runs on subscribe / referral / free close: syncs widget access, bumps `favoritePlayerRevision`, reloads timelines.
+
 `FavoritePlayersView` maps API rankings onto bundled photos via diacritic-insensitive
 last-name + first-initial matching; players outside the bundled catalog get
-`custom:` IDs and placeholder avatars. Custom search (`PlayerSearchCatalog`) stays
+`custom:` IDs and silhouettes until photos verify. Custom search (`PlayerSearchCatalog`) stays
 bundled — no API for autocomplete.
 
 **Free vs Pro widget access:** `AppGroupConstants.widgetAccessEnabled` is synced from
@@ -443,6 +449,7 @@ All hooks are parsed from `ProcessInfo.processInfo.arguments` via
 | `-UITestSettings` | Auto-present Settings sheet (Home tab) |
 | `-UITestWidgetFilter free\|small\|medium\|large` | Preselect Widgets gallery filter |
 | `-UITestWidgetOnly <itemID>` | Render one widget card (see IDs below) |
+| `-UITestWidgetColor [itemID]` | Open color sheet for a customizable id (default `favorite`); free users get paywall |
 
 **Standard build + launch loop:**
 

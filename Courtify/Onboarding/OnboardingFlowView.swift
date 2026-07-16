@@ -13,16 +13,32 @@ enum OnboardingStep: Hashable {
 
 struct OnboardingFlowView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    /// Drafts write to the same app-group keys Home/Settings read — progressive persistence.
+    @AppStorage(AppGroupConstants.Keys.tourPreference, store: AppGroupConstants.appGroupStorage)
+    private var draftTourPreferenceRaw = TourPreference.both.rawValue
+    @AppStorage(AppGroupConstants.Keys.favoritePlayerID, store: AppGroupConstants.appGroupStorage)
+    private var draftFavoritePlayerID = ""
+    @AppStorage(AppGroupConstants.Keys.favoriteGrandSlam, store: AppGroupConstants.appGroupStorage)
+    private var draftFavoriteGrandSlam = ""
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var revenueCat = RevenueCatManager.shared
     @State private var path: [OnboardingStep] = []
     @State private var navigationDirection: CourtifyMotion.Direction = .forward
-    @State private var draftTourPreference: TourPreference = .both
-    @State private var draftFavoritePlayerID = ""
-    @State private var draftFavoriteGrandSlam = ""
     @State private var showSpecialOfferOnPaywall = false
     @State private var showPaywallCloseButton = false
     @State private var paywallCloseOpacity: Double = 0
+
+    private var draftTourPreference: TourPreference {
+        get { TourPreference(rawValue: draftTourPreferenceRaw) ?? .both }
+        nonmutating set { draftTourPreferenceRaw = newValue.rawValue }
+    }
+
+    private var draftTourPreferenceBinding: Binding<TourPreference> {
+        Binding(
+            get: { draftTourPreference },
+            set: { draftTourPreferenceRaw = $0.rawValue }
+        )
+    }
 
     private var onboardingProgress: Double {
         OnboardingProgress.progress(for: path)
@@ -113,7 +129,8 @@ struct OnboardingFlowView: View {
         case .splash:
             EmptyView()
         case .tourPreference:
-            TourPreferenceView(tourPreference: $draftTourPreference) {
+            TourPreferenceView(tourPreference: draftTourPreferenceBinding) {
+                AppGroupConstants.persistOnboardingDraft(tourPreference: draftTourPreference)
                 navigateForward(.favoritePlayers)
             }
             .courtifyScreenContent()
@@ -123,12 +140,14 @@ struct OnboardingFlowView: View {
                 tourPreference: draftTourPreference,
                 favoritePlayerID: $draftFavoritePlayerID
             ) {
+                AppGroupConstants.persistOnboardingDraft(favoritePlayerID: draftFavoritePlayerID)
                 navigateForward(.favoriteGrandSlam)
             }
             .courtifyScreenContent()
             .padding(.top, onboardingContentTopInset)
         case .favoriteGrandSlam:
             FavoriteGrandSlamView(favoriteGrandSlam: $draftFavoriteGrandSlam) {
+                AppGroupConstants.persistOnboardingDraft(favoriteGrandSlam: draftFavoriteGrandSlam)
                 navigateForward(.notifications)
             }
             .courtifyScreenContent()
@@ -277,13 +296,13 @@ struct OnboardingFlowView: View {
 
     private func returnToJoinScreen() {
         OnboardingReminderManager.cancelAbandonmentReminders()
-        draftTourPreference = .both
-        draftFavoritePlayerID = ""
-        draftFavoriteGrandSlam = ""
         showSpecialOfferOnPaywall = false
         showPaywallCloseButton = false
         paywallCloseOpacity = 0
         AppGroupConstants.clearOnboardingPreferences()
+        draftTourPreferenceRaw = TourPreference.both.rawValue
+        draftFavoritePlayerID = ""
+        draftFavoriteGrandSlam = ""
         CourtifyMotion.animateScreen(.backward) {
             navigationDirection = .backward
             path.removeAll()

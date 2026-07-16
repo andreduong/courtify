@@ -103,12 +103,35 @@ enum AppGroupConstants {
         grantWidgetAccess: Bool = true
     ) {
         userDefaults.set(tourPreference.rawValue, forKey: Keys.tourPreference)
-        userDefaults.set(favoritePlayerID, forKey: Keys.favoritePlayerID)
         userDefaults.set(favoriteGrandSlam, forKey: Keys.favoriteGrandSlam)
+        // Bump revision + notify so Home / widgets refresh immediately.
+        if favoritePlayerID.isEmpty {
+            userDefaults.removeObject(forKey: Keys.favoritePlayerID)
+        } else {
+            updateFavoritePlayer(favoritePlayerID)
+        }
         if grantWidgetAccess {
             setWidgetAccessEnabled(true)
+        } else {
+            WidgetTimelineRefresher.reloadAll()
         }
-        WidgetTimelineRefresher.reloadAll()
+    }
+
+    /// Write-through while onboarding so picks survive paywall races / process death.
+    static func persistOnboardingDraft(
+        tourPreference: TourPreference? = nil,
+        favoritePlayerID: String? = nil,
+        favoriteGrandSlam: String? = nil
+    ) {
+        if let tourPreference {
+            userDefaults.set(tourPreference.rawValue, forKey: Keys.tourPreference)
+        }
+        if let favoritePlayerID {
+            userDefaults.set(favoritePlayerID, forKey: Keys.favoritePlayerID)
+        }
+        if let favoriteGrandSlam {
+            userDefaults.set(favoriteGrandSlam, forKey: Keys.favoriteGrandSlam)
+        }
     }
 
     static func clearOnboardingPreferences() {

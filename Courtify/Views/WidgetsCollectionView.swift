@@ -176,6 +176,16 @@ struct WidgetsCollectionView: View {
                     showPlayerPicker = true
                 }
             }
+            if let colorID = UITestLaunchArgs.widgetColorItemID {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.5))
+                    if isEntitled, let item = galleryItem(id: colorID) {
+                        colorPickerItem = item
+                    } else if !isEntitled {
+                        showPaywall = true
+                    }
+                }
+            }
             #endif
         }
         .task(id: favoritePlayerID) {
@@ -316,6 +326,10 @@ struct WidgetsCollectionView: View {
 
     private func isLocked(_ item: WidgetGalleryItem) -> Bool {
         !item.isFree && !isEntitled
+    }
+
+    private func galleryItem(id: String) -> WidgetGalleryItem? {
+        sections.flatMap(\.items).first { $0.id == id }
     }
 
     @ViewBuilder

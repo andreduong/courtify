@@ -79,7 +79,13 @@ struct FavoritePlayersView: View {
 
             Spacer()
 
-            Button(action: onContinue) {
+            Button {
+                // Ensure #1 is set if the user selected stars but never triggered primary assignment.
+                if favoritePlayerID.isEmpty, let first = selectedPlayerIDs.first {
+                    favoritePlayerID = first
+                }
+                onContinue()
+            } label: {
                 Text(selectedPlayerIDs.isEmpty ? "Skip for now" : "Continue")
                     .courtifyPrimaryButtonLabel(fillOpacity: selectedPlayerIDs.isEmpty ? 0.5 : 1)
             }

@@ -1,17 +1,36 @@
 import SwiftUI
+import UIKit
 
 /// Per-widget accent color + gradient strength (app-group, shared with WidgetKit).
 /// Tournament-branded gallery cards stay on surface/slam colors and ignore this store.
 struct WidgetColorConfig: Codable, Equatable {
-    /// Preset id — see `WidgetColorPreset`.
+    /// Preset id — see `WidgetColorPreset`. Use `"custom"` with `customAccentHex`.
     var presetID: String
     /// 0 = nearly flat accent, 1 = strong fade into midnight green.
     var gradientLevel: Double
+    /// RGB hex when `presetID == WidgetColorConfig.customPresetID`.
+    var customAccentHex: UInt?
 
-    static let `default` = WidgetColorConfig(presetID: WidgetColorPreset.courtify.rawValue, gradientLevel: 0.85)
+    static let customPresetID = "custom"
+    static let `default` = WidgetColorConfig(
+        presetID: WidgetColorPreset.courtify.rawValue,
+        gradientLevel: 0.85,
+        customAccentHex: nil
+    )
 
     var clampedLevel: Double {
         min(1, max(0, gradientLevel))
+    }
+
+    var isCustom: Bool {
+        presetID == Self.customPresetID
+    }
+
+    var resolvedAccent: Color {
+        if isCustom, let hex = customAccentHex {
+            return Color(hex: hex)
+        }
+        return (WidgetColorPreset(rawValue: presetID) ?? .courtify).accent
     }
 }
 
@@ -76,15 +95,18 @@ enum WidgetColorStyle {
         loadMap()[widgetID] ?? .default
     }
 
-    static func set(_ config: WidgetColorConfig, for widgetID: String) {
+    static func set(_ config: WidgetColorConfig, for widgetID: String, reloadTimelines: Bool = true) {
         guard isCustomizable(widgetID) else { return }
         var map = loadMap()
         map[widgetID] = WidgetColorConfig(
             presetID: config.presetID,
-            gradientLevel: config.clampedLevel
+            gradientLevel: config.clampedLevel,
+            customAccentHex: config.isCustom ? config.customAccentHex : nil
         )
         saveMap(map)
-        WidgetTimelineRefresher.reloadAll()
+        if reloadTimelines {
+            WidgetTimelineRefresher.reloadAll()
+        }
         NotificationCenter.default.post(name: AppGroupConstants.widgetColorDidChange, object: widgetID)
     }
 
@@ -104,8 +126,9 @@ enum WidgetColorStyle {
         endPoint: UnitPoint = .bottom
     ) -> LinearGradient {
         let config = config(for: widgetID)
-        let preset = WidgetColorPreset(rawValue: config.presetID)
-        let top = preset?.accent ?? fallbackAccent
+        let top = config.isCustom
+            ? (config.customAccentHex.map { Color(hex: $0) } ?? fallbackAccent)
+            : (WidgetColorPreset(rawValue: config.presetID)?.accent ?? fallbackAccent)
         let level = config.clampedLevel
         // Higher level → more midnight at the bottom; low level → flatter accent wash.
         let bottom = WidgetTheme.midnightGreen.opacity(0.35 + (0.65 * level))
@@ -129,5 +152,21 @@ enum WidgetColorStyle {
     private static func saveMap(_ map: [String: WidgetColorConfig]) {
         guard let data = try? JSONEncoder().encode(map) else { return }
         AppGroupConstants.userDefaults.set(data, forKey: storeKey)
+    }
+
+    /// Pack sRGB components from a SwiftUI `Color` into a 24-bit hex.
+    static func rgbHex(from color: Color) -> UInt {
+        let ui = UIColor(color)
+        var r: CGFloat = 0
+        var g: CGFloat = 0
+        var b: CGFloat = 0
+        var a: CGFloat = 0
+        guard ui.getRed(&r, green: &g, blue: &b, alpha: &a) else {
+            return WidgetColorPreset.courtify.accentHex
+        }
+        let ri = UInt(max(0, min(255, Int((r * 255).rounded()))))
+        let gi = UInt(max(0, min(255, Int((g * 255).rounded()))))
+        let bi = UInt(max(0, min(255, Int((b * 255).rounded()))))
+        return (ri << 16) | (gi << 8) | bi
     }
 }

@@ -16,7 +16,7 @@ Full context lives in `AGENTS.md` (start with **Agent quick start**). Do not re-
 - **Chrome:** `midnightGreen` base, gradient heroes, `opticYellow` highlights, `courtGreen` tile subtitles, `CourtifyTileDivider` hairlines. `ProfileIconButton` + `.settingsSheet` on **all four tabs**.
 - **Motion:** `CourtifyMotion` + `.courtifyButton(...)` only — no new haptics/animation curves.
 - **Widgets gallery:** filter pills All/Small/Medium/Large/Free; only **Favorite player** is free. Small previews are **165×165 squares**, leading-aligned. Others Pro-gated. Use `WidgetTheme.contentInset` (28pt) for all small/medium copy — do not invent per-widget padding. Overlay chrome must stay inside the preview-sized ZStack (never `maxWidth: .infinity` overlays that stretch a lone small card).
-- **Widget colors (Premium):** `WidgetColorStyle` + `WidgetColorPickerSheet` for `favorite` / standings / `live` / `order`. Tournament widgets (`next-*`, `countdown`, `calendar`) keep brand/surface colors — no recolor UI.
+- **Widget colors (Premium):** `WidgetColorStyle` + `WidgetColorPickerSheet` for `favorite` / standings / `live` / `order`. Includes named presets (Clay/Grass/…) plus a **Custom** `ColorPicker` swatch. Free users tapping the gallery color control open the paywall (never the sheet). Tournament widgets (`next-*`, `countdown`, `calendar`) keep brand/surface colors — no recolor UI. Gradient slider persists on finger-up only (no per-tick timeline reload). Sheet defaults to `.large`; gradient sits above the preset grid.
 - **Custom player photos:** `PlayerTorsoPhotoView` / `TennisPlayerPhotoView` + monochrome `PlayerSilhouetteView` — never letter placeholders, never a gradient/fill wash behind torso silhouettes (causes “half white gradient” when hero is trailing-padded).
 - **Settings favorite cards:** equal-width `FavoriteCard`s (`minWidth: 0`); artwork overlay-only (no huge intrinsic size or `.frame(height:)` will center-clip title + Change); Change padded above corner radius. Slam art via `FavoriteSlamLogoBadge` (always circular, fill-clipped). Quota miss → silhouette + helper text.
 - **Paywall backdrop:** `CourtifyMarqueeBackground` (same as splash) — not player photos.
@@ -36,6 +36,8 @@ Full context lives in `AGENTS.md` (start with **Agent quick start**). Do not re-
 | Onboarding top-10 player row | Worker | **Once ever** via `refreshOnceForOnboarding()` |
 
 On appear: `loadCachedPayload()` only (always reload from app-group disk). No `refresh()` without user pull or the one-time onboarding exception.
+
+**Onboarding picks:** Tour / favorite player / Grand Slam write to app-group keys as the user continues each step. Home is gated on `hasCompletedOnboarding` only — never skip onboarding solely because RevenueCat Pro or referral bypass flipped mid-flow (drops unsaved favorites).
 
 **Quota:** Do not expand widget-data to top 100. Do not fetch season W/L inside shared refresh. Lookup = one rankings call per uncached name, no 429 retries. Photos go through Worker edge cache. On 429/503 refresh, show alert and keep cached rankings. Custom photo failure → helper UX, not a blank broken hero. Worker skips RapidAPI when remaining quota is below reserve (5 on Basic-sized limits, 100 on Pro+).
 
