@@ -494,15 +494,29 @@ struct WidgetsCollectionView: View {
         case "lock-rank":
             LockScreenCircularRankView(player: favoritePlayer)
                 .clipShape(Circle())
+                .overlay {
+                    Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
+                }
         case "lock-countdown":
             LockScreenCircularCountdownView(tour: preferredTour)
                 .clipShape(Circle())
+                .overlay {
+                    Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
+                }
         case "lock-next":
             LockScreenRectangularNextView(tour: preferredTour)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
+                }
         case "lock-live":
             LockScreenRectangularLiveView(match: dataStore.payload?.liveMatches.first)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
+                }
         default: EmptyView()
         }
     }

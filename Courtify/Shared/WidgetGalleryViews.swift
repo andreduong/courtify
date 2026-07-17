@@ -16,7 +16,10 @@ struct FavoritePlayerWidgetView: View {
         ZStack(alignment: .topLeading) {
             WidgetColorStyle.gradient(for: widgetID)
                 .id(colorTick)
-            WidgetHatchOverlay(opacity: 0.06)
+            WidgetTextureOverlay(
+                texture: WidgetColorStyle.texture(for: widgetID),
+                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+            )
 
             if let player {
                 FavoritePlayerHeroImage(player: player)
@@ -77,7 +80,7 @@ struct FavoritePlayerWidgetView: View {
     }
 }
 
-/// Medium favorite — F1 “driver card”: rank + points-style W/L + stacked stats + hero.
+/// Medium favorite — F1 “driver card”: copy column + hero column (no stats over torso).
 struct FavoritePlayerMediumWidgetView: View {
     let player: TennisPlayer?
     var widgetID: String = "favorite-medium"
@@ -92,12 +95,10 @@ struct FavoritePlayerMediumWidgetView: View {
                 endPoint: .trailing
             )
             .id(colorTick)
-            WidgetHatchOverlay(opacity: 0.05)
-
-            if let player {
-                FavoritePlayerHeroImage(player: player)
-                    .padding(.leading, 120)
-            }
+            WidgetTextureOverlay(
+                texture: WidgetColorStyle.texture(for: widgetID),
+                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+            )
 
             HStack(alignment: .top, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
@@ -122,22 +123,26 @@ struct FavoritePlayerMediumWidgetView: View {
                         Text("\(record.wins)–\(record.losses) W–L")
                             .font(WidgetTheme.roundedFont(size: 12, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.75))
+
+                        HStack(spacing: 10) {
+                            mediumStat(value: "\(record.wins)", label: "Wins")
+                            mediumStat(value: "\(record.losses)", label: "Losses")
+                            mediumStat(value: winPct(record), label: "Win %")
+                        }
+                        .padding(.top, 6)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 6)
 
-                if let record = player?.displaySeasonRecord {
-                    VStack(alignment: .trailing, spacing: 10) {
-                        mediumStat(value: "\(record.wins)", label: "Wins")
-                        mediumStat(value: "\(record.losses)", label: "Losses")
-                        mediumStat(
-                            value: winPct(record),
-                            label: "Win %"
-                        )
+                ZStack(alignment: .bottomTrailing) {
+                    if let player {
+                        MediumFavoriteHeroCutout(player: player)
                     }
-                    .padding(.trailing, 28)
-                    .padding(.top, 28)
                 }
+                .frame(width: 118)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .clipped()
             }
             .padding(WidgetTheme.contentInset)
         }
@@ -149,9 +154,9 @@ struct FavoritePlayerMediumWidgetView: View {
     }
 
     private func mediumStat(value: String, label: String) -> some View {
-        VStack(alignment: .trailing, spacing: 1) {
+        VStack(alignment: .leading, spacing: 1) {
             Text(value)
-                .font(WidgetTheme.displayFont(size: 16, weight: .bold))
+                .font(WidgetTheme.displayFont(size: 15, weight: .bold))
                 .foregroundStyle(.white)
             Text(label)
                 .font(WidgetTheme.roundedFont(size: 9, weight: .medium))
@@ -163,6 +168,37 @@ struct FavoritePlayerMediumWidgetView: View {
         let total = record.wins + record.losses
         guard total > 0 else { return "—" }
         return "\(Int((Double(record.wins) / Double(total) * 100).rounded()))%"
+    }
+}
+
+/// Tight torso for the medium favorite hero column (no 88pt gallery padding).
+private struct MediumFavoriteHeroCutout: View {
+    let player: TennisPlayer
+
+    var body: some View {
+        Group {
+            if let bundled = player.imageName {
+                Image("\(bundled)-hero")
+                    .resizable()
+                    .scaledToFit()
+            } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
+                      let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
+                      let uiImage = UIImage(contentsOfFile: path) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(systemName: player.tour == .wta
+                      ? "figure.dress.line.vertical.figure"
+                      : "figure.tennis")
+                    .font(.system(size: 64, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.22))
+                    .symbolRenderingMode(.monochrome)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .offset(x: 10, y: 10)
+        .allowsHitTesting(false)
     }
 }
 
@@ -407,7 +443,7 @@ struct SeasonCalendarView: View {
 
     var body: some View {
         ZStack {
-            WidgetAtmosphere(accent: Color(hex: 0x143D2B), glowOpacity: 0.35, hatchOpacity: 0.05)
+            WidgetAtmosphere(accent: Color(hex: 0x143D2B), glowOpacity: 0.35, texture: .velvet)
 
             VStack(spacing: 10) {
                 Text("2026 \(tour.rawValue) CALENDAR")
@@ -479,12 +515,6 @@ struct RankingsWidgetView: View {
     @State private var colorTick = 0
 
     private var leader: WidgetRankingEntry? { entries.first }
-    private var leaderPlayer: TennisPlayer? {
-        guard let leader else { return nil }
-        return TennisPlayer.topPlayers.first {
-            $0.tour == tour && namesMatch($0.name, leader.player.name)
-        }
-    }
 
     var body: some View {
         ZStack {
@@ -495,16 +525,13 @@ struct RankingsWidgetView: View {
                 endPoint: .bottomTrailing
             )
             .id(colorTick)
-            WidgetHatchOverlay(opacity: 0.05)
+            WidgetTextureOverlay(
+                texture: WidgetColorStyle.texture(for: widgetID),
+                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+            )
 
-            if let leaderPlayer {
-                FavoritePlayerHeroImage(player: leaderPlayer, edge: .leading)
-                    .padding(.trailing, 150)
-                    .opacity(0.88)
-            }
-
-            HStack(alignment: .top, spacing: 10) {
-                // Leader spotlight
+            HStack(alignment: .top, spacing: 12) {
+                // Leader spotlight — typography only (no torso under pts / list)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(tour.rawValue)
                         .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
@@ -519,7 +546,7 @@ struct RankingsWidgetView: View {
                     Spacer(minLength: 0)
 
                     Text(WidgetTheme.ordinalRank(leader?.rank))
-                        .font(WidgetTheme.displayFont(size: 34, weight: .heavy))
+                        .font(WidgetTheme.displayFont(size: 36, weight: .heavy))
                         .foregroundStyle(.white)
 
                     if let points = leader?.points {
@@ -528,9 +555,9 @@ struct RankingsWidgetView: View {
                             .foregroundStyle(.white.opacity(0.7))
                     }
                 }
-                .frame(width: 110, alignment: .leading)
+                .frame(width: 118, alignment: .leading)
 
-                // Top list
+                // Top list — never under a torso
                 VStack(alignment: .leading, spacing: 0) {
                     if entries.isEmpty {
                         Spacer()
@@ -558,14 +585,6 @@ struct RankingsWidgetView: View {
             colorTick += 1
         }
     }
-
-    private func namesMatch(_ a: String, _ b: String) -> Bool {
-        let na = a.folding(options: .diacriticInsensitive, locale: .current).lowercased()
-        let nb = b.folding(options: .diacriticInsensitive, locale: .current).lowercased()
-        let lastA = na.split(separator: " ").last.map(String.init) ?? na
-        let lastB = nb.split(separator: " ").last.map(String.init) ?? nb
-        return lastA == lastB || na.contains(lastB) || nb.contains(lastA)
-    }
 }
 
 struct RankingsLargeWidgetView: View {
@@ -584,7 +603,10 @@ struct RankingsLargeWidgetView: View {
                 endPoint: .bottom
             )
             .id(colorTick)
-            WidgetHatchOverlay(opacity: 0.05)
+            WidgetTextureOverlay(
+                texture: WidgetColorStyle.texture(for: widgetID),
+                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+            )
 
             VStack(spacing: 10) {
                 Text("2026 \(tour.rawValue) RANKINGS")
@@ -685,7 +707,10 @@ struct LiveScoresWidgetView: View {
                 endPoint: .bottomTrailing
             )
             .id(colorTick)
-            WidgetHatchOverlay(opacity: 0.06)
+            WidgetTextureOverlay(
+                texture: WidgetColorStyle.texture(for: widgetID),
+                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+            )
 
             if let match {
                 VStack(alignment: .leading, spacing: 4) {
@@ -770,7 +795,10 @@ struct OrderOfPlayListView: View {
                 endPoint: .bottomTrailing
             )
             .id(colorTick)
-            WidgetHatchOverlay(opacity: 0.05)
+            WidgetTextureOverlay(
+                texture: WidgetColorStyle.texture(for: widgetID),
+                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+            )
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("ORDER OF PLAY")
@@ -851,12 +879,15 @@ struct LockScreenCircularRankView: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.15), lineWidth: 6)
+                .fill(WidgetTheme.midnightGreen)
+
+            Circle()
+                .stroke(Color.white.opacity(0.22), lineWidth: 4)
             Circle()
                 .trim(from: 0, to: gaugeProgress)
                 .stroke(
-                    WidgetTheme.opticYellow,
-                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                    Color.white.opacity(0.95),
+                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
 
@@ -870,7 +901,11 @@ struct LockScreenCircularRankView: View {
                     .lineLimit(1)
             }
         }
-        .padding(6)
+        .padding(7)
+        .overlay {
+            Circle()
+                .strokeBorder(Color.white.opacity(0.78), lineWidth: 1.5)
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(WidgetTheme.midnightGreen)
         .courtifyWidgetCanvas()
@@ -896,12 +931,15 @@ struct LockScreenCircularCountdownView: View {
 
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.15), lineWidth: 6)
+                .fill(WidgetTheme.midnightGreen)
+
+            Circle()
+                .stroke(Color.white.opacity(0.22), lineWidth: 4)
             Circle()
                 .trim(from: 0, to: min(1, CGFloat(days) / 60.0))
                 .stroke(
-                    WidgetTheme.surfaceAccent(for: event?.surface),
-                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                    Color.white.opacity(0.95),
+                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
 
@@ -914,7 +952,11 @@ struct LockScreenCircularCountdownView: View {
                     .foregroundStyle(.white.opacity(0.55))
             }
         }
-        .padding(6)
+        .padding(7)
+        .overlay {
+            Circle()
+                .strokeBorder(Color.white.opacity(0.78), lineWidth: 1.5)
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(WidgetTheme.midnightGreen)
         .courtifyWidgetCanvas()
@@ -955,6 +997,10 @@ struct LockScreenRectangularNextView: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(WidgetTheme.midnightGreen)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
+        }
         .courtifyWidgetCanvas()
     }
 }
@@ -980,7 +1026,7 @@ struct LockScreenRectangularLiveView: View {
                         .lineLimit(1)
                 } else {
                     Text("No live match")
-                        .font(WidgetTheme.roundedFont(size: 11, weight: .semibold))
+                        .font(WidgetTheme.roundedFont(.caption, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.65))
                 }
             }
@@ -991,6 +1037,10 @@ struct LockScreenRectangularLiveView: View {
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(WidgetTheme.midnightGreen)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
+        }
         .courtifyWidgetCanvas()
     }
 

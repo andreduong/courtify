@@ -65,7 +65,7 @@ struct WidgetAtmosphere: View {
     let accent: Color
     var secondary: Color = WidgetTheme.midnightGreen
     var glowOpacity: Double = 0.55
-    var hatchOpacity: Double = 0.07
+    var texture: WidgetTexturePreset = .aurora
 
     var body: some View {
         ZStack {
@@ -80,17 +80,126 @@ struct WidgetAtmosphere: View {
                 endPoint: .bottomTrailing
             )
 
-            // Soft radial glow — stadium-light feel without flat washes
-            RadialGradient(
-                colors: [accent.opacity(glowOpacity), .clear],
-                center: .topTrailing,
-                startRadius: 4,
-                endRadius: 160
-            )
-            .blendMode(.plusLighter)
-            .opacity(0.55)
+            WidgetTextureOverlay(texture: texture, accent: accent, glowOpacity: glowOpacity)
+        }
+    }
+}
 
-            WidgetHatchOverlay(opacity: hatchOpacity)
+/// Per-widget texture layer used on colorable cards (favorite, standings, live, order).
+struct WidgetTextureOverlay: View {
+    let texture: WidgetTexturePreset
+    var accent: Color = WidgetTheme.emeraldGreen
+    var glowOpacity: Double = 0.55
+
+    var body: some View {
+        switch texture {
+        case .aurora:
+            ZStack {
+                RadialGradient(
+                    colors: [accent.opacity(min(1, glowOpacity + 0.2)), accent.opacity(0.25), .clear],
+                    center: .topTrailing,
+                    startRadius: 2,
+                    endRadius: 190
+                )
+                .blendMode(.plusLighter)
+                .opacity(0.85)
+
+                RadialGradient(
+                    colors: [Color.white.opacity(0.18), WidgetTheme.opticYellow.opacity(0.08), .clear],
+                    center: .bottomLeading,
+                    startRadius: 2,
+                    endRadius: 150
+                )
+                .blendMode(.plusLighter)
+                .opacity(0.7)
+
+                RadialGradient(
+                    colors: [accent.opacity(0.35), .clear],
+                    center: UnitPoint(x: 0.15, y: 0.2),
+                    startRadius: 4,
+                    endRadius: 110
+                )
+                .blendMode(.plusLighter)
+                .opacity(0.55)
+
+                LinearGradient(
+                    colors: [.clear, WidgetTheme.midnightGreen.opacity(0.28)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+            }
+            .allowsHitTesting(false)
+
+        case .spotlight:
+            ZStack {
+                RadialGradient(
+                    colors: [accent.opacity(min(1, glowOpacity + 0.15)), .clear],
+                    center: UnitPoint(x: 0.82, y: 0.12),
+                    startRadius: 2,
+                    endRadius: 190
+                )
+                .blendMode(.plusLighter)
+                .opacity(0.85)
+
+                RadialGradient(
+                    colors: [Color.black.opacity(0.45), .clear],
+                    center: .bottomLeading,
+                    startRadius: 10,
+                    endRadius: 160
+                )
+            }
+            .allowsHitTesting(false)
+
+        case .carbon:
+            ZStack {
+                RadialGradient(
+                    colors: [accent.opacity(glowOpacity * 0.55), .clear],
+                    center: .topTrailing,
+                    startRadius: 4,
+                    endRadius: 150
+                )
+                .blendMode(.plusLighter)
+                .opacity(0.45)
+                WidgetHatchOverlay(opacity: 0.075)
+            }
+            .allowsHitTesting(false)
+
+        case .mesh:
+            ZStack {
+                RadialGradient(
+                    colors: [accent.opacity(glowOpacity * 0.5), .clear],
+                    center: .topLeading,
+                    startRadius: 4,
+                    endRadius: 140
+                )
+                .blendMode(.plusLighter)
+                .opacity(0.5)
+                WidgetMeshOverlay(opacity: 0.09)
+            }
+            .allowsHitTesting(false)
+
+        case .velvet:
+            ZStack {
+                RadialGradient(
+                    colors: [accent.opacity(glowOpacity * 0.7), accent.opacity(0.15), .clear],
+                    center: .center,
+                    startRadius: 8,
+                    endRadius: 180
+                )
+                .blendMode(.plusLighter)
+                .opacity(0.65)
+
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(0.06),
+                        .clear,
+                        WidgetTheme.midnightGreen.opacity(0.55),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .allowsHitTesting(false)
         }
     }
 }
@@ -117,6 +226,33 @@ struct WidgetHatchOverlay: View {
     }
 }
 
+/// Fine orthogonal mesh — quieter than carbon fiber.
+struct WidgetMeshOverlay: View {
+    var opacity: Double = 0.08
+    var spacing: CGFloat = 9
+
+    var body: some View {
+        GeometryReader { geo in
+            Path { path in
+                var x: CGFloat = 0
+                while x <= geo.size.width {
+                    path.move(to: CGPoint(x: x, y: 0))
+                    path.addLine(to: CGPoint(x: x, y: geo.size.height))
+                    x += spacing
+                }
+                var y: CGFloat = 0
+                while y <= geo.size.height {
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: geo.size.width, y: y))
+                    y += spacing
+                }
+            }
+            .stroke(Color.white.opacity(opacity), lineWidth: 0.45)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 /// Thin vertical brand bar used on standings rows (F1 team-color cue → tour/surface).
 struct WidgetAccentBar: View {
     let color: Color
@@ -131,12 +267,13 @@ struct WidgetAccentBar: View {
 }
 
 func widgetSurfaceGradient(for event: TournamentEvent?) -> some View {
-    WidgetAtmosphere(accent: WidgetTheme.surfaceAccent(for: event?.surface))
+    WidgetAtmosphere(accent: WidgetTheme.surfaceAccent(for: event?.surface), texture: .aurora)
 }
 
 func rankingsAtmosphere(for tour: TourPreference) -> some View {
     WidgetAtmosphere(
         accent: tour == .wta ? Color(hex: 0x5A2D78) : Color(hex: 0x0C3A5C),
-        glowOpacity: 0.45
+        glowOpacity: 0.45,
+        texture: .aurora
     )
 }

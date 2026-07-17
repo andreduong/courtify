@@ -10,12 +10,15 @@ struct WidgetColorConfig: Codable, Equatable {
     var gradientLevel: Double
     /// RGB hex when `presetID == WidgetColorConfig.customPresetID`.
     var customAccentHex: UInt?
+    /// Surface texture — see `WidgetTexturePreset`. Defaults to aurora (quiet luxury).
+    var textureID: String
 
     static let customPresetID = "custom"
     static let `default` = WidgetColorConfig(
         presetID: WidgetColorPreset.courtify.rawValue,
-        gradientLevel: 0.85,
-        customAccentHex: nil
+        gradientLevel: 0.72,
+        customAccentHex: nil,
+        textureID: WidgetTexturePreset.aurora.rawValue
     )
 
     var clampedLevel: Double {
@@ -31,6 +34,66 @@ struct WidgetColorConfig: Codable, Equatable {
             return Color(hex: hex)
         }
         return (WidgetColorPreset(rawValue: presetID) ?? .courtify).accent
+    }
+
+    var resolvedTexture: WidgetTexturePreset {
+        WidgetTexturePreset(rawValue: textureID) ?? .aurora
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case presetID, gradientLevel, customAccentHex, textureID
+    }
+
+    init(
+        presetID: String,
+        gradientLevel: Double,
+        customAccentHex: UInt?,
+        textureID: String = WidgetTexturePreset.aurora.rawValue
+    ) {
+        self.presetID = presetID
+        self.gradientLevel = gradientLevel
+        self.customAccentHex = customAccentHex
+        self.textureID = textureID
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        presetID = try c.decode(String.self, forKey: .presetID)
+        gradientLevel = try c.decode(Double.self, forKey: .gradientLevel)
+        customAccentHex = try c.decodeIfPresent(UInt.self, forKey: .customAccentHex)
+        textureID = try c.decodeIfPresent(String.self, forKey: .textureID)
+            ?? WidgetTexturePreset.aurora.rawValue
+    }
+}
+
+/// Atmospheric surface treatment — carbon fiber is one option, not the default.
+enum WidgetTexturePreset: String, CaseIterable, Identifiable {
+    case aurora
+    case spotlight
+    case carbon
+    case mesh
+    case velvet
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .aurora: "Aurora"
+        case .spotlight: "Spotlight"
+        case .carbon: "Carbon"
+        case .mesh: "Mesh"
+        case .velvet: "Velvet"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .aurora: "Soft glow"
+        case .spotlight: "Stadium light"
+        case .carbon: "Fiber hatch"
+        case .mesh: "Fine grid"
+        case .velvet: "Deep wash"
+        }
     }
 }
 
@@ -101,7 +164,8 @@ enum WidgetColorStyle {
         let stored = WidgetColorConfig(
             presetID: config.presetID,
             gradientLevel: config.clampedLevel,
-            customAccentHex: config.isCustom ? config.customAccentHex : nil
+            customAccentHex: config.isCustom ? config.customAccentHex : nil,
+            textureID: config.resolvedTexture.rawValue
         )
         map[widgetID] = stored
         // Keep small + medium favorite cards on the same accent.
@@ -147,6 +211,10 @@ enum WidgetColorStyle {
             startPoint: startPoint,
             endPoint: endPoint
         )
+    }
+
+    static func texture(for widgetID: String) -> WidgetTexturePreset {
+        config(for: widgetID).resolvedTexture
     }
 
     private static func loadMap() -> [String: WidgetColorConfig] {

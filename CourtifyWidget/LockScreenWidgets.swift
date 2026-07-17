@@ -73,6 +73,10 @@ struct LockScreenLockedCircular: View {
                 .foregroundStyle(.white.opacity(0.7))
         }
         .padding(6)
+        .overlay {
+            Circle()
+                .strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
+        }
     }
 }
 
@@ -89,5 +93,9 @@ struct LockScreenLockedRectangular: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
+        }
     }
 }

@@ -25,8 +25,6 @@ struct OnboardingFlowView: View {
     @State private var path: [OnboardingStep] = []
     @State private var navigationDirection: CourtifyMotion.Direction = .forward
     @State private var showSpecialOfferOnPaywall = false
-    @State private var showPaywallCloseButton = false
-    @State private var paywallCloseOpacity: Double = 0
 
     private var draftTourPreference: TourPreference {
         get { TourPreference(rawValue: draftTourPreferenceRaw) ?? .both }
@@ -50,31 +48,34 @@ struct OnboardingFlowView: View {
 
     private var showsOnboardingChrome: Bool {
         guard let last = path.last else { return false }
-        return last != .allSet
-    }
-
-    private var isPaywallStep: Bool {
-        path.last == .paywall
+        // Paywall owns full-bleed marquee + close — chrome inset would paint a solid band over it.
+        return last != .allSet && last != .paywall
     }
 
     var body: some View {
-        CourtifyScreenFlow(path: $path, direction: $navigationDirection) {
+        let flow = CourtifyScreenFlow(path: $path, direction: $navigationDirection) {
             SplashScreenView {
                 navigateForward(.tourPreference)
             }
         } destination: { step in
             destinationView(for: step)
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
+
+        Group {
             if showsOnboardingChrome {
-                OnboardingChrome(
-                    progress: onboardingProgress,
-                    showsBackButton: showsBackButton,
-                    onBack: navigateBackward,
-                    showsCloseButton: isPaywallStep && showPaywallCloseButton,
-                    closeButtonOpacity: paywallCloseOpacity,
-                    onClose: completeOnboardingAsFreeUser
-                )
+                flow
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        OnboardingChrome(
+                            progress: onboardingProgress,
+                            showsBackButton: showsBackButton,
+                            onBack: navigateBackward,
+                            showsCloseButton: false,
+                            closeButtonOpacity: 0,
+                            onClose: completeOnboardingAsFreeUser
+                        )
+                    }
+            } else {
+                flow
             }
         }
         .courtifyBackground()
@@ -89,14 +90,6 @@ struct OnboardingFlowView: View {
             #if DEBUG
             openPaywallForUITestIfNeeded()
             #endif
-        }
-        .onChange(of: path) { _, newPath in
-            if newPath.last == .paywall {
-                schedulePaywallCloseButton()
-            } else {
-                showPaywallCloseButton = false
-                paywallCloseOpacity = 0
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .courtifyOpenSpecialOfferPaywall)) { _ in
             openSpecialOfferPaywallIfNeeded()
@@ -176,6 +169,7 @@ struct OnboardingFlowView: View {
             PaywallView(
                 favoritePlayerID: draftFavoritePlayerID,
                 showSpecialOfferOnAppear: showSpecialOfferOnPaywall,
+                managesOwnCloseButton: true,
                 onSubscribed: completeOnboarding,
                 onClose: completeOnboardingAsFreeUser,
                 onSkip: completeOnboardingAsFreeUser
@@ -297,8 +291,6 @@ struct OnboardingFlowView: View {
     private func returnToJoinScreen() {
         OnboardingReminderManager.cancelAbandonmentReminders()
         showSpecialOfferOnPaywall = false
-        showPaywallCloseButton = false
-        paywallCloseOpacity = 0
         AppGroupConstants.clearOnboardingPreferences()
         draftTourPreferenceRaw = TourPreference.both.rawValue
         draftFavoritePlayerID = ""
@@ -309,27 +301,12 @@ struct OnboardingFlowView: View {
         }
     }
 
-    private func schedulePaywallCloseButton() {
-        showPaywallCloseButton = false
-        paywallCloseOpacity = 0
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            guard path.last == .paywall else { return }
-            showPaywallCloseButton = true
-            withAnimation(CourtifyMotion.reveal) {
-                paywallCloseOpacity = 1
-            }
-        }
-    }
-
     #if DEBUG
     private func openPaywallForUITestIfNeeded() {
         guard ProcessInfo.processInfo.arguments.contains("-UITestPaywall") else { return }
         draftFavoritePlayerID = "sinner"
         draftFavoriteGrandSlam = "Wimbledon"
         path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .allSet, .paywall]
-        showPaywallCloseButton = true
-        paywallCloseOpacity = 1
     }
     #endif
 }

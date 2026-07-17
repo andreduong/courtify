@@ -17,22 +17,26 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
     var price: String {
         switch self {
         case .yearly: "$34.99/year"
-        case .weekly: "$2.99/week"
+        case .weekly: "$4.99/week"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .yearly: "Save 77% vs weekly"
+        case .yearly: "Save 85% vs weekly"
         case .weekly: "Perfect for a grand slam"
         }
     }
 
     var badge: String? {
         switch self {
-        case .yearly: "Best Value"
+        case .yearly: "Most Popular"
         case .weekly: nil
         }
+    }
+
+    var emphasizesSubtitle: Bool {
+        self == .yearly
     }
 }
 
@@ -56,21 +60,33 @@ struct PaywallView: View {
         ZStack {
             paywallBackground
 
-            Color.black.opacity(0.45).ignoresSafeArea()
+            // Soft vignette — keep it gentle so marquee seams don't read as blackout bars.
+            RadialGradient(
+                colors: [
+                    Color.black.opacity(0.22),
+                    Color.black.opacity(0.42),
+                    Color.black.opacity(0.55),
+                ],
+                center: .center,
+                startRadius: 60,
+                endRadius: 560
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
 
             ScrollView {
                 VStack(spacing: 28) {
                     Spacer(minLength: managesOwnCloseButton ? 72 : 16)
 
                     VStack(spacing: 12) {
-                        Text("Go Pro with Courtify")
+                        Text("Courtify Premium")
                             .font(ThemeManager.roundedFont(.largeTitle, weight: .bold))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
 
                         Text("Unlock live point-by-point, advanced stats, and ad-free Grand Slam coverage.")
-                            .font(ThemeManager.roundedFont(.body))
-                            .foregroundStyle(.white.opacity(0.75))
+                            .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.92))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 8)
                     }
@@ -79,8 +95,7 @@ struct PaywallView: View {
                         ForEach(SubscriptionPlan.allCases) { plan in
                             PlanOptionRow(
                                 plan: plan,
-                                isSelected: selectedPlan == plan,
-                                packagePrice: packagePrice(for: plan)
+                                isSelected: selectedPlan == plan
                             ) {
                                 CourtifyMotion.animateSelection {
                                     selectedPlan = plan
@@ -112,14 +127,14 @@ struct PaywallView: View {
                                 }
                             }
                         }
-                        .font(ThemeManager.roundedFont(.footnote, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .font(ThemeManager.roundedFont(.footnote, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.88))
                         .courtifyButton(.ghost)
                     }
 
                     Text("Cancel anytime. Subscription auto-renews unless cancelled 24 hours before the period ends.")
-                        .font(ThemeManager.roundedFont(.caption2))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.72))
                         .multilineTextAlignment(.center)
                         .padding(.bottom, 32)
                 }
@@ -191,18 +206,10 @@ struct PaywallView: View {
     private var paywallBackground: some View {
         ZStack {
             ThemeManager.midnightGreen.ignoresSafeArea()
+            // Full-bleed size so GeometryReader clip doesn't truncate the loop;
+            // marquee still uses window safe-top to pin row 0 under the clock.
             CourtifyMarqueeBackground()
-                .allowsHitTesting(false)
                 .ignoresSafeArea()
-        }
-    }
-
-    private func packagePrice(for plan: SubscriptionPlan) -> String? {
-        switch plan {
-        case .yearly:
-            revenueCat.yearlyPackage.map { "\($0.localizedPriceString)/year" }
-        case .weekly:
-            revenueCat.weeklyPackage.map { "\($0.localizedPriceString)/week" }
         }
     }
 
@@ -327,7 +334,6 @@ private struct SpecialOfferPopup: View {
 private struct PlanOptionRow: View {
     let plan: SubscriptionPlan
     let isSelected: Bool
-    let packagePrice: String?
     let onSelect: () -> Void
 
     var body: some View {
@@ -350,13 +356,22 @@ private struct PlanOptionRow: View {
                         }
                     }
 
-                    Text(packagePrice ?? plan.price)
+                    Text(plan.price)
                         .font(ThemeManager.roundedFont(.title3, weight: .bold))
                         .foregroundStyle(ThemeManager.opticYellow)
 
                     Text(plan.subtitle)
-                        .font(ThemeManager.roundedFont(.subheadline))
-                        .foregroundStyle(.white.opacity(0.65))
+                        .font(
+                            ThemeManager.roundedFont(
+                                .subheadline,
+                                weight: plan.emphasizesSubtitle ? .bold : .regular
+                            )
+                        )
+                        .foregroundStyle(
+                            plan.emphasizesSubtitle
+                                ? ThemeManager.opticYellow
+                                : .white.opacity(0.65)
+                        )
                 }
 
                 Spacer()

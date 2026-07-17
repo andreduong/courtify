@@ -38,6 +38,7 @@ struct WidgetColorPickerSheet: View {
 
                     // Gradient sits above the color grid so the thumb stays clear of the home indicator.
                     gradientSection
+                    textureSection
                     presetSection
                 }
                 .padding(20)
@@ -91,21 +92,29 @@ struct WidgetColorPickerSheet: View {
                 .font(ThemeManager.roundedFont(.caption, weight: .bold))
                 .foregroundStyle(.white.opacity(0.5))
 
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: previewColors,
-                        startPoint: .top,
-                        endPoint: .bottom
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: previewColors,
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
+                WidgetTextureOverlay(
+                    texture: draft.resolvedTexture,
+                    accent: draft.resolvedAccent
                 )
-                .frame(height: 88)
-                .overlay(alignment: .bottomLeading) {
-                    Text("Preview")
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(14)
-                }
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .frame(height: 88)
+            .overlay(alignment: .bottomLeading) {
+                Text("Preview")
+                    .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(14)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
 
@@ -300,6 +309,69 @@ struct WidgetColorPickerSheet: View {
             )
             .tint(ThemeManager.opticYellow)
         }
+    }
+
+    private var textureSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Texture")
+                .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.45))
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 10)], spacing: 10) {
+                ForEach(WidgetTexturePreset.allCases) { texture in
+                    Button {
+                        guard isEntitled else {
+                            presentPaywall()
+                            return
+                        }
+                        CourtifyMotion.animateSelection {
+                            draft.textureID = texture.rawValue
+                        }
+                        persistDraft(reloadTimelines: false)
+                    } label: {
+                        textureSwatch(texture)
+                    }
+                    .courtifyButton(.ghost)
+                }
+            }
+        }
+    }
+
+    private func textureSwatch(_ texture: WidgetTexturePreset) -> some View {
+        let selected = draft.resolvedTexture == texture
+        return VStack(alignment: .leading, spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [draft.resolvedAccent, WidgetTheme.midnightGreen],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                WidgetTextureOverlay(texture: texture, accent: draft.resolvedAccent)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .frame(height: 44)
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(
+                        selected ? ThemeManager.opticYellow : .white.opacity(0.12),
+                        lineWidth: selected ? 2 : 1
+                    )
+            }
+
+            Text(texture.title)
+                .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.85))
+            Text(texture.subtitle)
+                .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                .foregroundStyle(.white.opacity(0.45))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(.white.opacity(selected ? 0.1 : 0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var gradientLabel: String {
