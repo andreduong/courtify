@@ -11,5 +11,8 @@ struct CourtifyWidgetBundle: WidgetBundle {
         WTAStandingsWidget()
         LiveScoresWidget()
         OrderOfPlayWidget()
+        LockScreenRankWidget()
+        LockScreenCountdownWidget()
+        LockScreenNextWidget()
     }
 }

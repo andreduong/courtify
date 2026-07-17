@@ -28,7 +28,8 @@ This repo has two parts:
 | Paywall / splash backdrop | `CourtifyMarqueeBackground` | Per-player paywall photos or silhouettes on paywall |
 | Grand Slam logos | `AssetCatalogImage` in pickers | `CachedBundledImage` for slam assets (in-memory cache goes stale) |
 | Settings favorite cards | Equal-width `FavoriteCard` + `FavoriteSlamLogoBadge` (circular) + `PlayerTorsoPhotoView` | `FavoritePlayerHeroImage`; oversized silhouette with gradient wash; rectangular slam logos |
-| Widget content inset | `WidgetTheme.contentInset` (28pt) on all small/medium widget copy | Per-widget ad-hoc `.padding(14)` that drifts left/right |
+| Widget content inset | `WidgetTheme.contentInset` (16pt) on all small/medium widget copy | Per-widget ad-hoc `.padding(14)` that drifts left/right |
+| Widget atmosphere | `WidgetAtmosphere` + hatch + surface accent bars (no muddy slam logos as bg) | Flat single-color fills; faded tournament logos behind copy |
 | Widget colors (Premium) | `WidgetColorStyle` + `WidgetColorPickerSheet` (app group) | Recoloring tournament widgets (`next-*`, `countdown`, `calendar`) |
 | Tab chrome | `ProfileIconButton`, `TourPillToggle`, `LastUpdatedLabel`, `CourtifyTileDivider` | Duplicate profile/settings entry points or introduce new haptic/animation curves |
 | Settings / favorites | `SettingsView` + `AppGroupConstants` | Write prefs outside app group (widgets won't see them) |
@@ -313,15 +314,16 @@ other animation curves or haptic calls.
 
 `WidgetsCollectionView` is an F1-app-style gallery: filter pills
 (All / Small / Medium / Large / **Free**), sections with captions under each
-card. Catalog: Favorite player (small, **free**), Next tournament
+card. Catalog: Favorite player (small + medium, **free**), Next tournament
 (small + large), Tournament countdown (medium), Season calendar (large),
 ATP/WTA standings (medium top-5 + large top-10), Live scores (small),
-Order of play (large).
+Order of play (large), Lock Screen (circular rank **free**, circular countdown,
+rectangular next / live preview).
 
 Gating rules:
 
-- **Every widget is Pro-gated except Favorite player.** Entitled means
-  `RevenueCatManager.isProUser || AppGroupConstants.referralBypassActive`.
+- **Pro-gated except:** Favorite player (small + medium) and Lock Screen favorite rank.
+  Entitled means `RevenueCatManager.isProUser || AppGroupConstants.referralBypassActive`.
 - Locked cards show a `PRO 🎾` badge and the whole card opens the paywall.
 - The Favorite player widget uses **bundled season record** + `FavoritePlayerCatalog.resolvedPlayer` for rank when available; bundled `-hero` for featured players. Custom picks show verified API photos or empty hero (no letter placeholders).
 - **Gallery small widgets** are **165×165 pt squares** (`previewHeight` width = height); lone small cards align leading, not full-width.
@@ -368,10 +370,8 @@ auto-refresh timers or on-appear `refresh()` without an explicit product request
 
 ### Paywall
 
-- Background: `CourtifyMarqueeBackground` — same scrolling widget strip as onboarding splash (`SplashScreenView`), **not** per-player photos.
-- `BundledImageCache.warmOnboardingAssets()` on appear (includes `marquee-widget-strip`).
-| Onboarding favorite-player row | Worker top 10 (or top 5+5 for Both) | **Once ever** on first app open |
-| Home-screen widget extension | Worker (Pro/bypass only) | Widget timeline refresh |
+- Background: `CourtifyMarqueeBackground` — **live** scrolling mini widget cards (same SwiftUI views as the gallery), **not** the old static `marquee-widget-strip` asset and not per-player photos.
+- `BundledImageCache.warmOnboardingAssets()` on appear (player + paywall assets). Do **not** warm `marquee-widget-strip` — splash/paywall no longer use it.
 
 **Onboarding one-time fetch** (`OnboardingFlowView.task` →
 `WidgetDataStore.refreshOnceForOnboarding()`):
@@ -423,7 +423,7 @@ onboarding/rankings; `player-{id}-paywall` are pre-blurred paywall backgrounds f
 | `CachedBundledImage` | Player onboarding cards, paywall bundled `-paywall` assets — **in-memory cache** |
 | `AssetCatalogImage` | Grand Slam logos in pickers / Home countdown — always reads asset catalog (avoids stale slam logos after asset swaps) |
 
-`BundledImageCache.warmOnboardingAssets()` preloads player + marquee assets; **does not** preload slam logos.
+`BundledImageCache.warmOnboardingAssets()` preloads player + paywall assets; **does not** preload slam logos or `marquee-widget-strip`.
 
 ### Simulator stale-state trap
 
@@ -514,8 +514,9 @@ Use this loop every session — do not rediscover setup:
    ```
 
 7. **Widget gallery item IDs** for `-UITestWidgetOnly`:
-   `favorite`, `next-small`, `countdown`, `next-large`, `calendar`,
-   `atp-medium`, `atp-large`, `wta-medium`, `wta-large`, `live`, `order`
+   `favorite`, `favorite-medium`, `next-small`, `countdown`, `next-large`, `calendar`,
+   `atp-medium`, `atp-large`, `wta-medium`, `wta-large`, `live`, `order`,
+   `lock-rank`, `lock-countdown`, `lock-next`, `lock-live`
 
 8. **No tap/scroll automation** — relaunch with different args/prefs instead of
    trying to tap filter pills or pull to refresh.
@@ -599,7 +600,13 @@ after TestFlight install.
 - **Settings `FavoriteCard` taller than `Change`:** oversized torso/silhouette intrinsic size + `.frame(height:)` centers content → title and Change get clipped. Keep artwork overlay-only (no huge intrinsic size); pad Change above the 20pt corner radius; both cards `minWidth: 0` + equal `maxWidth: .infinity`.
 - **Silhouette “half white gradient” on widgets:** never put a `LinearGradient` / fill behind `PlayerSilhouetteView` torso — when the hero is leading-padded, the wash only covers the trailing half and looks broken. Use monochrome SF Symbol only.
 - **Gallery chrome expanding small cards:** palette/person overlays must live *inside* a ZStack framed to the preview size (165×165). `frame(maxWidth: .infinity)` on overlay buttons pushes a lone small card to the trailing edge.
-- **Ad-hoc widget padding:** always use `WidgetTheme.contentInset` for small/medium copy. Favorite may add trailing air for silhouette, but leading/top/bottom stay on the shared inset.
+- **Ad-hoc widget padding:** always use `WidgetTheme.contentInset` (16pt) for small/medium copy. Favorite may add trailing air for silhouette, but leading/top/bottom stay on the shared inset.
+- **Widget backgrounds:** prefer `WidgetAtmosphere` / hatch texture and surface-color accent bars; do not fade Grand Slam logos into the background.
+- **Widget typography:** `WidgetTheme.displayFont` (default design, heavy) for ranks / countdowns / scores; `roundedFont` for labels — mix weights like F1 sports apps, don’t use one rounded size for everything.
+- **Medium hero + stats overlap:** keep copy and player cutouts in **separate columns** (or tuck a small hero *under* rank text). Never stack Win/Loss/% or leaderboard rows on top of the torso.
+- **Marquee blackout gutters:** `CourtifyMarqueeBackground` row `startOffset` must not be a positive x-offset into empty space — that leaves a solid midnight strip on the leading edge (reads as a “black rectangle” on paywall/splash). Prefer negative phase / wrap within duplicated strips.
+- **Paywall + onboarding chrome:** do **not** wrap the paywall step in `OnboardingFlowView`’s top `safeAreaInset` chrome. The inset reserves a band that only shows `.courtifyBackground()` while the marquee lives in the content below → top-left blackout bar. Paywall should own full-bleed background + its own close control (`managesOwnCloseButton`).
+- **WidgetKit bundle limit:** keep the extension’s `@main` `WidgetBundle` **flat** (≤ ~10 kinds). Nested `WidgetBundle` types did **not** compile as `Widget` in this project’s SDK — split kinds or drop a family instead of nesting.
 - **Rectangular slam logos in Settings:** wrap with `FavoriteSlamLogoBadge` — `scaledToFill` + `clipShape(Circle())` so AO / RG / Wimbledon / US Open all read as round badges (wide US Open wordmark fills then clips).
 - **Quota UX:** when custom favorite photos fail (RapidAPI 429), show silhouette + helper copy / one-shot alert — don’t leave blank heroes or look “broken.”
 
@@ -610,9 +617,13 @@ after TestFlight install.
   `.settingsSheet`, `LastUpdatedLabel`, `PullToRefreshHint`, `GetPremiumPill`,
   `FavoritePlayerCatalog`, `FavoritePlayerPickerSheet`, `FavoritePlayerEnricher`,
   `PlayerTorsoPhotoView`, `PlayerSilhouetteView`, `PlayerSeasonRecordCache`, `FavoriteSlamLogoBadge`,
-  `WidgetColorStyle`, `WidgetColorPickerSheet`, `CourtifyMarqueeBackground`, `AssetCatalogImage`.
+  `WidgetColorStyle`, `WidgetColorPickerSheet`, `WidgetAtmosphere`, `WidgetTheme.displayFont`,
+  `CourtifyMarqueeBackground` (live cards), `AssetCatalogImage`.
+- **Home-screen + Lock Screen widgets** (`CourtifyWidget/`): favorite (S+M), tournaments, standings,
+  live, order of play, plus accessory circular/rectangular kinds in `LockScreenWidgets.swift`.
+  Reload via `WidgetTimelineRefresher` (includes lock-screen kinds).
 - **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Small/Medium/Large/Free;
-  sectioned catalog; only **Favorite player** is free (bundled). All other cards Pro-gated
+  sectioned catalog; **Favorite player** (S+M) + **Lock Screen rank** are free. Others Pro-gated
   (`Premium 🎾` badge → paywall). Small = 165×165 leading-aligned. Overlay chrome:
   color control (top-trailing, Premium) on customizable ids; person control (bottom-trailing)
   on favorite for player pick. Tournament ids (`next-small`, `countdown`, `next-large`,

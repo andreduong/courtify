@@ -8,6 +8,9 @@ enum WidgetTimelineRefresher {
     static let wtaStandingsKind = "WTAStandingsWidget"
     static let liveScoresKind = "LiveScoresWidget"
     static let orderOfPlayKind = "OrderOfPlayWidget"
+    static let lockScreenRankKind = "LockScreenRankWidget"
+    static let lockScreenCountdownKind = "LockScreenCountdownWidget"
+    static let lockScreenNextKind = "LockScreenNextWidget"
 
     private static let allKinds = [
         favoritePlayerKind,
@@ -17,6 +20,9 @@ enum WidgetTimelineRefresher {
         wtaStandingsKind,
         liveScoresKind,
         orderOfPlayKind,
+        lockScreenRankKind,
+        lockScreenCountdownKind,
+        lockScreenNextKind,
     ]
 
     static func reloadAll() {

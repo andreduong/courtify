@@ -34,7 +34,6 @@ enum BundledImageCache {
         } + [
             "placeholder-male",
             "placeholder-female",
-            "marquee-widget-strip",
             "courtify-logo",
         ]
         for name in Set(names) {

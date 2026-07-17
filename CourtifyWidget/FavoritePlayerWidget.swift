@@ -61,12 +61,26 @@ struct FavoritePlayerWidget: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectFavoritePlayerIntent.self, provider: FavoritePlayerProvider()) { entry in
-            FavoritePlayerWidgetView(player: entry.player)
+            FavoritePlayerWidgetContainer(entry: entry)
         }
         .configurationDisplayName("Favorite player")
         .description("Your favorite player's rank and season record.")
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
+    }
+}
+
+private struct FavoritePlayerWidgetContainer: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: FavoritePlayerEntry
+
+    var body: some View {
+        switch family {
+        case .systemMedium:
+            FavoritePlayerMediumWidgetView(player: entry.player, widgetID: "favorite")
+        default:
+            FavoritePlayerWidgetView(player: entry.player, widgetID: "favorite")
+        }
     }
 }
 

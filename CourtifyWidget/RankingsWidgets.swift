@@ -90,14 +90,22 @@ private struct RankingsWidgetContainer: View {
     @Environment(\.widgetFamily) private var family
     let entry: RankingsEntry
 
+    private var mediumID: String {
+        entry.tour == .wta ? "wta-medium" : "atp-medium"
+    }
+
+    private var largeID: String {
+        entry.tour == .wta ? "wta-large" : "atp-large"
+    }
+
     var body: some View {
         Group {
             if entry.isLocked {
                 WidgetLockedView()
             } else if family == .systemLarge {
-                RankingsLargeWidgetView(tour: entry.tour, entries: entry.entries)
+                RankingsLargeWidgetView(tour: entry.tour, entries: entry.entries, widgetID: largeID)
             } else {
-                RankingsWidgetView(tour: entry.tour, entries: entry.entries, limit: 5)
+                RankingsWidgetView(tour: entry.tour, entries: entry.entries, limit: 5, widgetID: mediumID)
             }
         }
     }

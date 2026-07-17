@@ -86,6 +86,7 @@ struct WidgetsCollectionView: View {
     private let sections: [WidgetGallerySection] = [
         WidgetGallerySection(id: "favorite", title: "Favorite player", items: [
             WidgetGalleryItem(id: "favorite", title: "Favorite player", size: .small, isFree: true),
+            WidgetGalleryItem(id: "favorite-medium", title: "Favorite player", size: .medium, isFree: true),
         ]),
         WidgetGallerySection(id: "tournaments", title: "Tournament widgets", items: [
             WidgetGalleryItem(id: "next-small", title: "Next tournament", size: .small),
@@ -104,6 +105,12 @@ struct WidgetsCollectionView: View {
         WidgetGallerySection(id: "live", title: "Live widgets", items: [
             WidgetGalleryItem(id: "live", title: "Live scores", size: .small),
             WidgetGalleryItem(id: "order", title: "Order of play", size: .large),
+        ]),
+        WidgetGallerySection(id: "lock", title: "Lock Screen", items: [
+            WidgetGalleryItem(id: "lock-rank", title: "Favorite rank", size: .small, isFree: true),
+            WidgetGalleryItem(id: "lock-countdown", title: "Countdown", size: .small),
+            WidgetGalleryItem(id: "lock-next", title: "Next tournament", size: .medium),
+            WidgetGalleryItem(id: "lock-live", title: "Live score", size: .medium),
         ]),
     ]
 
@@ -225,7 +232,7 @@ struct WidgetsCollectionView: View {
     }
 
     private var freeExplainer: some View {
-        Text("Free includes your favorite player widget — no live data needed. Unlock Premium for live scores, rankings and tournament widgets.")
+        Text("Free includes your favorite player widgets (home + Lock Screen rank) — no live data needed. Unlock Premium for live scores, rankings, tournament and Lock Screen countdown widgets.")
             .font(ThemeManager.roundedFont(.footnote))
             .foregroundStyle(.white.opacity(0.6))
             .fixedSize(horizontal: false, vertical: true)
@@ -391,7 +398,7 @@ struct WidgetsCollectionView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
 
-                if !locked, item.id == "favorite" {
+                if !locked, item.id == "favorite" || item.id == "favorite-medium" {
                     Button {
                         showPlayerPicker = true
                     } label: {
@@ -434,6 +441,9 @@ struct WidgetsCollectionView: View {
         switch item.id {
         case "favorite":
             FavoritePlayerWidgetView(player: favoritePlayer, widgetID: "favorite")
+                .id(favoritePlayerID)
+        case "favorite-medium":
+            FavoritePlayerMediumWidgetView(player: favoritePlayer, widgetID: "favorite")
                 .id(favoritePlayerID)
         case "next-small": NextTournamentSmallView(tour: preferredTour)
         case "countdown": TournamentCountdownView(tour: preferredTour)
@@ -481,6 +491,18 @@ struct WidgetsCollectionView: View {
                 showsRefreshHint: true,
                 widgetID: "order"
             )
+        case "lock-rank":
+            LockScreenCircularRankView(player: favoritePlayer)
+                .clipShape(Circle())
+        case "lock-countdown":
+            LockScreenCircularCountdownView(tour: preferredTour)
+                .clipShape(Circle())
+        case "lock-next":
+            LockScreenRectangularNextView(tour: preferredTour)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        case "lock-live":
+            LockScreenRectangularLiveView(match: dataStore.payload?.liveMatches.first)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         default: EmptyView()
         }
     }

@@ -81,7 +81,7 @@ enum WidgetColorStyle {
     ]
 
     static let customizableIDs: Set<String> = [
-        "favorite",
+        "favorite", "favorite-medium",
         "atp-medium", "atp-large",
         "wta-medium", "wta-large",
         "live", "order",
@@ -98,11 +98,18 @@ enum WidgetColorStyle {
     static func set(_ config: WidgetColorConfig, for widgetID: String, reloadTimelines: Bool = true) {
         guard isCustomizable(widgetID) else { return }
         var map = loadMap()
-        map[widgetID] = WidgetColorConfig(
+        let stored = WidgetColorConfig(
             presetID: config.presetID,
             gradientLevel: config.clampedLevel,
             customAccentHex: config.isCustom ? config.customAccentHex : nil
         )
+        map[widgetID] = stored
+        // Keep small + medium favorite cards on the same accent.
+        if widgetID == "favorite" {
+            map["favorite-medium"] = stored
+        } else if widgetID == "favorite-medium" {
+            map["favorite"] = stored
+        }
         saveMap(map)
         if reloadTimelines {
             WidgetTimelineRefresher.reloadAll()

@@ -104,6 +104,7 @@
 		G5W2B3C4D5E6478890A1B2C7 /* RankingsWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5A6B7C8D9E0812234E5F608 /* RankingsWidgets.swift */; };
 		G6W2B3C4D5E6478890A1B2C8 /* LiveScoresWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = G6A7B8C9D0E1923345F60719 /* LiveScoresWidget.swift */; };
 		WAC0D1E2F3045567F8193A4D /* WidgetLockedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = WBC0D1E2F3045567F8193A4E /* WidgetLockedView.swift */; };
+		LSW1A2B3C4D5E6478890A1B001 /* LockScreenWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = LS1A2B3C4D5E6478890A1B001 /* LockScreenWidgets.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -201,6 +202,7 @@
 		G5A6B7C8D9E0812234E5F608 /* RankingsWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankingsWidgets.swift; sourceTree = "<group>"; };
 		G6A7B8C9D0E1923345F60719 /* LiveScoresWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveScoresWidget.swift; sourceTree = "<group>"; };
 		WBC0D1E2F3045567F8193A4E /* WidgetLockedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetLockedView.swift; sourceTree = "<group>"; };
+		LS1A2B3C4D5E6478890A1B001 /* LockScreenWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenWidgets.swift; sourceTree = "<group>"; };
 		W1E2F3045567F8193A4B5C6D /* OrderOfPlayWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrderOfPlayWidget.swift; sourceTree = "<group>"; };
 		W3F4056677F8193A4B5C6D7E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		W5F6078899F8193A4B5C6D7E /* CourtifyWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CourtifyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -384,6 +386,7 @@
 				G5A6B7C8D9E0812234E5F608 /* RankingsWidgets.swift */,
 				G6A7B8C9D0E1923345F60719 /* LiveScoresWidget.swift */,
 				W1E2F3045567F8193A4B5C6D /* OrderOfPlayWidget.swift */,
+				LS1A2B3C4D5E6478890A1B001 /* LockScreenWidgets.swift */,
 				WBC0D1E2F3045567F8193A4E /* WidgetLockedView.swift */,
 				W8F81990A1B2C3D4E5F60722 /* Info.plist */,
 				W7F81990A1B2C3D4E5F60718 /* CourtifyWidgetExtension.entitlements */,
@@ -578,6 +581,7 @@
 				G4W2B3C4D5E6478890A1B2C6 /* TournamentWidgets.swift in Sources */,
 				G5W2B3C4D5E6478890A1B2C7 /* RankingsWidgets.swift in Sources */,
 				G6W2B3C4D5E6478890A1B2C8 /* LiveScoresWidget.swift in Sources */,
+				LSW1A2B3C4D5E6478890A1B001 /* LockScreenWidgets.swift in Sources */,
 				WAC0D1E2F3045567F8193A4D /* WidgetLockedView.swift in Sources */,
 				W0D1E2F3045567F8193A4B5D /* OrderOfPlayWidget.swift in Sources */,
 				W1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift in Sources */,
@@ -737,7 +741,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -770,7 +774,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -802,7 +806,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -829,7 +833,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 21;
+				CURRENT_PROJECT_VERSION = 22;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
