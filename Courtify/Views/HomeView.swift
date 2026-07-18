@@ -72,7 +72,10 @@ struct HomeView: View {
                 .tag(HomeTab.widgets)
         }
         .tint(ThemeManager.opticYellow)
-        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .toolbarBackground(
+            selectedTab == .home ? AnyShapeStyle(.clear) : AnyShapeStyle(.ultraThinMaterial),
+            for: .tabBar
+        )
         .toolbarBackground(.visible, for: .tabBar)
         .preferredColorScheme(.dark)
         .courtifySelectionFeedback(selectedTab)

@@ -37,6 +37,9 @@ enum CourtifyLayout {
 /// it measures the real inset, then grows the content by that amount and shifts
 /// it up so it draws edge-to-edge under the status bar.
 struct CourtifyFullBleedScreen<Content: View>: View {
+    /// Canvas behind content — bleeds under the tab bar / home indicator.
+    /// Home passes the next slam brand so navy (etc.) shows through the material tab bar.
+    var canvasColor: Color = ThemeManager.midnightGreen
     @ViewBuilder var content: (_ safeTop: CGFloat, _ size: CGSize) -> Content
 
     var body: some View {
@@ -47,7 +50,7 @@ struct CourtifyFullBleedScreen<Content: View>: View {
                 .frame(width: size.width, height: size.height, alignment: .top)
                 .offset(y: -safeTop)
         }
-        .background(ThemeManager.midnightGreen.ignoresSafeArea())
+        .background(canvasColor.ignoresSafeArea())
     }
 }
 

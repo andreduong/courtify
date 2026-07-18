@@ -31,27 +31,58 @@ struct HomeDashboardView: View {
         TournamentCalendar.nextGrandSlam(for: selectedTour)
     }
 
+    private var nextSlam: GrandSlam? {
+        nextGrandSlam?.grandSlam
+    }
+
     private var liveRank: Int? {
         FavoritePlayerCatalog.displayRank(for: favoritePlayerID, payload: dataStore.payload)
     }
 
+    private var slamHighlight: Color {
+        guard let slam = nextSlam else { return ThemeManager.opticYellow }
+        return Color(hex: slam.highlightColor)
+    }
+
+    private var slamBase: Color {
+        guard let slam = nextSlam else { return ThemeManager.midnightGreen }
+        switch slam {
+        case .australianOpen: return Color(hex: 0x08263D)
+        case .frenchOpen: return Color(hex: 0x3B1404)
+        case .wimbledon: return Color(hex: 0x140B22)
+        case .usOpen: return Color(hex: 0x07111F)
+        }
+    }
+
+    private var slamLift: Color {
+        guard let slam = nextSlam else { return ThemeManager.emeraldGreen.opacity(0.35) }
+        switch slam {
+        case .australianOpen: return Color(hex: 0x0E4A72)
+        case .frenchOpen: return Color(hex: 0x8A2E05)
+        case .wimbledon: return Color(hex: 0x2A1848)
+        case .usOpen: return Color(hex: 0x0C2340)
+        }
+    }
+
     var body: some View {
-        CourtifyFullBleedScreen { safeTop, size in
+        // Slam canvas bleeds under the translucent tab bar + home indicator.
+        CourtifyFullBleedScreen(canvasColor: slamBase) { safeTop, size in
             VStack(spacing: 0) {
-                // Hero flexes to fill whatever the countdown section doesn't need,
-                // so the player name always sits directly above "Next Grand Slam".
                 playerHeroSection(safeTop: safeTop)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
 
+                // Content-sized band; slam `canvasColor` bleeds under the tab bar.
                 grandSlamCountdownSection
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(width: size.width, height: size.height, alignment: .top)
         }
+        // Solid slam chrome on Home so brand color fills behind + below the tab bar.
+        .toolbarBackground(slamBase, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(.dark, for: .tabBar)
         .onAppear {
-            // Cache only — live data refreshes exclusively on pull-to-refresh
-            // (Rankings/Widgets tabs) to keep API usage minimal.
             dataStore.loadCachedPayload()
             #if DEBUG
             if UITestLaunchArgs.showsSettings {
@@ -64,8 +95,6 @@ struct HomeDashboardView: View {
                 playerID: favoritePlayerID,
                 payload: dataStore.payload
             )
-            // One-shot per player ID so relaunches don’t re-prompt.
-            // Skip while another modal is up (Settings / paywall) to avoid presentation conflicts.
             guard !showSettings, !showPaywall else { return }
             if FavoritePlayerEnricher.mediaUnavailable,
                FavoritePlayerEnricher.shouldPresentMediaUnavailableAlert(for: favoritePlayerID) {
@@ -103,22 +132,71 @@ struct HomeDashboardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
 
-            heroSeamGradient
-
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
-                    Spacer()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(selectedTour == .wta ? "WTA RANKING" : "ATP RANKING")
+                            .font(ThemeManager.roundedFont(size: 11, weight: .bold))
+                            .foregroundStyle(ThemeManager.opticYellow)
+                            .tracking(1.6)
+
+                        if let player = favoritePlayer {
+                            Text(player.name)
+                                .font(ThemeManager.roundedFont(size: 26, weight: .bold))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.85)
+                                .shadow(color: .black.opacity(0.35), radius: 6, y: 1)
+                        }
+                    }
+                    .frame(maxWidth: 200, alignment: .leading)
+
+                    Spacer(minLength: 8)
 
                     ProfileIconButton(showSettings: $showSettings)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, safeTop + 8)
+                .padding(.top, safeTop + 10)
+
+                if showsFavoriteMediaHint {
+                    Text("Photo & season record unavailable (API limit). Rank still updates from cache.")
+                        .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 Spacer(minLength: 0)
 
-                playerStatsBlock
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
+                // Rank + record sit low; name stays high so it doesn't fight the torso.
+                VStack(alignment: .leading, spacing: 6) {
+                    if let rank = liveRank {
+                        Text("\(rank)")
+                            .font(WidgetTheme.displayFont(size: 92, weight: .black))
+                            .fontWidth(.compressed)
+                            .foregroundStyle(.white)
+                            .tracking(-5)
+                            .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
+                    }
+
+                    if let record = favoritePlayer?.displaySeasonRecord {
+                        let total = record.wins + record.losses
+                        let winRate = total > 0
+                            ? Int((Double(record.wins) / Double(total) * 100).rounded())
+                            : 0
+                        Text(verbatim: "\(record.wins)–\(record.losses)  ·  \(winRate)%")
+                            .font(ThemeManager.roundedFont(size: 14, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.58))
+                    } else if favoritePlayer?.isCustom == true {
+                        Text("Season record unavailable")
+                            .font(ThemeManager.roundedFont(size: 13, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+                }
+                .padding(.leading, 20)
+                .padding(.bottom, 28)
+                .frame(maxWidth: 180, alignment: .leading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -128,104 +206,35 @@ struct HomeDashboardView: View {
     private func playerHeroBackground(safeTop: CGFloat) -> some View {
         ZStack {
             LinearGradient(
-                colors: [ThemeManager.emeraldGreen.opacity(0.55), ThemeManager.midnightGreen],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                colors: [
+                    Color(hex: 0x1F7A4A),
+                    ThemeManager.emeraldGreen,
+                    Color(hex: 0x0C2A1A),
+                    ThemeManager.midnightGreen,
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            LinearGradient(
+                colors: [
+                    ThemeManager.opticYellow.opacity(0.08),
+                    .clear,
+                ],
+                startPoint: .top,
+                endPoint: .center
             )
 
             if let player = favoritePlayer {
                 PlayerTorsoPhotoView(player: player, contentMode: .fit)
                     .id("\(favoritePlayerID)-\(photoRefreshToken)")
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(.top, safeTop + 8)
-
-                Text(player.name.split(separator: " ").first.map(String.init) ?? player.name)
-                    .font(ThemeManager.roundedFont(size: 96, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.08))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding(.leading, 16)
-                    .padding(.top, safeTop + 48)
-            }
-
-            LinearGradient(
-                colors: [
-                    .black.opacity(0.25),
-                    .clear,
-                    .black.opacity(0.45),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
-    }
-
-    private var heroSeamGradient: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            LinearGradient(
-                colors: [
-                    .clear,
-                    ThemeManager.emeraldGreen.opacity(0.25),
-                    ThemeManager.midnightGreen.opacity(0.85),
-                    ThemeManager.midnightGreen,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 120)
-        }
-        .allowsHitTesting(false)
-    }
-
-    private var playerStatsBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 18) {
-                statChip(icon: "chart.bar.fill", label: "Rank", value: rankLabel)
-                if let record = favoritePlayer?.displaySeasonRecord {
-                    let year = PlayerSeasonRecordCache.entry(for: favoritePlayer?.id ?? "")?.season
-                        ?? Calendar.current.component(.year, from: Date())
-                    statChip(
-                        icon: "sportscourt.fill",
-                        label: "\(year)",
-                        value: "\(record.wins)-\(record.losses)"
-                    )
-                } else if favoritePlayer?.isCustom == true {
-                    statChip(
-                        icon: "sportscourt.fill",
-                        label: "\(Calendar.current.component(.year, from: Date()))",
-                        value: "—"
-                    )
-                }
-            }
-
-            if showsFavoriteMediaHint {
-                Text("Photo & season record unavailable (API limit). Rank still updates from cache.")
-                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if let rank = liveRank {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("\(rank)")
-                        .font(ThemeManager.roundedFont(size: 58, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text("RANK")
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.55))
-                        .padding(.bottom, 8)
-                }
-            }
-
-            if let player = favoritePlayer {
-                Text(player.name)
-                    .font(ThemeManager.roundedFont(.title2, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.95))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.85)
+                    .padding(.top, safeTop + 28)
+                    .padding(.leading, 96)
+                    .padding(.trailing, -24)
+                    .padding(.bottom, 4)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var showsFavoriteMediaHint: Bool {
@@ -235,127 +244,121 @@ struct HomeDashboardView: View {
             && !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
-    private var rankLabel: String {
-        if let rank = liveRank {
-            return "#\(rank)"
-        }
-        return "—"
-    }
-
-    private func statChip(icon: String, label: String, value: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-            Text(label)
-                .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
-            Text(value)
-                .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
-        }
-        .foregroundStyle(.white.opacity(0.9))
-    }
-
     // MARK: - Grand Slam countdown
 
     private var grandSlamCountdownSection: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Next Grand Slam")
-                    .font(ThemeManager.roundedFont(.title2, weight: .bold))
-                    .foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 0) {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            slamHighlight.opacity(0.9),
+                            slamHighlight.opacity(0.3),
+                            .white.opacity(0.06),
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 1.5)
 
-                if let slam = nextGrandSlam {
-                    Text("\(slam.name) · Starts in")
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.65))
-
-                    let countdown = TournamentCalendar.countdown(to: slam)
-                    HStack(spacing: 12) {
-                        countdownUnit(value: countdown.days, label: "D")
-                        countdownUnit(value: countdown.hours, label: "H")
-                        countdownUnit(value: countdown.minutes, label: "M")
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        Capsule()
+                            .fill(slamHighlight)
+                            .frame(width: 18, height: 3)
+                        Text("NEXT GRAND SLAM")
+                            .font(ThemeManager.roundedFont(size: 11, weight: .bold))
+                            .foregroundStyle(slamHighlight.opacity(0.95))
+                            .tracking(1.5)
                     }
-                    .padding(.top, 2)
 
-                    Text("Follow every match from draw day through the trophy ceremony.")
-                        .font(ThemeManager.roundedFont(.caption))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .padding(.top, 8)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let slam = nextGrandSlam {
+                        Text(slam.name)
+                            .font(ThemeManager.roundedFont(size: 28, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        Text("\(slam.location.uppercased())  ·  \(slam.surface.uppercased())")
+                            .font(ThemeManager.roundedFont(size: 11, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.42))
+                            .tracking(1)
+
+                        let countdown = TournamentCalendar.countdown(to: slam)
+                        HStack(spacing: 18) {
+                            countdownUnit(value: countdown.days, label: "DAYS")
+                            countdownUnit(value: countdown.hours, label: "HRS")
+                            countdownUnit(value: countdown.minutes, label: "MIN")
+                        }
+                        .padding(.top, 4)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                if !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
+                    GetPremiumPill(action: { showPaywall = true })
                 }
             }
-
-            Spacer(minLength: 0)
-
-            if !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
-                GetPremiumPill(action: { showPaywall = true })
-            }
+            .padding(.horizontal, 20)
+            .padding(.top, 22)
+            .padding(.bottom, 28)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 24)
-        .padding(.bottom, 40)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background { grandSlamBackground }
-        .overlay(alignment: .bottomTrailing) {
-            Image(systemName: "info.circle")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.white.opacity(0.35))
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-        }
     }
 
     private var grandSlamBackground: some View {
-        // Base color is flexible, so it adopts the section's exact size; the
-        // overlays (blurred slam photo can be much taller) are then clipped to it.
-        ThemeManager.midnightGreen
-            .overlay {
-                if let slam = nextGrandSlam, let imageName = slam.heroImageName {
-                    AssetCatalogImage(name: imageName, contentMode: .fill)
-                        .blur(radius: 14)
-                        .scaleEffect(1.1)
-                        .opacity(0.28)
-                }
-            }
-            .overlay {
-                LinearGradient(
-                    colors: [
-                        ThemeManager.midnightGreen,
-                        ThemeManager.emeraldGreen.opacity(0.16),
-                        ThemeManager.midnightGreen,
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
-            .overlay { bottomSeamGradient }
-            .clipped()
-    }
-
-    private var bottomSeamGradient: some View {
-        VStack(spacing: 0) {
+        ZStack(alignment: .leading) {
             LinearGradient(
-                colors: [
-                    ThemeManager.midnightGreen,
-                    ThemeManager.emeraldGreen.opacity(0.2),
-                    .clear,
-                ],
+                colors: [slamLift, slamBase],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 72)
-            Spacer()
+
+            Rectangle()
+                .fill(slamHighlight)
+                .frame(width: 3)
+                .opacity(0.9)
+
+            if let slam = nextSlam {
+                AssetCatalogImage(name: slam.logoImageName, contentMode: .fit)
+                    .frame(width: 140, height: 140)
+                    .opacity(0.08)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(.trailing, -12)
+                    .padding(.bottom, -16)
+                    .allowsHitTesting(false)
+            }
         }
-        .allowsHitTesting(false)
+        .clipped()
     }
 
     private func countdownUnit(value: Int, label: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(String(format: "%02d", value))
-                .font(ThemeManager.roundedFont(size: 32, weight: .bold))
+                .font(WidgetTheme.displayFont(size: 36, weight: .heavy))
                 .foregroundStyle(.white)
+                .monospacedDigit()
             Text(label)
-                .font(ThemeManager.roundedFont(.caption, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.45))
+                .font(ThemeManager.roundedFont(size: 10, weight: .bold))
+                .foregroundStyle(slamHighlight.opacity(0.8))
+                .tracking(1.3)
+        }
+    }
+}
+
+// MARK: - Tournament → Grand Slam
+
+private extension TournamentEvent {
+    var grandSlam: GrandSlam? {
+        guard tier == .grandSlam else { return nil }
+        return GrandSlam.allCases.first {
+            name.localizedCaseInsensitiveContains($0.rawValue)
+                || (shortName == "AO" && $0 == .australianOpen)
+                || (shortName == "RG" && $0 == .frenchOpen)
+                || (shortName == "WIM" && $0 == .wimbledon)
+                || (shortName == "USO" && $0 == .usOpen)
         }
     }
 }
