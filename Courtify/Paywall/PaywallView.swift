@@ -216,19 +216,24 @@ struct PaywallView: View {
         }
     }
 
-    /// Light edge vignette only — widgets stay the hero, not covered by a panel.
+    /// Soft wash so colorful widgets sit behind the CTA — still visible, not screaming.
     private var paywallFocusScrim: some View {
-        RadialGradient(
-            colors: [
-                Color.clear,
-                Color.clear,
-                Color.black.opacity(0.22),
-            ],
-            center: .center,
-            startRadius: 240,
-            endRadius: 700
-        )
-        .ignoresSafeArea()
+        ZStack {
+            Color.black.opacity(0.22)
+                .ignoresSafeArea()
+
+            RadialGradient(
+                colors: [
+                    Color.clear,
+                    Color.black.opacity(0.12),
+                    Color.black.opacity(0.28),
+                ],
+                center: .center,
+                startRadius: 220,
+                endRadius: 680
+            )
+            .ignoresSafeArea()
+        }
     }
 
     private func purchaseSelectedPlan() async {
