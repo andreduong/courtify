@@ -72,6 +72,7 @@
 		L1B2C3D4E5F60718293A4B72 /* AssetCatalogImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */; };
 		L2B2C3D4E5F60718293A4B73 /* PlayerSilhouetteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */; };
 		M1B2C3D4E5F60718293A4B74 /* CourtifyMarqueeBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */; };
+		M2B2C3D4E5F60718293A4B79 /* MarqueeShowcaseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = M2A2B3C4D5E6478890A1B2D9 /* MarqueeShowcaseData.swift */; };
 		L2W2B3C4D5E6478890A1B2D8 /* PlayerSilhouetteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */; };
 		K1W2B3C4D5E6478890A1B2D4 /* PlayerPhotoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = K1A2B3C4D5E6478890A1B2D1 /* PlayerPhotoStore.swift */; };
 		J4B2C3D4E5F60718293A4B6C /* FavoritePlayerWidgetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = J4A2B3C4D5E6478890A1B2CF /* FavoritePlayerWidgetIntent.swift */; };
@@ -193,6 +194,7 @@
 		L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetCatalogImage.swift; sourceTree = "<group>"; };
 		L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSilhouetteView.swift; sourceTree = "<group>"; };
 		M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyMarqueeBackground.swift; sourceTree = "<group>"; };
+		M2A2B3C4D5E6478890A1B2D9 /* MarqueeShowcaseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeShowcaseData.swift; sourceTree = "<group>"; };
 		K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisPlayerPhotoView.swift; sourceTree = "<group>"; };
 		J3A2B3C4D5E6478890A1B2CE /* FavoritePlayerPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerPickerSheet.swift; sourceTree = "<group>"; };
 		J4A2B3C4D5E6478890A1B2CF /* FavoritePlayerWidgetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerWidgetIntent.swift; sourceTree = "<group>"; };
@@ -370,6 +372,7 @@
 				L1A2B3C4D5E6478890A1B2D6 /* AssetCatalogImage.swift */,
 				L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */,
 				M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */,
+				M2A2B3C4D5E6478890A1B2D9 /* MarqueeShowcaseData.swift */,
 				K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */,
 				J3A2B3C4D5E6478890A1B2CE /* FavoritePlayerPickerSheet.swift */,
 			);
@@ -554,6 +557,7 @@
 				K6B2C3D4E5F60718293A4B75 /* FavoritePlayerEnricher.swift in Sources */,
 				L1B2C3D4E5F60718293A4B72 /* AssetCatalogImage.swift in Sources */,
 				M1B2C3D4E5F60718293A4B74 /* CourtifyMarqueeBackground.swift in Sources */,
+				M2B2C3D4E5F60718293A4B79 /* MarqueeShowcaseData.swift in Sources */,
 				L2B2C3D4E5F60718293A4B73 /* PlayerSilhouetteView.swift in Sources */,
 				K3B2C3D4E5F60718293A4B6F /* TennisPlayerPhotoView.swift in Sources */,
 				J3B2C3D4E5F60718293A4B6B /* FavoritePlayerPickerSheet.swift in Sources */,
@@ -741,7 +745,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -774,7 +778,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -806,7 +810,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -833,7 +837,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 23;
+				CURRENT_PROJECT_VERSION = 24;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;

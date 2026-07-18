@@ -7,22 +7,79 @@ import SwiftUI
 /// clipped viewport. Centering a wide `HStack` and offsetting it leaves empty
 /// midnight gutters (especially top-leading) as the phase wraps.
 struct CourtifyMarqueeBackground: View {
-    var opacity: Double = 0.68
+    var opacity: Double = 0.74
 
     private let rowCount = 8
     private let cardHeight: CGFloat = 128
-    private let rowSpacing: CGFloat = 8
-    private let duration: Double = 26
+    /// Slightly airier than the gallery — paywall reads more premium when cards breathe.
+    private let rowSpacing: CGFloat = 22
+    private let duration: Double = 30
 
     private let rows: [[MarqueeCard]] = [
-        [.favorite, .nextSmall, .live, .countdown, .atpMedium, .order],
-        [.wtaMedium, .lockRank, .favoriteMedium, .nextLarge, .calendar, .live],
-        [.order, .lockCountdown, .live, .favorite, .countdown, .atpMedium],
-        [.atpMedium, .nextSmall, .lockNext, .wtaMedium, .favoriteMedium, .calendar],
-        [.calendar, .live, .favorite, .nextLarge, .order, .countdown],
-        [.favoriteMedium, .countdown, .atpMedium, .nextSmall, .live, .wtaMedium],
-        [.nextLarge, .favorite, .order, .lockRank, .countdown, .live],
-        [.live, .calendar, .wtaMedium, .favoriteMedium, .nextSmall, .atpMedium],
+        [
+            .favorite(playerID: "alcaraz"),
+            .classic(0),
+            .live,
+            .favorite(playerID: "djokovic"),
+            .countdown,
+            .atpMedium,
+        ],
+        [
+            .favoriteMedium(playerID: "sinner"),
+            .classic(1),
+            .wtaMedium,
+            .favorite(playerID: "swiatek"),
+            .nextLarge,
+            .lockRank(playerID: "alcaraz"),
+        ],
+        [
+            .classic(2),
+            .favorite(playerID: "sabalenka"),
+            .order,
+            .favoriteMedium(playerID: "djokovic"),
+            .live,
+            .calendar,
+        ],
+        [
+            .favorite(playerID: "gauff"),
+            .classic(3),
+            .nextSmall,
+            .favoriteMedium(playerID: "alcaraz"),
+            .lockCountdown,
+            .classic(4),
+        ],
+        [
+            .favoriteMedium(playerID: "swiatek"),
+            .live,
+            .favorite(playerID: "sinner"),
+            .classic(0),
+            .order,
+            .countdown,
+        ],
+        [
+            .classic(1),
+            .favorite(playerID: "alcaraz"),
+            .atpMedium,
+            .favoriteMedium(playerID: "sabalenka"),
+            .nextSmall,
+            .wtaMedium,
+        ],
+        [
+            .favorite(playerID: "djokovic"),
+            .classic(2),
+            .lockRank(playerID: "djokovic"),
+            .favoriteMedium(playerID: "gauff"),
+            .calendar,
+            .classic(3),
+        ],
+        [
+            .live,
+            .favorite(playerID: "swiatek"),
+            .classic(4),
+            .favoriteMedium(playerID: "sinner"),
+            .nextLarge,
+            .order,
+        ],
     ]
 
     var body: some View {
@@ -63,16 +120,37 @@ struct CourtifyMarqueeBackground: View {
     }
 }
 
-private enum MarqueeCard: String, Identifiable {
-    case favorite, favoriteMedium, nextSmall, countdown, nextLarge, calendar
+private enum MarqueeCard: Identifiable {
+    case favorite(playerID: String)
+    case favoriteMedium(playerID: String)
+    case nextSmall, countdown, nextLarge, calendar
     case atpMedium, wtaMedium, live, order
-    case lockRank, lockCountdown, lockNext
+    case classic(Int)
+    case lockRank(playerID: String)
+    case lockCountdown, lockNext
 
-    var id: String { rawValue }
+    var id: String {
+        switch self {
+        case .favorite(let playerID): return "favorite-\(playerID)"
+        case .favoriteMedium(let playerID): return "favorite-medium-\(playerID)"
+        case .nextSmall: return "next-small"
+        case .countdown: return "countdown"
+        case .nextLarge: return "next-large"
+        case .calendar: return "calendar"
+        case .atpMedium: return "atp-medium"
+        case .wtaMedium: return "wta-medium"
+        case .live: return "live"
+        case .order: return "order"
+        case .classic(let index): return "classic-\(index)"
+        case .lockRank(let playerID): return "lock-rank-\(playerID)"
+        case .lockCountdown: return "lock-countdown"
+        case .lockNext: return "lock-next"
+        }
+    }
 
     var width: CGFloat {
         switch self {
-        case .favorite, .nextSmall, .live, .lockRank, .lockCountdown:
+        case .favorite, .nextSmall, .live, .classic, .lockRank, .lockCountdown:
             return 118
         case .favoriteMedium, .countdown, .atpMedium, .wtaMedium, .lockNext:
             return 220
@@ -90,7 +168,7 @@ private struct MarqueeLiveRow: View {
     let phaseFraction: Double
     var reverse: Bool = false
 
-    private let gap: CGFloat = 8
+    private let gap: CGFloat = 22
 
     private var travelDistance: CGFloat {
         cards.reduce(0) { $0 + $1.width + gap }
@@ -102,9 +180,13 @@ private struct MarqueeLiveRow: View {
                 marqueePreview(card)
                     .frame(width: card.width, height: cardHeight)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                    }
                     // Keep shadows inside the card bounds so `.clipped()` on the
                     // viewport doesn't carve a dark “cutoff” halo at the edges.
-                    .shadow(color: .black.opacity(0.28), radius: 5, y: 3)
+                    .shadow(color: .black.opacity(0.34), radius: 8, y: 4)
             }
         }
     }
@@ -139,16 +221,20 @@ private struct MarqueeLiveRow: View {
 
     @ViewBuilder
     private func marqueePreview(_ card: MarqueeCard) -> some View {
-        let player = TennisPlayer.topPlayers.first { $0.id == "sinner" }
-            ?? TennisPlayer.topPlayers.first
         let tour: TourPreference = .atp
         let rankings = WidgetPreviewSamples.rankings(for: .atp)
 
         switch card {
-        case .favorite:
-            FavoritePlayerWidgetView(player: player, widgetID: "favorite")
-        case .favoriteMedium:
-            FavoritePlayerMediumWidgetView(player: player, widgetID: "favorite-medium")
+        case .favorite(let playerID):
+            FavoritePlayerWidgetView(
+                player: MarqueeShowcaseData.player(id: playerID),
+                widgetID: "favorite"
+            )
+        case .favoriteMedium(let playerID):
+            FavoritePlayerMediumWidgetView(
+                player: MarqueeShowcaseData.player(id: playerID),
+                widgetID: "favorite-medium"
+            )
         case .nextSmall:
             NextTournamentSmallView(tour: tour)
         case .countdown:
@@ -160,13 +246,23 @@ private struct MarqueeLiveRow: View {
         case .atpMedium:
             RankingsWidgetView(tour: .atp, entries: rankings, limit: 5, widgetID: "atp-medium")
         case .wtaMedium:
-            RankingsWidgetView(tour: .wta, entries: WidgetPreviewSamples.rankings(for: .wta), limit: 5, widgetID: "wta-medium")
+            RankingsWidgetView(
+                tour: .wta,
+                entries: WidgetPreviewSamples.rankings(for: .wta),
+                limit: 5,
+                widgetID: "wta-medium"
+            )
         case .live:
-            LiveScoresWidgetView(match: WidgetPreviewSamples.liveMatch, widgetID: "live")
+            LiveScoresWidgetView(match: MarqueeShowcaseData.modernLiveMatch, widgetID: "live")
+        case .classic(let index):
+            LiveScoresWidgetView(
+                match: MarqueeShowcaseData.classicMatch(at: index),
+                widgetID: "live"
+            )
         case .order:
             OrderOfPlayListView(matches: WidgetPreviewSamples.upcomingMatches, widgetID: "order")
-        case .lockRank:
-            LockScreenCircularRankView(player: player)
+        case .lockRank(let playerID):
+            LockScreenCircularRankView(player: MarqueeShowcaseData.player(id: playerID))
                 .clipShape(Circle())
                 .overlay {
                     Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)

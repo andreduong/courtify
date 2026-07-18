@@ -60,19 +60,9 @@ struct PaywallView: View {
         ZStack {
             paywallBackground
 
-            // Soft vignette — keep it gentle so marquee seams don't read as blackout bars.
-            RadialGradient(
-                colors: [
-                    Color.black.opacity(0.22),
-                    Color.black.opacity(0.42),
-                    Color.black.opacity(0.55),
-                ],
-                center: .center,
-                startRadius: 60,
-                endRadius: 560
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            // Soft depth: keep marquee visible — widgets are the selling point.
+            paywallFocusScrim
+                .allowsHitTesting(false)
 
             ScrollView {
                 VStack(spacing: 28) {
@@ -83,15 +73,18 @@ struct PaywallView: View {
                             .font(ThemeManager.roundedFont(.largeTitle, weight: .bold))
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
+                            .shadow(color: .black.opacity(0.75), radius: 14, y: 2)
+                            .shadow(color: .black.opacity(0.45), radius: 4, y: 1)
 
                         Text("Unlock live point-by-point, advanced stats, and ad-free Grand Slam coverage.")
                             .font(ThemeManager.roundedFont(.body, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.92))
+                            .foregroundStyle(.white.opacity(0.94))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 8)
+                            .shadow(color: .black.opacity(0.7), radius: 10, y: 1)
                     }
 
-                    VStack(spacing: 12) {
+                    VStack(spacing: 14) {
                         ForEach(SubscriptionPlan.allCases) { plan in
                             PlanOptionRow(
                                 plan: plan,
@@ -128,14 +121,16 @@ struct PaywallView: View {
                             }
                         }
                         .font(ThemeManager.roundedFont(.footnote, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.88))
+                        .foregroundStyle(.white.opacity(0.9))
                         .courtifyButton(.ghost)
+                        .shadow(color: .black.opacity(0.55), radius: 8, y: 1)
                     }
 
                     Text("Cancel anytime. Subscription auto-renews unless cancelled 24 hours before the period ends.")
                         .font(ThemeManager.roundedFont(.caption2, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.72))
+                        .foregroundStyle(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
+                        .shadow(color: .black.opacity(0.7), radius: 8, y: 1)
                         .padding(.bottom, 32)
                 }
                 .padding(24)
@@ -211,6 +206,21 @@ struct PaywallView: View {
             CourtifyMarqueeBackground()
                 .ignoresSafeArea()
         }
+    }
+
+    /// Light edge vignette only — widgets stay the hero, not covered by a panel.
+    private var paywallFocusScrim: some View {
+        RadialGradient(
+            colors: [
+                Color.clear,
+                Color.clear,
+                Color.black.opacity(0.22),
+            ],
+            center: .center,
+            startRadius: 240,
+            endRadius: 700
+        )
+        .ignoresSafeArea()
     }
 
     private func purchaseSelectedPlan() async {

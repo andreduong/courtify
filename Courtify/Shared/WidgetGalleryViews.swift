@@ -716,9 +716,9 @@ struct LiveScoresWidgetView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 5) {
                         Circle()
-                            .fill(Color.red)
+                            .fill(isClassicMatch(match) ? WidgetTheme.opticYellow : Color.red)
                             .frame(width: 6, height: 6)
-                        Text("LIVE · \(match.tour)")
+                        Text(liveBadgeTitle(for: match))
                             .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
                             .foregroundStyle(WidgetTheme.opticYellow)
                             .lineLimit(1)
@@ -770,6 +770,17 @@ struct LiveScoresWidgetView: View {
             guard (note.object as? String) == widgetID || note.object == nil else { return }
             colorTick += 1
         }
+    }
+
+    private func isClassicMatch(_ match: WidgetLiveMatch) -> Bool {
+        match.status?.uppercased() == "CLASSIC"
+    }
+
+    private func liveBadgeTitle(for match: WidgetLiveMatch) -> String {
+        if isClassicMatch(match) {
+            return "CLASSIC · \(match.tour)"
+        }
+        return "LIVE · \(match.tour)"
     }
 }
 
