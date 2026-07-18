@@ -6,19 +6,31 @@ import UIKit
 struct FavoritePlayerWidgetView: View {
     let player: TennisPlayer?
     var widgetID: String = "favorite"
+    /// When set (paywall marquee), bypasses saved WidgetColorStyle for this card.
+    var forceAccent: Color? = nil
     @State private var colorTick = 0
 
     private var rankLabel: String {
         WidgetTheme.ordinalRank(player?.ranking)
     }
 
+    private var resolvedAccent: Color {
+        forceAccent ?? WidgetColorStyle.config(for: widgetID).resolvedAccent
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
-            WidgetColorStyle.gradient(for: widgetID)
-                .id(colorTick)
+            Group {
+                if let forceAccent {
+                    WidgetColorStyle.gradient(accent: forceAccent)
+                } else {
+                    WidgetColorStyle.gradient(for: widgetID)
+                }
+            }
+            .id(colorTick)
             WidgetTextureOverlay(
                 texture: WidgetColorStyle.texture(for: widgetID),
-                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+                accent: resolvedAccent
             )
 
             if let player {
@@ -84,20 +96,35 @@ struct FavoritePlayerWidgetView: View {
 struct FavoritePlayerMediumWidgetView: View {
     let player: TennisPlayer?
     var widgetID: String = "favorite-medium"
+    var forceAccent: Color? = nil
     @State private var colorTick = 0
+
+    private var resolvedAccent: Color {
+        forceAccent ?? WidgetColorStyle.config(for: widgetID).resolvedAccent
+    }
 
     var body: some View {
         ZStack {
-            WidgetColorStyle.gradient(
-                for: widgetID,
-                fallbackAccent: WidgetTheme.emeraldGreen,
-                startPoint: .leading,
-                endPoint: .trailing
-            )
+            Group {
+                if let forceAccent {
+                    WidgetColorStyle.gradient(
+                        accent: forceAccent,
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                } else {
+                    WidgetColorStyle.gradient(
+                        for: widgetID,
+                        fallbackAccent: WidgetTheme.emeraldGreen,
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                }
+            }
             .id(colorTick)
             WidgetTextureOverlay(
                 texture: WidgetColorStyle.texture(for: widgetID),
-                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+                accent: resolvedAccent
             )
 
             HStack(alignment: .top, spacing: 0) {
@@ -254,11 +281,17 @@ struct FavoritePlayerHeroImage: View {
 
 struct NextTournamentSmallView: View {
     let tour: TourPreference
+    /// Paywall marquee — force a Grand Slam brand wash regardless of calendar.
+    var forceSlam: GrandSlam? = nil
 
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
         ZStack(alignment: .topLeading) {
-            widgetSurfaceGradient(for: event)
+            if let forceSlam {
+                widgetSlamAtmosphere(forceSlam)
+            } else {
+                widgetSurfaceGradient(for: event)
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 if let event {
@@ -299,11 +332,16 @@ struct NextTournamentSmallView: View {
 
 struct TournamentCountdownView: View {
     let tour: TourPreference
+    var forceSlam: GrandSlam? = nil
 
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
         ZStack {
-            widgetSurfaceGradient(for: event)
+            if let forceSlam {
+                widgetSlamAtmosphere(forceSlam)
+            } else {
+                widgetSurfaceGradient(for: event)
+            }
 
             // Soft tennis-ball watermark — not a muddy tournament logo
             Image(systemName: "tennisball.fill")
@@ -350,6 +388,7 @@ struct TournamentCountdownView: View {
 
 struct NextTournamentLargeView: View {
     let tour: TourPreference
+    var forceSlam: GrandSlam? = nil
 
     private var upcoming: [TournamentEvent] {
         let today = Calendar.current.startOfDay(for: Date())
@@ -360,7 +399,11 @@ struct NextTournamentLargeView: View {
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
         ZStack(alignment: .topLeading) {
-            widgetSurfaceGradient(for: event)
+            if let forceSlam {
+                widgetSlamAtmosphere(forceSlam)
+            } else {
+                widgetSurfaceGradient(for: event)
+            }
 
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -436,6 +479,7 @@ struct NextTournamentLargeView: View {
 
 struct SeasonCalendarView: View {
     let tour: TourPreference
+    var forceSlam: GrandSlam? = nil
 
     private var events: [TournamentEvent] {
         TournamentCalendar.events(for: tour)
@@ -443,7 +487,11 @@ struct SeasonCalendarView: View {
 
     var body: some View {
         ZStack {
-            WidgetAtmosphere(accent: Color(hex: 0x143D2B), glowOpacity: 0.35, texture: .velvet)
+            if let forceSlam {
+                widgetSlamAtmosphere(forceSlam)
+            } else {
+                WidgetAtmosphere(accent: Color(hex: 0x143D2B), glowOpacity: 0.35, texture: .velvet)
+            }
 
             VStack(spacing: 10) {
                 Text("2026 \(tour.rawValue) CALENDAR")
@@ -512,22 +560,38 @@ struct RankingsWidgetView: View {
     let limit: Int
     var showsRefreshHint = false
     var widgetID: String = "atp-medium"
+    var forceAccent: Color? = nil
     @State private var colorTick = 0
 
     private var leader: WidgetRankingEntry? { entries.first }
 
+    private var resolvedAccent: Color {
+        forceAccent
+            ?? WidgetColorStyle.config(for: widgetID).resolvedAccent
+    }
+
     var body: some View {
         ZStack {
-            WidgetColorStyle.gradient(
-                for: widgetID,
-                fallbackAccent: tour == .atp ? Color(hex: 0x0C3A5C) : Color(hex: 0x5A2D78),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            Group {
+                if let forceAccent {
+                    WidgetColorStyle.gradient(
+                        accent: forceAccent,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                } else {
+                    WidgetColorStyle.gradient(
+                        for: widgetID,
+                        fallbackAccent: tour == .atp ? Color(hex: 0x0C3A5C) : Color(hex: 0x5A2D78),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            }
             .id(colorTick)
             WidgetTextureOverlay(
                 texture: WidgetColorStyle.texture(for: widgetID),
-                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+                accent: resolvedAccent
             )
 
             HStack(alignment: .top, spacing: 12) {
@@ -696,20 +760,35 @@ struct LiveScoresWidgetView: View {
     let match: WidgetLiveMatch?
     var showsRefreshHint = false
     var widgetID: String = "live"
+    var forceAccent: Color? = nil
     @State private var colorTick = 0
+
+    private var resolvedAccent: Color {
+        forceAccent ?? WidgetColorStyle.config(for: widgetID).resolvedAccent
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            WidgetColorStyle.gradient(
-                for: widgetID,
-                fallbackAccent: Color(hex: 0x1A5C3A),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            Group {
+                if let forceAccent {
+                    WidgetColorStyle.gradient(
+                        accent: forceAccent,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                } else {
+                    WidgetColorStyle.gradient(
+                        for: widgetID,
+                        fallbackAccent: Color(hex: 0x1A5C3A),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            }
             .id(colorTick)
             WidgetTextureOverlay(
                 texture: WidgetColorStyle.texture(for: widgetID),
-                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+                accent: resolvedAccent
             )
 
             if let match {
@@ -788,6 +867,7 @@ struct OrderOfPlayListView: View {
     let matches: [WidgetUpcomingMatch]
     var showsRefreshHint = false
     var widgetID: String = "order"
+    var forceAccent: Color? = nil
     @State private var colorTick = 0
 
     private static let timeFormatter: DateFormatter = {
@@ -797,18 +877,32 @@ struct OrderOfPlayListView: View {
         return formatter
     }()
 
+    private var resolvedAccent: Color {
+        forceAccent ?? WidgetColorStyle.config(for: widgetID).resolvedAccent
+    }
+
     var body: some View {
         ZStack(alignment: .topLeading) {
-            WidgetColorStyle.gradient(
-                for: widgetID,
-                fallbackAccent: Color(hex: 0x0C3A5C),
-                startPoint: .leading,
-                endPoint: .bottomTrailing
-            )
+            Group {
+                if let forceAccent {
+                    WidgetColorStyle.gradient(
+                        accent: forceAccent,
+                        startPoint: .leading,
+                        endPoint: .bottomTrailing
+                    )
+                } else {
+                    WidgetColorStyle.gradient(
+                        for: widgetID,
+                        fallbackAccent: Color(hex: 0x0C3A5C),
+                        startPoint: .leading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            }
             .id(colorTick)
             WidgetTextureOverlay(
                 texture: WidgetColorStyle.texture(for: widgetID),
-                accent: WidgetColorStyle.config(for: widgetID).resolvedAccent
+                accent: resolvedAccent
             )
 
             VStack(alignment: .leading, spacing: 10) {

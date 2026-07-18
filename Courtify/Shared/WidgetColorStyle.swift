@@ -189,6 +189,25 @@ enum WidgetColorStyle {
         NotificationCenter.default.post(name: AppGroupConstants.widgetColorDidChange, object: widgetID)
     }
 
+    /// Accent → midnight gradient using an explicit accent (marquee / previews).
+    static func gradient(
+        accent: Color,
+        gradientLevel: Double = 0.72,
+        startPoint: UnitPoint = .top,
+        endPoint: UnitPoint = .bottom
+    ) -> LinearGradient {
+        let level = min(1, max(0, gradientLevel))
+        let bottom = WidgetTheme.midnightGreen.opacity(0.35 + (0.65 * level))
+        let mid = accent.opacity(1.0 - (0.35 * level))
+        return LinearGradient(
+            colors: level < 0.15
+                ? [accent, accent.opacity(0.92)]
+                : [accent, mid, bottom],
+            startPoint: startPoint,
+            endPoint: endPoint
+        )
+    }
+
     /// Accent → midnight gradient using saved style (or defaults).
     static func gradient(
         for widgetID: String,
@@ -200,14 +219,9 @@ enum WidgetColorStyle {
         let top = config.isCustom
             ? (config.customAccentHex.map { Color(hex: $0) } ?? fallbackAccent)
             : (WidgetColorPreset(rawValue: config.presetID)?.accent ?? fallbackAccent)
-        let level = config.clampedLevel
-        // Higher level → more midnight at the bottom; low level → flatter accent wash.
-        let bottom = WidgetTheme.midnightGreen.opacity(0.35 + (0.65 * level))
-        let mid = top.opacity(1.0 - (0.35 * level))
-        return LinearGradient(
-            colors: level < 0.15
-                ? [top, top.opacity(0.92)]
-                : [top, mid, bottom],
+        return gradient(
+            accent: top,
+            gradientLevel: config.clampedLevel,
             startPoint: startPoint,
             endPoint: endPoint
         )

@@ -266,8 +266,42 @@ struct WidgetAccentBar: View {
     }
 }
 
+@ViewBuilder
 func widgetSurfaceGradient(for event: TournamentEvent?) -> some View {
-    WidgetAtmosphere(accent: WidgetTheme.surfaceAccent(for: event?.surface), texture: .aurora)
+    if let slam = grandSlam(for: event) {
+        widgetSlamAtmosphere(slam)
+    } else {
+        WidgetAtmosphere(accent: WidgetTheme.surfaceAccent(for: event?.surface), texture: .aurora)
+    }
+}
+
+func widgetSlamAtmosphere(_ slam: GrandSlam) -> WidgetAtmosphere {
+    let accent = Color(hex: slam.accentColor)
+    let secondary: Color = {
+        switch slam {
+        case .australianOpen: Color(hex: 0x1E6FA8) // deeper blue under sky blue
+        case .frenchOpen: Color(hex: 0x8A2E05) // burnt clay
+        case .wimbledon: Color(hex: slam.highlightColor) // purple → green
+        case .usOpen: Color(hex: 0x061018) // near-black under night blue (yellow via UI accents)
+        }
+    }()
+    return WidgetAtmosphere(
+        accent: accent,
+        secondary: secondary,
+        glowOpacity: slam == .australianOpen || slam == .usOpen ? 0.42 : 0.55,
+        texture: .aurora
+    )
+}
+
+private func grandSlam(for event: TournamentEvent?) -> GrandSlam? {
+    guard let event, event.tier == .grandSlam else { return nil }
+    return GrandSlam.allCases.first {
+        event.name.localizedCaseInsensitiveContains($0.rawValue)
+            || (event.shortName == "AO" && $0 == .australianOpen)
+            || (event.shortName == "RG" && $0 == .frenchOpen)
+            || (event.shortName == "WIM" && $0 == .wimbledon)
+            || (event.shortName == "USO" && $0 == .usOpen)
+    }
 }
 
 func rankingsAtmosphere(for tour: TourPreference) -> some View {

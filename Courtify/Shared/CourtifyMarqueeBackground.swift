@@ -15,70 +15,75 @@ struct CourtifyMarqueeBackground: View {
     private let rowSpacing: CGFloat = 22
     private let duration: Double = 30
 
+    /// Palette key: a=AO sky, f=RG clay, w=Wimbledon purple/green, u=US Open night blue.
+    /// Rows 0–1 and 6–7 are the most visible on paywall — pack torso favorite cards there.
     private let rows: [[MarqueeCard]] = [
+        // Top — dense torsos
         [
-            .favorite(playerID: "alcaraz"),
-            .classic(0),
-            .live,
-            .favorite(playerID: "djokovic"),
-            .countdown,
-            .atpMedium,
+            .favorite(playerID: "alcaraz", slam: .frenchOpen),
+            .favoriteMedium(playerID: "sinner", slam: .usOpen),
+            .favorite(playerID: "djokovic", slam: .australianOpen),
+            .favoriteMedium(playerID: "swiatek", slam: .wimbledon),
+            .favorite(playerID: "sabalenka", slam: .frenchOpen),
+            .favoriteMedium(playerID: "zverev", slam: .australianOpen),
         ],
         [
-            .favoriteMedium(playerID: "sinner"),
-            .classic(1),
-            .wtaMedium,
-            .favorite(playerID: "swiatek"),
-            .nextLarge,
-            .lockRank(playerID: "alcaraz"),
+            .favoriteMedium(playerID: "alcaraz", slam: .usOpen),
+            .favorite(playerID: "gauff", slam: .wimbledon),
+            .favoriteMedium(playerID: "djokovic", slam: .frenchOpen),
+            .favorite(playerID: "sinner", slam: .australianOpen),
+            .favoriteMedium(playerID: "rybakina", slam: .usOpen),
+            .favorite(playerID: "medvedev", slam: .wimbledon),
+        ],
+        // Mid — mix of classics / live / standings
+        [
+            .classic(2, slam: .frenchOpen),
+            .favorite(playerID: "sabalenka", slam: .australianOpen),
+            .order(slam: .usOpen),
+            .favoriteMedium(playerID: "djokovic", slam: .wimbledon),
+            .live(slam: .wimbledon),
+            .calendar(slam: .australianOpen),
         ],
         [
-            .classic(2),
-            .favorite(playerID: "sabalenka"),
-            .order,
-            .favoriteMedium(playerID: "djokovic"),
-            .live,
-            .calendar,
-        ],
-        [
-            .favorite(playerID: "gauff"),
-            .classic(3),
-            .nextSmall,
-            .favoriteMedium(playerID: "alcaraz"),
+            .favorite(playerID: "gauff", slam: .usOpen),
+            .classic(3, slam: .wimbledon),
+            .nextSmall(slam: .australianOpen),
+            .favoriteMedium(playerID: "alcaraz", slam: .frenchOpen),
             .lockCountdown,
-            .classic(4),
+            .classic(4, slam: .wimbledon),
         ],
         [
-            .favoriteMedium(playerID: "swiatek"),
-            .live,
-            .favorite(playerID: "sinner"),
-            .classic(0),
-            .order,
-            .countdown,
+            .favoriteMedium(playerID: "swiatek", slam: .australianOpen),
+            .live(slam: .frenchOpen),
+            .favorite(playerID: "sinner", slam: .wimbledon),
+            .classic(0, slam: .wimbledon),
+            .order(slam: .australianOpen),
+            .countdown(slam: .wimbledon),
         ],
         [
-            .classic(1),
-            .favorite(playerID: "alcaraz"),
-            .atpMedium,
-            .favoriteMedium(playerID: "sabalenka"),
-            .nextSmall,
-            .wtaMedium,
+            .classic(1, slam: .australianOpen),
+            .favorite(playerID: "alcaraz", slam: .usOpen),
+            .atpMedium(slam: .usOpen),
+            .favoriteMedium(playerID: "sabalenka", slam: .frenchOpen),
+            .nextSmall(slam: .frenchOpen),
+            .wtaMedium(slam: .australianOpen),
+        ],
+        // Bottom — dense torsos again
+        [
+            .favorite(playerID: "djokovic", slam: .frenchOpen),
+            .favoriteMedium(playerID: "pegula", slam: .australianOpen),
+            .favorite(playerID: "swiatek", slam: .usOpen),
+            .favoriteMedium(playerID: "alcaraz", slam: .wimbledon),
+            .favorite(playerID: "zverev", slam: .frenchOpen),
+            .favoriteMedium(playerID: "gauff", slam: .usOpen),
         ],
         [
-            .favorite(playerID: "djokovic"),
-            .classic(2),
-            .lockRank(playerID: "djokovic"),
-            .favoriteMedium(playerID: "gauff"),
-            .calendar,
-            .classic(3),
-        ],
-        [
-            .live,
-            .favorite(playerID: "swiatek"),
-            .classic(4),
-            .favoriteMedium(playerID: "sinner"),
-            .nextLarge,
-            .order,
+            .favoriteMedium(playerID: "sinner", slam: .australianOpen),
+            .favorite(playerID: "sabalenka", slam: .wimbledon),
+            .favoriteMedium(playerID: "medvedev", slam: .usOpen),
+            .favorite(playerID: "rybakina", slam: .frenchOpen),
+            .favoriteMedium(playerID: "djokovic", slam: .australianOpen),
+            .favorite(playerID: "alcaraz", slam: .usOpen),
         ],
     ]
 
@@ -121,27 +126,33 @@ struct CourtifyMarqueeBackground: View {
 }
 
 private enum MarqueeCard: Identifiable {
-    case favorite(playerID: String)
-    case favoriteMedium(playerID: String)
-    case nextSmall, countdown, nextLarge, calendar
-    case atpMedium, wtaMedium, live, order
-    case classic(Int)
+    case favorite(playerID: String, slam: GrandSlam)
+    case favoriteMedium(playerID: String, slam: GrandSlam)
+    case nextSmall(slam: GrandSlam)
+    case countdown(slam: GrandSlam)
+    case nextLarge(slam: GrandSlam)
+    case calendar(slam: GrandSlam)
+    case atpMedium(slam: GrandSlam)
+    case wtaMedium(slam: GrandSlam)
+    case live(slam: GrandSlam)
+    case order(slam: GrandSlam)
+    case classic(Int, slam: GrandSlam)
     case lockRank(playerID: String)
     case lockCountdown, lockNext
 
     var id: String {
         switch self {
-        case .favorite(let playerID): return "favorite-\(playerID)"
-        case .favoriteMedium(let playerID): return "favorite-medium-\(playerID)"
-        case .nextSmall: return "next-small"
-        case .countdown: return "countdown"
-        case .nextLarge: return "next-large"
-        case .calendar: return "calendar"
-        case .atpMedium: return "atp-medium"
-        case .wtaMedium: return "wta-medium"
-        case .live: return "live"
-        case .order: return "order"
-        case .classic(let index): return "classic-\(index)"
+        case .favorite(let playerID, let slam): return "favorite-\(playerID)-\(slam.rawValue)"
+        case .favoriteMedium(let playerID, let slam): return "favorite-medium-\(playerID)-\(slam.rawValue)"
+        case .nextSmall(let slam): return "next-small-\(slam.rawValue)"
+        case .countdown(let slam): return "countdown-\(slam.rawValue)"
+        case .nextLarge(let slam): return "next-large-\(slam.rawValue)"
+        case .calendar(let slam): return "calendar-\(slam.rawValue)"
+        case .atpMedium(let slam): return "atp-medium-\(slam.rawValue)"
+        case .wtaMedium(let slam): return "wta-medium-\(slam.rawValue)"
+        case .live(let slam): return "live-\(slam.rawValue)"
+        case .order(let slam): return "order-\(slam.rawValue)"
+        case .classic(let index, let slam): return "classic-\(index)-\(slam.rawValue)"
         case .lockRank(let playerID): return "lock-rank-\(playerID)"
         case .lockCountdown: return "lock-countdown"
         case .lockNext: return "lock-next"
@@ -225,42 +236,60 @@ private struct MarqueeLiveRow: View {
         let rankings = WidgetPreviewSamples.rankings(for: .atp)
 
         switch card {
-        case .favorite(let playerID):
+        case .favorite(let playerID, let slam):
             FavoritePlayerWidgetView(
                 player: MarqueeShowcaseData.player(id: playerID),
-                widgetID: "favorite"
+                widgetID: "favorite",
+                forceAccent: Color(hex: slam.accentColor)
             )
-        case .favoriteMedium(let playerID):
+        case .favoriteMedium(let playerID, let slam):
             FavoritePlayerMediumWidgetView(
                 player: MarqueeShowcaseData.player(id: playerID),
-                widgetID: "favorite-medium"
+                widgetID: "favorite-medium",
+                forceAccent: Color(hex: slam.accentColor)
             )
-        case .nextSmall:
-            NextTournamentSmallView(tour: tour)
-        case .countdown:
-            TournamentCountdownView(tour: tour)
-        case .nextLarge:
-            NextTournamentLargeView(tour: tour)
-        case .calendar:
-            SeasonCalendarView(tour: tour)
-        case .atpMedium:
-            RankingsWidgetView(tour: .atp, entries: rankings, limit: 5, widgetID: "atp-medium")
-        case .wtaMedium:
+        case .nextSmall(let slam):
+            NextTournamentSmallView(tour: tour, forceSlam: slam)
+        case .countdown(let slam):
+            TournamentCountdownView(tour: tour, forceSlam: slam)
+        case .nextLarge(let slam):
+            NextTournamentLargeView(tour: tour, forceSlam: slam)
+        case .calendar(let slam):
+            SeasonCalendarView(tour: tour, forceSlam: slam)
+        case .atpMedium(let slam):
+            RankingsWidgetView(
+                tour: .atp,
+                entries: rankings,
+                limit: 5,
+                widgetID: "atp-medium",
+                forceAccent: Color(hex: slam.accentColor)
+            )
+        case .wtaMedium(let slam):
             RankingsWidgetView(
                 tour: .wta,
                 entries: WidgetPreviewSamples.rankings(for: .wta),
                 limit: 5,
-                widgetID: "wta-medium"
+                widgetID: "wta-medium",
+                forceAccent: Color(hex: slam.accentColor)
             )
-        case .live:
-            LiveScoresWidgetView(match: MarqueeShowcaseData.modernLiveMatch, widgetID: "live")
-        case .classic(let index):
+        case .live(let slam):
+            LiveScoresWidgetView(
+                match: MarqueeShowcaseData.modernLiveMatch,
+                widgetID: "live",
+                forceAccent: Color(hex: slam.accentColor)
+            )
+        case .classic(let index, let slam):
             LiveScoresWidgetView(
                 match: MarqueeShowcaseData.classicMatch(at: index),
-                widgetID: "live"
+                widgetID: "live",
+                forceAccent: Color(hex: slam.accentColor)
             )
-        case .order:
-            OrderOfPlayListView(matches: WidgetPreviewSamples.upcomingMatches, widgetID: "order")
+        case .order(let slam):
+            OrderOfPlayListView(
+                matches: WidgetPreviewSamples.upcomingMatches,
+                widgetID: "order",
+                forceAccent: Color(hex: slam.accentColor)
+            )
         case .lockRank(let playerID):
             LockScreenCircularRankView(player: MarqueeShowcaseData.player(id: playerID))
                 .clipShape(Circle())

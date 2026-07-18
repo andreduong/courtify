@@ -361,10 +361,20 @@ enum GrandSlam: String, CaseIterable, Identifiable, Codable {
 
     var accentColor: UInt {
         switch self {
-        case .australianOpen: 0x0085CA
-        case .frenchOpen: 0xE35205
+        case .australianOpen: 0x5BB8E8 // light sky blue
+        case .frenchOpen: 0xE35205 // clay orange
+        case .wimbledon: 0x5C2D91 // royal purple (paired with green highlight)
+        case .usOpen: 0x0C2340 // night blue
+        }
+    }
+
+    /// Secondary brand tint (AO white, USO yellow, RG warm clay, Wimbledon green).
+    var highlightColor: UInt {
+        switch self {
+        case .australianOpen: 0xF5FBFF
+        case .frenchOpen: 0xFF8A3D
         case .wimbledon: 0x006633
-        case .usOpen: 0x0C2340
+        case .usOpen: 0xFFD200
         }
     }
 
