@@ -28,14 +28,17 @@ This repo has two parts:
 | Paywall / splash backdrop | `CourtifyMarqueeBackground` | Per-player paywall photos or silhouettes on paywall |
 | Grand Slam logos | `AssetCatalogImage` in pickers | `CachedBundledImage` for slam assets (in-memory cache goes stale) |
 | Settings favorite cards | Equal-width `FavoriteCard` + `FavoriteSlamLogoBadge` (circular) + `PlayerTorsoPhotoView` | `FavoritePlayerHeroImage`; oversized silhouette with gradient wash; rectangular slam logos |
-| Widget content inset | `WidgetTheme.contentInset` (16pt) on all small/medium widget copy | Per-widget ad-hoc `.padding(14)` that drifts left/right |
+| Widget content inset | `WidgetTheme.contentInsets` (16pt + stamp clearance) on home widget copy | Per-widget ad-hoc `.padding(14)`; bare `contentInset` that crowds the stamp |
+| Widget “made by” stamp | `.courtifyWidgetCanvas()` (default stamp) / `WidgetMadeByStamp` | Home widgets without stamp; Lock Screen with stamp (use `stamp: .none`) |
 | Widget atmosphere | `WidgetAtmosphere` + hatch + surface accent bars (no muddy slam logos as bg) | Flat single-color fills; faded tournament logos behind copy |
 | Widget colors (Premium) | `WidgetColorStyle` + `WidgetColorPickerSheet` (app group) | Recoloring tournament widgets (`next-*`, `countdown`, `calendar`) |
+| Widgets gallery catalog | `CourtifyWidgetCatalog` (+ `WidgetsCollectionView`) | Duplicate gallery lists that drift from WidgetKit kinds |
+| Home-screen + Lock Screen widgets | `CourtifyWidget/` + `CourtifyWidgetBundle` (`OtherBundle().body` when >10) | Leave gallery-only widgets unregistered; nest `WidgetBundle()` as a `Widget` |
 | Tab chrome | `ProfileIconButton`, `TourPillToggle`, `LastUpdatedLabel`, `CourtifyTileDivider` | Duplicate profile/settings entry points or introduce new haptic/animation curves |
 | Settings / favorites | `SettingsView` + `AppGroupConstants` | Write prefs outside app group (widgets won't see them) |
 | Simulator screenshots | `UITestLaunchArgs` + `simctl launch` flags | Install tap/scroll automation (none available) |
 
-**UI language:** F1-app dark mode — `midnightGreen` base, `emeraldGreen`→`midnightGreen` gradient heroes, white rounded type, `opticYellow` highlights, `courtGreen` tile subtitles, hairline dividers. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)`.
+**UI language:** F1-app dark mode — `midnightGreen` base, `emeraldGreen`→`midnightGreen` gradient heroes, white rounded type, `opticYellow` highlights, `courtGreen` tile subtitles, hairline dividers. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)` — root `.courtifyInteractiveChrome()` gives every `Button` soft press-down `sensoryFeedback` + scale; override with `.courtifyButton(.primary/.card/.icon/.row/…)`. Selection (tabs, tour, toggles) uses `.courtifySelectionFeedback`.
 
 **API cost rule:** RapidAPI Matchstat **Pro ($29/mo)** is required — Basic 50/day is insufficient. Worker data refreshes on **user pull-to-refresh** (Rankings, Widgets) or the **one-time onboarding exception**. Custom lookup / photo / season-record only on favorite **pick**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
 
@@ -306,9 +309,11 @@ All tabs share: `ThemeManager.midnightGreen` base, gradient hero top
 (`emeraldGreen` → `midnightGreen`), white bold rounded type, `opticYellow` for
 highlights/countdowns, `courtGreen` for accent subtitles on tiles, hairline
 `CourtifyTileDivider` between rows. Haptics/animation come exclusively from
-`CourtifyMotion` + `.courtifyButton(...)` (light impact on press) and
-`TourPillToggle` (uses `CourtifyMotion.animateSelection`) — do not introduce
-other animation curves or haptic calls.
+`CourtifyMotion` + `.courtifyButton(...)` (soft `sensoryFeedback` impact on
+press-down) — applied app-wide via `.courtifyInteractiveChrome()` on the root,
+with per-control overrides (`.primary` / `.card` / `.icon` / `.row` / …).
+Selection changes (tabs, tour pills, toggles) use `.courtifySelectionFeedback`.
+Do not introduce other animation curves or haptic APIs.
 
 ### Widgets tab (gallery)
 
@@ -324,10 +329,11 @@ Gating rules:
 
 - **Pro-gated except:** Favorite player (small + medium) and Lock Screen favorite rank.
   Entitled means `RevenueCatManager.isProUser || AppGroupConstants.referralBypassActive`.
-- Locked cards show a `PRO 🎾` badge and the whole card opens the paywall.
+- Locked cards show a `Premium 🎾` badge and the whole card opens the paywall.
 - The Favorite player widget uses **bundled season record** + `FavoritePlayerCatalog.resolvedPlayer` for rank when available; bundled `-hero` for featured players. Custom picks show verified API photos or empty hero (no letter placeholders).
 - **Gallery small widgets** are **165×165 pt squares** (`previewHeight` width = height); lone small cards align leading, not full-width.
-- Paintbrush on favorite card opens `FavoritePlayerPickerSheet` → writes `favoritePlayerID` via `AppGroupConstants.updateFavoritePlayer`.
+- **Unlocked card tap** → `WidgetShareView` (`.courtifyButton(.card)` haptic + modal) with Share → system share sheet. Shared image includes **Made by Courtify on App Store** stamp.
+- Person control on favorite opens `FavoritePlayerPickerSheet`; color control opens `WidgetColorPickerSheet` (or paywall when free).
 - Rankings / live / order-of-play cards read `WidgetDataStore` (cached payload;
   pull-to-refresh only). Tournament cards read the bundled
   `TournamentCalendar` (zero API cost).
@@ -450,6 +456,7 @@ All hooks are parsed from `ProcessInfo.processInfo.arguments` via
 | `-UITestWidgetFilter free\|small\|medium\|large` | Preselect Widgets gallery filter |
 | `-UITestWidgetOnly <itemID>` | Render one widget card (see IDs below) |
 | `-UITestWidgetColor [itemID]` | Open color sheet for a customizable id (default `favorite`); free users get paywall |
+| `-UITestWidgetShare [itemID]` | Open widget share screen (default `favorite`); locked items open paywall |
 
 **Standard build + launch loop:**
 
@@ -600,13 +607,14 @@ after TestFlight install.
 - **Settings `FavoriteCard` taller than `Change`:** oversized torso/silhouette intrinsic size + `.frame(height:)` centers content → title and Change get clipped. Keep artwork overlay-only (no huge intrinsic size); pad Change above the 20pt corner radius; both cards `minWidth: 0` + equal `maxWidth: .infinity`.
 - **Silhouette “half white gradient” on widgets:** never put a `LinearGradient` / fill behind `PlayerSilhouetteView` torso — when the hero is leading-padded, the wash only covers the trailing half and looks broken. Use monochrome SF Symbol only.
 - **Gallery chrome expanding small cards:** palette/person overlays must live *inside* a ZStack framed to the preview size (165×165). `frame(maxWidth: .infinity)` on overlay buttons pushes a lone small card to the trailing edge.
-- **Ad-hoc widget padding:** always use `WidgetTheme.contentInset` (16pt) for small/medium copy. Favorite may add trailing air for silhouette, but leading/top/bottom stay on the shared inset.
+- **Ad-hoc widget padding:** always use `WidgetTheme.contentInsets` on home-screen widget copy (16pt + stamp clearance). Favorite may add trailing air for silhouette, but leading/top stay on the shared inset. Do not use bare `contentInset` alone — it crowds the stamp.
+- **Made by Courtify stamp:** every home-screen widget ends with `.courtifyWidgetCanvas()` which overlays a bright `WidgetMadeByStamp` (white on dark capsule; default `.bottomTrailing`; use `.bottomCenter` / `.bottomLeading` when content crowds a corner). Lock Screen accessories must pass `stamp: .none`. Do not hand-roll a second watermark.
 - **Widget backgrounds:** prefer `WidgetAtmosphere` / hatch texture and surface-color accent bars; do not fade Grand Slam logos into the background.
 - **Widget typography:** `WidgetTheme.displayFont` (default design, heavy) for ranks / countdowns / scores; `roundedFont` for labels — mix weights like F1 sports apps, don’t use one rounded size for everything.
 - **Medium hero + stats overlap:** keep copy and player cutouts in **separate columns** (or tuck a small hero *under* rank text). Never stack Win/Loss/% or leaderboard rows on top of the torso.
 - **Marquee blackout gutters:** `CourtifyMarqueeBackground` row `startOffset` must not be a positive x-offset into empty space — that leaves a solid midnight strip on the leading edge (reads as a “black rectangle” on paywall/splash). Prefer negative phase / wrap within duplicated strips.
 - **Paywall + onboarding chrome:** do **not** wrap the paywall step in `OnboardingFlowView`’s top `safeAreaInset` chrome. The inset reserves a band that only shows `.courtifyBackground()` while the marquee lives in the content below → top-left blackout bar. Paywall should own full-bleed background + its own close control (`managesOwnCloseButton`).
-- **WidgetKit bundle limit:** keep the extension’s `@main` `WidgetBundle` **flat** (≤ ~10 kinds). Nested `WidgetBundle` types did **not** compile as `Widget` in this project’s SDK — split kinds or drop a family instead of nesting.
+- **WidgetKit catalog:** `CourtifyWidgetCatalog` is the single source of truth for gallery cards and WidgetKit kinds. Exceed the 10-kind builder limit with `OtherBundle().body` (not `OtherBundle()` as a `Widget`). Lock Screen kinds live in `LockScreenWidgets.swift`.
 - **Rectangular slam logos in Settings:** wrap with `FavoriteSlamLogoBadge` — `scaledToFill` + `clipShape(Circle())` so AO / RG / Wimbledon / US Open all read as round badges (wide US Open wordmark fills then clips).
 - **Quota UX:** when custom favorite photos fail (RapidAPI 429), show silhouette + helper copy / one-shot alert — don’t leave blank heroes or look “broken.”
 
@@ -624,10 +632,13 @@ after TestFlight install.
   Reload via `WidgetTimelineRefresher` (includes lock-screen kinds).
 - **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Small/Medium/Large/Free;
   sectioned catalog; **Favorite player** (S+M) + **Lock Screen rank** are free. Others Pro-gated
-  (`Premium 🎾` badge → paywall). Small = 165×165 leading-aligned. Overlay chrome:
+  (`Premium 🎾` badge → paywall). Unlocked card tap → `WidgetShareView` + Share
+  (system share sheet) with `MadeByCourtifyAppStoreStamp` on the share asset.
+  Small = 165×165 leading-aligned. Overlay chrome:
   color control (top-trailing, Premium) on customizable ids; person control (bottom-trailing)
   on favorite for player pick. Tournament ids (`next-small`, `countdown`, `next-large`,
   `calendar`) keep surface/brand gradients — no recolor.
+  Previews via `WidgetGalleryPreview` (shared with share screen).
 - **Widget color prefs:** app-group key `widgetColorStyles` via `WidgetColorStyle`;
   preset accent + gradient level; free users tapping color → paywall.
 - **Onboarding player cards:** horizontal scroll, star on primary pick, bundled search sheet

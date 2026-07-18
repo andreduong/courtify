@@ -1,28 +1,42 @@
 import SwiftUI
-import UIKit
 
 // MARK: - Motion Tokens
 
-/// Central motion system for Courtify. Apply via view modifiers and button styles
-/// so animations stay consistent across onboarding, paywall, and home.
+/// Central motion + press system for Courtify. Apply via `.courtifyButton(...)`
+/// (or the app-root default) so every control shares the same haptic and spring.
 enum CourtifyMotion {
     enum Direction {
         case forward
         case backward
     }
 
-    // Springs tuned for iOS-style interactive motion.
+    // Springs tuned for native iOS interactive motion.
     static let screen = Animation.spring(response: 0.44, dampingFraction: 0.88, blendDuration: 0.08)
-    static let press = Animation.spring(response: 0.26, dampingFraction: 0.74)
+    static let press = Animation.interactiveSpring(response: 0.22, dampingFraction: 0.72, blendDuration: 0.05)
     static let selection = Animation.spring(response: 0.34, dampingFraction: 0.82)
     static let modal = Animation.spring(response: 0.4, dampingFraction: 0.86)
     static let reveal = Animation.spring(response: 0.5, dampingFraction: 0.9)
     static let exit = Animation.spring(response: 0.36, dampingFraction: 0.92)
 
-    static let pressedScalePrimary: CGFloat = 0.972
-    static let pressedScaleCard: CGFloat = 0.985
-    static let pressedScaleIcon: CGFloat = 0.9
+    static let pressedScalePrimary: CGFloat = 0.968
+    static let pressedScaleCard: CGFloat = 0.982
+    static let pressedScaleIcon: CGFloat = 0.88
+    static let pressedScaleGhost: CGFloat = 0.975
     static let selectedScale: CGFloat = 1.02
+
+    /// Soft impact on touch-down — matches system control feel (iOS 17+).
+    static func pressFeedback(for style: CourtifyPressStyle) -> SensoryFeedback {
+        switch style {
+        case .primary, .secondary:
+            .impact(flexibility: .soft, intensity: 0.9)
+        case .card:
+            .impact(flexibility: .soft, intensity: 0.55)
+        case .icon:
+            .impact(flexibility: .soft, intensity: 0.75)
+        case .ghost, .row:
+            .impact(flexibility: .soft, intensity: 0.5)
+        }
+    }
 
     static func screenTransition(_ direction: Direction) -> AnyTransition {
         switch direction {
@@ -73,48 +87,74 @@ enum CourtifyMotion {
 
 // MARK: - Button Styles
 
-enum CourtifyPressStyle {
+enum CourtifyPressStyle: Equatable {
+    /// Filled CTAs (Join, Continue, Subscribe).
     case primary
+    /// Outlined / secondary CTAs.
     case secondary
+    /// Large tappable cards and list rows.
     case card
+    /// Text / pill chrome with light press.
     case ghost
+    /// Circular icon buttons (profile, close).
     case icon
+    /// Full-width list rows (rankings, schedule) — subtle scale.
+    case row
 }
 
 struct CourtifyPressButtonStyle: ButtonStyle {
-    let style: CourtifyPressStyle
-    var isEnabled: Bool = true
+    var style: CourtifyPressStyle = .ghost
+    /// Optional override; defaults to the environment `isEnabled`.
+    var isEnabled: Bool? = nil
+
+    @Environment(\.isEnabled) private var environmentEnabled
+
+    private var effectivelyEnabled: Bool {
+        isEnabled ?? environmentEnabled
+    }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(scale(isPressed: configuration.isPressed))
             .opacity(opacity(isPressed: configuration.isPressed))
-            .brightness(configuration.isPressed && isEnabled ? -0.03 : 0)
+            .brightness(configuration.isPressed && effectivelyEnabled ? -0.025 : 0)
             .animation(CourtifyMotion.press, value: configuration.isPressed)
-            .onChange(of: configuration.isPressed) { _, isPressed in
-                if isPressed && isEnabled {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                }
+            .sensoryFeedback(
+                CourtifyMotion.pressFeedback(for: style),
+                trigger: configuration.isPressed
+            ) { _, isPressed in
+                isPressed && effectivelyEnabled
             }
     }
 
     private func scale(isPressed: Bool) -> CGFloat {
-        guard isEnabled else { return 1 }
-        guard isPressed else { return 1 }
+        guard effectivelyEnabled, isPressed else { return 1 }
 
         switch style {
-        case .primary, .secondary, .ghost:
+        case .primary, .secondary:
             return CourtifyMotion.pressedScalePrimary
         case .card:
             return CourtifyMotion.pressedScaleCard
         case .icon:
             return CourtifyMotion.pressedScaleIcon
+        case .ghost:
+            return CourtifyMotion.pressedScaleGhost
+        case .row:
+            return CourtifyMotion.pressedScaleCard
         }
     }
 
     private func opacity(isPressed: Bool) -> Double {
-        if !isEnabled { return 0.5 }
-        return isPressed ? 0.94 : 1
+        if !effectivelyEnabled { return 0.5 }
+        return isPressed ? 0.92 : 1
+    }
+}
+
+extension ButtonStyle where Self == CourtifyPressButtonStyle {
+    static var courtify: CourtifyPressButtonStyle { CourtifyPressButtonStyle() }
+
+    static func courtify(_ style: CourtifyPressStyle, enabled: Bool? = nil) -> CourtifyPressButtonStyle {
+        CourtifyPressButtonStyle(style: style, isEnabled: enabled)
     }
 }
 
@@ -153,6 +193,9 @@ private struct CourtifySelectionModifier: ViewModifier {
         content
             .scaleEffect(isSelected ? scale : 1)
             .animation(CourtifyMotion.selection, value: isSelected)
+            .sensoryFeedback(.selection, trigger: isSelected) { _, selected in
+                selected
+            }
     }
 }
 
@@ -180,12 +223,23 @@ private struct CourtifyPrimaryButtonLabelModifier: ViewModifier {
 }
 
 extension View {
+    /// Shared press scale + soft haptic. Prefer this on every `Button` / `NavigationLink`.
     func courtifyButton(_ style: CourtifyPressStyle = .primary, enabled: Bool = true) -> some View {
-        buttonStyle(CourtifyPressButtonStyle(style: style, isEnabled: enabled))
+        buttonStyle(.courtify(style, enabled: enabled))
+    }
+
+    /// App-root default so unlabeled buttons still get Courtify press feedback.
+    func courtifyInteractiveChrome() -> some View {
+        buttonStyle(.courtify(.ghost))
     }
 
     func courtifySelection(_ isSelected: Bool, scale: CGFloat = CourtifyMotion.selectedScale) -> some View {
         modifier(CourtifySelectionModifier(isSelected: isSelected, scale: scale))
+    }
+
+    /// Selection haptic when a discrete value changes (tabs, toggles, tour pills).
+    func courtifySelectionFeedback<T: Equatable>(_ trigger: T) -> some View {
+        sensoryFeedback(.selection, trigger: trigger)
     }
 
     func courtifyPrimaryButtonLabel(

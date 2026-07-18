@@ -55,25 +55,44 @@ struct NextTournamentWidget: Widget {
                 if entry.isLocked {
                     WidgetLockedView()
                 } else {
-                    TournamentWidgetContent(tour: entry.tour)
+                    NextTournamentWidgetContent(tour: entry.tour)
                 }
             }
         }
         .configurationDisplayName("Next tournament")
-        .description("Countdown to the next major on your tour.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .description("The next major on your tour.")
+        .supportedFamilies([.systemSmall, .systemLarge])
         .contentMarginsDisabled()
     }
 }
 
-private struct TournamentWidgetContent: View {
+/// Separate kind so Home Screen picker lists "Tournament countdown" like Widgets Collection.
+struct TournamentCountdownWidget: Widget {
+    let kind = WidgetTimelineRefresher.tournamentCountdownKind
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: TournamentProvider()) { entry in
+            Group {
+                if entry.isLocked {
+                    WidgetLockedView()
+                } else {
+                    TournamentCountdownView(tour: entry.tour)
+                }
+            }
+        }
+        .configurationDisplayName("Tournament countdown")
+        .description("Days, hours, and minutes until the next major.")
+        .supportedFamilies([.systemMedium])
+        .contentMarginsDisabled()
+    }
+}
+
+private struct NextTournamentWidgetContent: View {
     @Environment(\.widgetFamily) private var family
     let tour: TourPreference
 
     var body: some View {
         switch family {
-        case .systemMedium:
-            TournamentCountdownView(tour: tour)
         case .systemLarge:
             NextTournamentLargeView(tour: tour)
         default:

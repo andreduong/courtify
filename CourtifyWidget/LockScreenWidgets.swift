@@ -61,6 +61,28 @@ struct LockScreenNextWidget: Widget {
     }
 }
 
+/// Live score — Pro Lock Screen rectangular (matches Widgets Collection `lock-live`).
+struct LockScreenLiveWidget: Widget {
+    let kind = WidgetTimelineRefresher.lockScreenLiveKind
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: LiveScoresProvider()) { entry in
+            Group {
+                if entry.isLocked {
+                    LockScreenLockedRectangular(label: "Premium")
+                } else {
+                    LockScreenRectangularLiveView(match: entry.match)
+                }
+            }
+            .containerBackground(for: .widget) { WidgetTheme.midnightGreen }
+        }
+        .configurationDisplayName("Live score")
+        .description("Live match score on the Lock Screen.")
+        .supportedFamilies([.accessoryRectangular])
+        .contentMarginsDisabled()
+    }
+}
+
 // MARK: - Locked placeholders
 
 struct LockScreenLockedCircular: View {

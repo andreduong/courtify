@@ -8,6 +8,19 @@ enum WidgetTheme {
 
     /// Tuned for F1-style density while clearing continuous corner masks.
     static let contentInset: CGFloat = 16
+    /// Extra bottom inset so copy / lists clear the “made by courtify” stamp.
+    /// Keep modest — large values clip ranks / scores inside 165pt small widgets.
+    static let stampClearance: CGFloat = 14
+
+    /// Home-screen widget content insets (full-bleed bg + stamp-safe bottom).
+    static var contentInsets: EdgeInsets {
+        EdgeInsets(
+            top: contentInset,
+            leading: contentInset,
+            bottom: contentInset + stampClearance,
+            trailing: contentInset
+        )
+    }
 
     // MARK: Typography — mix heavy display numerals with rounded labels
 

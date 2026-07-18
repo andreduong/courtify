@@ -45,6 +45,7 @@ struct FavoritePlayerPickerSheet: View {
                     Button("Done") { dismiss() }
                         .foregroundStyle(ThemeManager.opticYellow)
                         .disabled(isSaving)
+                        .courtifyButton(.ghost)
                 }
             }
             .onAppear {

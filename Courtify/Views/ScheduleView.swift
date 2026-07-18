@@ -183,53 +183,57 @@ private struct TournamentTile: View {
     }
 
     var body: some View {
-        HStack(spacing: 16) {
-            VStack(spacing: 0) {
-                Text(dayLabel)
-                    .font(ThemeManager.roundedFont(.title3, weight: .bold))
-                    .foregroundStyle(isPast ? .white.opacity(0.35) : .white)
-                Text(monthLabel)
-                    .font(ThemeManager.roundedFont(.caption, weight: .semibold))
-                    .foregroundStyle(.white.opacity(isPast ? 0.25 : 0.55))
-            }
-            .frame(width: 44)
+        Button(action: {}) {
+            HStack(spacing: 16) {
+                VStack(spacing: 0) {
+                    Text(dayLabel)
+                        .font(ThemeManager.roundedFont(.title3, weight: .bold))
+                        .foregroundStyle(isPast ? .white.opacity(0.35) : .white)
+                    Text(monthLabel)
+                        .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                        .foregroundStyle(.white.opacity(isPast ? 0.25 : 0.55))
+                }
+                .frame(width: 44)
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(event.name)
-                        .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                        .foregroundStyle(isPast ? .white.opacity(0.4) : .white)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(event.name)
+                            .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                            .foregroundStyle(isPast ? .white.opacity(0.4) : .white)
 
-                    if isPast {
-                        Image(systemName: "checkmark")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(ThemeManager.emeraldGreen)
+                        if isPast {
+                            Image(systemName: "checkmark")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(ThemeManager.emeraldGreen)
+                        }
                     }
+
+                    Text("\(event.shortName) · \(event.location)")
+                        .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                        .foregroundStyle(
+                            isPast
+                                ? Color.white.opacity(0.3)
+                                : (event.tier == .grandSlam ? ThemeManager.opticYellow : ThemeManager.courtGreen)
+                        )
                 }
 
-                Text("\(event.shortName) · \(event.location)")
-                    .font(ThemeManager.roundedFont(.caption, weight: .semibold))
-                    .foregroundStyle(
-                        isPast
-                            ? Color.white.opacity(0.3)
-                            : (event.tier == .grandSlam ? ThemeManager.opticYellow : ThemeManager.courtGreen)
-                    )
-            }
+                Spacer(minLength: 8)
 
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(event.surface)
-                    .font(ThemeManager.roundedFont(.caption, weight: .semibold))
-                    .foregroundStyle(.white.opacity(isPast ? 0.3 : 0.7))
-                Text(event.tier == .grandSlam ? "Slam" : "1000")
-                    .font(ThemeManager.roundedFont(.caption2, weight: .medium))
-                    .foregroundStyle(.white.opacity(isPast ? 0.2 : 0.45))
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(event.surface)
+                        .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                        .foregroundStyle(.white.opacity(isPast ? 0.3 : 0.7))
+                    Text(event.tier == .grandSlam ? "Slam" : "1000")
+                        .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                        .foregroundStyle(.white.opacity(isPast ? 0.2 : 0.45))
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .contentShape(Rectangle())
+        .courtifyButton(.row)
+        .accessibilityLabel("\(event.name), \(event.location)")
     }
 }
 

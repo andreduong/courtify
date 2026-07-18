@@ -75,6 +75,7 @@ struct HomeView: View {
         .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .preferredColorScheme(.dark)
+        .courtifySelectionFeedback(selectedTab)
         .onAppear(perform: openPaywallFromDeepLinkIfNeeded)
         .onReceive(NotificationCenter.default.publisher(for: .courtifyOpenPaywall)) { _ in
             openPaywallFromDeepLinkIfNeeded()

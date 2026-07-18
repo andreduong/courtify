@@ -73,9 +73,10 @@ struct FavoritePlayerWidgetView: View {
                     .padding(.top, 2)
             }
             .frame(maxWidth: 108, alignment: .leading)
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
         }
-        .courtifyWidgetCanvas()
+        // Center stamp — clears large rank (leading) and gallery person chrome (trailing)
+        .courtifyWidgetCanvas(stamp: .bottomCenter)
         .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
             guard (note.object as? String) == widgetID || note.object == nil else { return }
             colorTick += 1
@@ -171,9 +172,10 @@ struct FavoritePlayerMediumWidgetView: View {
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 .clipped()
             }
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
         }
-        .courtifyWidgetCanvas()
+        // Center stamp — stats sit leading, hero cutout trailing
+        .courtifyWidgetCanvas(stamp: .bottomCenter)
         .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
             guard (note.object as? String) == widgetID || note.object == nil else { return }
             colorTick += 1
@@ -324,7 +326,7 @@ struct NextTournamentSmallView: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
         }
         .courtifyWidgetCanvas()
     }
@@ -380,7 +382,7 @@ struct TournamentCountdownView: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
         }
         .courtifyWidgetCanvas()
     }
@@ -471,7 +473,7 @@ struct NextTournamentLargeView: View {
                 }
                 .frame(width: 158, alignment: .leading)
             }
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
         }
         .courtifyWidgetCanvas()
     }
@@ -505,7 +507,7 @@ struct SeasonCalendarView: View {
                     widgetCalendarColumn(Array(events.dropFirst(midpoint)))
                 }
             }
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
         }
         .courtifyWidgetCanvas()
     }
@@ -640,7 +642,7 @@ struct RankingsWidgetView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
         .courtifyWidgetCanvas()
@@ -691,7 +693,7 @@ struct RankingsLargeWidgetView: View {
                     }
                 }
             }
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .courtifyWidgetCanvas()
@@ -833,7 +835,7 @@ struct LiveScoresWidgetView: View {
                             .padding(.top, 2)
                     }
                 }
-                .padding(WidgetTheme.contentInset)
+                .padding(WidgetTheme.contentInsets)
             } else {
                 VStack(spacing: 6) {
                     Text("No live matches")
@@ -931,7 +933,7 @@ struct OrderOfPlayListView: View {
                     Spacer(minLength: 0)
                 }
             }
-            .padding(WidgetTheme.contentInset)
+            .padding(WidgetTheme.contentInsets)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
         .courtifyWidgetCanvas()
@@ -1013,7 +1015,7 @@ struct LockScreenCircularRankView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(WidgetTheme.midnightGreen)
-        .courtifyWidgetCanvas()
+        .courtifyWidgetCanvas(stamp: .none)
     }
 
     private var shortName: String {
@@ -1064,7 +1066,7 @@ struct LockScreenCircularCountdownView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(WidgetTheme.midnightGreen)
-        .courtifyWidgetCanvas()
+        .courtifyWidgetCanvas(stamp: .none)
     }
 }
 
@@ -1106,7 +1108,7 @@ struct LockScreenRectangularNextView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
         }
-        .courtifyWidgetCanvas()
+        .courtifyWidgetCanvas(stamp: .none)
     }
 }
 
@@ -1146,7 +1148,7 @@ struct LockScreenRectangularLiveView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
         }
-        .courtifyWidgetCanvas()
+        .courtifyWidgetCanvas(stamp: .none)
     }
 
     private func shortName(_ name: String) -> String {

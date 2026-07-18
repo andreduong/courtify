@@ -195,6 +195,7 @@ struct TourPillToggle: View {
         .padding(4)
         .background(.white.opacity(0.12))
         .clipShape(Capsule())
+        .courtifySelectionFeedback(selectedTour)
     }
 
     private func pill(_ title: String, tour: TourPreference) -> some View {

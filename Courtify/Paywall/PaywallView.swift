@@ -104,22 +104,14 @@ struct PaywallView: View {
                             Group {
                                 if revenueCat.isLoading {
                                     ProgressView()
-                                        .tint(ThemeManager.opticYellow)
+                                        .tint(ThemeManager.midnightGreen)
                                 } else {
                                     Text("Subscribe")
-                                        .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                                        .foregroundStyle(ThemeManager.opticYellow)
                                 }
                             }
-                            .frame(maxWidth: .infinity)
-                            .glassCard(cornerRadius: 16, padding: 18)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(ThemeManager.opticYellow, lineWidth: 2)
-                            }
-                            .courtifySelection(true)
+                            .courtifyPrimaryButtonLabel(cornerRadius: 16, verticalPadding: 18)
                         }
-                        .courtifyButton(.card, enabled: !revenueCat.isLoading)
+                        .courtifyButton(.primary, enabled: !revenueCat.isLoading)
 
                         Button("Restore Purchases") {
                             Task {

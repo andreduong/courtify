@@ -203,6 +203,7 @@ struct SettingsView: View {
                     Toggle("", isOn: $use24HourFormat)
                         .labelsHidden()
                         .tint(ThemeManager.emeraldGreen)
+                        .courtifySelectionFeedback(use24HourFormat)
                 }
 
                 SettingsButtonRow(
@@ -536,6 +537,7 @@ private struct PickerSheetShell<Content: View>: View {
                     Button("Done") { dismiss() }
                         .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
                         .tint(ThemeManager.opticYellow)
+                        .courtifyButton(.ghost)
                 }
             }
             .toolbarBackground(ThemeManager.midnightGreen, for: .navigationBar)

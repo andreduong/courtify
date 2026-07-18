@@ -50,6 +50,9 @@ private struct AppRootView: View {
         .animation(CourtifyMotion.screen, value: isBootstrapped)
         .animation(CourtifyMotion.screen, value: shouldShowHome)
         .background(ThemeManager.midnightGreen.ignoresSafeArea())
+        // Default press scale + soft haptic for every Button in the hierarchy.
+        // Explicit `.courtifyButton(.primary/.card/.icon/…)` still overrides per control.
+        .courtifyInteractiveChrome()
         .task {
             AppGroupConstants.migratePlayerCachesIfNeeded()
             await revenueCat.prepareForLaunch()

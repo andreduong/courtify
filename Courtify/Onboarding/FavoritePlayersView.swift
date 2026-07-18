@@ -398,6 +398,7 @@ private struct CustomPlayerSearchSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") { dismiss() }
                         .foregroundStyle(ThemeManager.opticYellow)
+                        .courtifyButton(.ghost)
                 }
             }
             .onAppear { isFieldFocused = true }

@@ -146,7 +146,11 @@ struct RankingsView: View {
         } else {
             ForEach(Array(rankings.enumerated()), id: \.element.id) { index, entry in
                 VStack(spacing: 0) {
-                    RankingTile(rank: entry.rank ?? index + 1, entry: entry)
+                    RankingTile(
+                        rank: entry.rank ?? index + 1,
+                        entry: entry,
+                        tour: selectedTour
+                    )
                     CourtifyTileDivider()
                 }
             }
@@ -163,42 +167,78 @@ struct RankingsView: View {
 private struct RankingTile: View {
     let rank: Int
     let entry: WidgetRankingEntry
+    let tour: TourPreference
+
+    @ObservedObject private var dataStore = WidgetDataStore.shared
+    @AppStorage(AppGroupConstants.Keys.favoritePlayerID, store: AppGroupConstants.appGroupStorage)
+    private var favoritePlayerID = ""
+
+    private var player: TennisPlayer {
+        FavoritePlayerCatalog.player(from: entry, tour: tour)
+    }
+
+    private var isFavorite: Bool {
+        favoritePlayerID == player.id
+    }
 
     var body: some View {
-        HStack(spacing: 16) {
-            Text(String(format: "%02d", rank))
-                .font(ThemeManager.roundedFont(.title3, weight: .bold))
-                .foregroundStyle(.white.opacity(rank <= 3 ? 1 : 0.55))
-                .frame(width: 44, alignment: .center)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(entry.player.name)
-                    .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                    .foregroundStyle(.white)
-
-                if let country = entry.player.country {
-                    Text(country)
-                        .font(ThemeManager.roundedFont(.caption, weight: .semibold))
-                        .foregroundStyle(ThemeManager.courtGreen)
-                }
+        Button {
+            let resolved = player
+            guard favoritePlayerID != resolved.id else { return }
+            AppGroupConstants.updateFavoritePlayer(resolved.id)
+            Task {
+                await FavoritePlayerEnricher.enrich(
+                    resolved,
+                    payload: dataStore.payload,
+                    clearExisting: true
+                )
             }
+        } label: {
+            HStack(spacing: 16) {
+                Text(String(format: "%02d", rank))
+                    .font(ThemeManager.roundedFont(.title3, weight: .bold))
+                    .foregroundStyle(.white.opacity(rank <= 3 ? 1 : 0.55))
+                    .frame(width: 44, alignment: .center)
 
-            Spacer(minLength: 8)
-
-            if let points = entry.points {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(points.formatted())
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(entry.player.name)
                         .font(ThemeManager.roundedFont(.headline, weight: .bold))
                         .foregroundStyle(.white)
-                    Text("PTS")
-                        .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.45))
+
+                    if let country = entry.player.country {
+                        Text(country)
+                            .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                            .foregroundStyle(ThemeManager.courtGreen)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                if isFavorite {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ThemeManager.opticYellow)
+                }
+
+                if let points = entry.points {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(points.formatted())
+                            .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                            .foregroundStyle(.white)
+                        Text("PTS")
+                            .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .contentShape(Rectangle())
+        .courtifyButton(.row)
+        .accessibilityLabel("\(entry.player.name), rank \(rank)")
+        .accessibilityHint(isFavorite ? "Current favorite" : "Sets as favorite player")
+        .accessibilityAddTraits(isFavorite ? .isSelected : [])
     }
 }
 

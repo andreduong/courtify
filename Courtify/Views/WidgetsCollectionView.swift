@@ -1,20 +1,6 @@
 import SwiftUI
 
-// MARK: - Catalog model
-
-private enum WidgetGallerySize: String {
-    case small = "Small"
-    case medium = "Medium"
-    case large = "Large"
-
-    var previewHeight: CGFloat {
-        switch self {
-        case .small: 165
-        case .medium: 165
-        case .large: 330
-        }
-    }
-}
+// MARK: - Filter
 
 private enum WidgetGalleryFilter: String, CaseIterable, Identifiable {
     case all = "All"
@@ -24,19 +10,6 @@ private enum WidgetGalleryFilter: String, CaseIterable, Identifiable {
     case free = "Free"
 
     var id: String { rawValue }
-}
-
-private struct WidgetGalleryItem: Identifiable {
-    let id: String
-    let title: String
-    let size: WidgetGallerySize
-    var isFree: Bool = false
-}
-
-private struct WidgetGallerySection: Identifiable {
-    let id: String
-    let title: String
-    let items: [WidgetGalleryItem]
 }
 
 // MARK: - View
@@ -55,7 +28,8 @@ struct WidgetsCollectionView: View {
     @State private var showPaywall = false
     @State private var showPlayerPicker = false
     @State private var showSettings = false
-    @State private var colorPickerItem: WidgetGalleryItem?
+    @State private var colorPickerItem: CourtifyWidgetCatalog.Item?
+    @State private var shareItem: CourtifyWidgetCatalog.Item?
     @State private var colorRefreshTick = 0
 
     /// DEBUG-only: launch with `-UITestWidgetFilter free|small|medium|large` to
@@ -83,36 +57,8 @@ struct WidgetsCollectionView: View {
         revenueCat.isProUser || AppGroupConstants.referralBypassActive
     }
 
-    private let sections: [WidgetGallerySection] = [
-        WidgetGallerySection(id: "favorite", title: "Favorite player", items: [
-            WidgetGalleryItem(id: "favorite", title: "Favorite player", size: .small, isFree: true),
-            WidgetGalleryItem(id: "favorite-medium", title: "Favorite player", size: .medium, isFree: true),
-        ]),
-        WidgetGallerySection(id: "tournaments", title: "Tournament widgets", items: [
-            WidgetGalleryItem(id: "next-small", title: "Next tournament", size: .small),
-            WidgetGalleryItem(id: "countdown", title: "Tournament countdown", size: .medium),
-            WidgetGalleryItem(id: "next-large", title: "Next tournament", size: .large),
-            WidgetGalleryItem(id: "calendar", title: "Season calendar", size: .large),
-        ]),
-        WidgetGallerySection(id: "atp", title: "ATP widgets", items: [
-            WidgetGalleryItem(id: "atp-medium", title: "ATP standings", size: .medium),
-            WidgetGalleryItem(id: "atp-large", title: "ATP standings", size: .large),
-        ]),
-        WidgetGallerySection(id: "wta", title: "WTA widgets", items: [
-            WidgetGalleryItem(id: "wta-medium", title: "WTA standings", size: .medium),
-            WidgetGalleryItem(id: "wta-large", title: "WTA standings", size: .large),
-        ]),
-        WidgetGallerySection(id: "live", title: "Live widgets", items: [
-            WidgetGalleryItem(id: "live", title: "Live scores", size: .small),
-            WidgetGalleryItem(id: "order", title: "Order of play", size: .large),
-        ]),
-        WidgetGallerySection(id: "lock", title: "Lock Screen", items: [
-            WidgetGalleryItem(id: "lock-rank", title: "Favorite rank", size: .small, isFree: true),
-            WidgetGalleryItem(id: "lock-countdown", title: "Countdown", size: .small),
-            WidgetGalleryItem(id: "lock-next", title: "Next tournament", size: .medium),
-            WidgetGalleryItem(id: "lock-live", title: "Live score", size: .medium),
-        ]),
-    ]
+    /// Gallery sections come from `CourtifyWidgetCatalog` — same source as WidgetKit kinds.
+    private var sections: [CourtifyWidgetCatalog.Section] { CourtifyWidgetCatalog.sections }
 
     /// DEBUG-only: launch with `-UITestWidgetOnly <itemID>` to render a single
     /// widget (used by agents to screenshot widgets that are below the fold).
@@ -124,7 +70,7 @@ struct WidgetsCollectionView: View {
         #endif
     }
 
-    private var visibleSections: [WidgetGallerySection] {
+    private var visibleSections: [CourtifyWidgetCatalog.Section] {
         sections.compactMap { section in
             let items = section.items.filter { item in
                 if let onlyID = Self.debugOnlyItemID, item.id != onlyID { return false }
@@ -137,7 +83,7 @@ struct WidgetsCollectionView: View {
                 }
             }
             guard !items.isEmpty else { return nil }
-            return WidgetGallerySection(id: section.id, title: section.title, items: items)
+            return CourtifyWidgetCatalog.Section(id: section.id, title: section.title, items: items)
         }
     }
 
@@ -193,6 +139,16 @@ struct WidgetsCollectionView: View {
                     }
                 }
             }
+            if let shareID = UITestLaunchArgs.widgetShareItemID {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.5))
+                    if let item = galleryItem(id: shareID), !isLocked(item) {
+                        CourtifyMotion.animateModal { shareItem = item }
+                    } else if let item = galleryItem(id: shareID), isLocked(item) {
+                        showPaywall = true
+                    }
+                }
+            }
             #endif
         }
         .task(id: favoritePlayerID) {
@@ -225,6 +181,19 @@ struct WidgetsCollectionView: View {
                 title: item.title,
                 onRequestPaywall: { showPaywall = true }
             )
+        }
+        .fullScreenCover(item: $shareItem) { item in
+            WidgetShareView(
+                item: item,
+                favoritePlayer: favoritePlayer,
+                favoritePlayerID: favoritePlayerID,
+                tour: preferredTour,
+                payload: dataStore.payload,
+                onClose: {
+                    CourtifyMotion.animateModal { shareItem = nil }
+                }
+            )
+            .courtifyInteractiveChrome()
         }
         .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { _ in
             colorRefreshTick += 1
@@ -265,7 +234,7 @@ struct WidgetsCollectionView: View {
 
     // MARK: Sections
 
-    private func sectionView(_ section: WidgetGallerySection) -> some View {
+    private func sectionView(_ section: CourtifyWidgetCatalog.Section) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(section.title)
                 .font(ThemeManager.roundedFont(.headline, weight: .bold))
@@ -304,9 +273,9 @@ struct WidgetsCollectionView: View {
     }
 
     /// Small widgets pair up two per row; medium/large span the full width.
-    private func chunkedRows(_ items: [WidgetGalleryItem]) -> [[WidgetGalleryItem]] {
-        var rows: [[WidgetGalleryItem]] = []
-        var pendingSmall: WidgetGalleryItem?
+    private func chunkedRows(_ items: [CourtifyWidgetCatalog.Item]) -> [[CourtifyWidgetCatalog.Item]] {
+        var rows: [[CourtifyWidgetCatalog.Item]] = []
+        var pendingSmall: CourtifyWidgetCatalog.Item?
         for item in items {
             if item.size == .small {
                 if let first = pendingSmall {
@@ -331,16 +300,16 @@ struct WidgetsCollectionView: View {
 
     // MARK: Card chrome
 
-    private func isLocked(_ item: WidgetGalleryItem) -> Bool {
+    private func isLocked(_ item: CourtifyWidgetCatalog.Item) -> Bool {
         !item.isFree && !isEntitled
     }
 
-    private func galleryItem(id: String) -> WidgetGalleryItem? {
-        sections.flatMap(\.items).first { $0.id == id }
+    private func galleryItem(id: String) -> CourtifyWidgetCatalog.Item? {
+        CourtifyWidgetCatalog.item(id: id)
     }
 
     @ViewBuilder
-    private func widgetCard(for item: WidgetGalleryItem) -> some View {
+    private func widgetCard(for item: CourtifyWidgetCatalog.Item) -> some View {
         let locked = isLocked(item)
         let isSquareSmall = item.size == .small
         let canRecolor = WidgetColorStyle.isCustomizable(item.id)
@@ -350,21 +319,27 @@ struct WidgetsCollectionView: View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topTrailing) {
                 Button {
-                    if locked {
+                    // Free users on Premium widgets → paywall only (never share).
+                    if isLocked(item) {
                         showPaywall = true
-                    } else if item.id == "favorite" {
-                        showPlayerPicker = true
+                    } else {
+                        CourtifyMotion.animateModal { shareItem = item }
                     }
                 } label: {
-                    previewContent(for: item)
-                        .id("\(item.id)-\(colorRefreshTick)")
-                        .frame(width: previewWidth)
-                        .frame(maxWidth: isSquareSmall ? nil : .infinity)
-                        .frame(height: previewHeight)
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    WidgetGalleryPreview(
+                        item: item,
+                        favoritePlayer: favoritePlayer,
+                        favoritePlayerID: favoritePlayerID,
+                        tour: preferredTour,
+                        payload: dataStore.payload
+                    )
+                    .id("\(item.id)-\(colorRefreshTick)")
+                    .frame(width: previewWidth)
+                    .frame(maxWidth: isSquareSmall ? nil : .infinity)
+                    .frame(height: previewHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 }
                 .courtifyButton(.card)
-                .disabled(!locked && item.id != "favorite")
 
                 if locked {
                     Text("Premium 🎾")
@@ -434,91 +409,6 @@ struct WidgetsCollectionView: View {
             .lineLimit(1)
         }
         .frame(maxWidth: isSquareSmall ? previewHeight : .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private func previewContent(for item: WidgetGalleryItem) -> some View {
-        switch item.id {
-        case "favorite":
-            FavoritePlayerWidgetView(player: favoritePlayer, widgetID: "favorite")
-                .id(favoritePlayerID)
-        case "favorite-medium":
-            FavoritePlayerMediumWidgetView(player: favoritePlayer, widgetID: "favorite")
-                .id(favoritePlayerID)
-        case "next-small": NextTournamentSmallView(tour: preferredTour)
-        case "countdown": TournamentCountdownView(tour: preferredTour)
-        case "next-large": NextTournamentLargeView(tour: preferredTour)
-        case "calendar": SeasonCalendarView(tour: preferredTour)
-        case "atp-medium":
-            RankingsWidgetView(
-                tour: .atp,
-                entries: dataStore.rankings(for: .atp),
-                limit: 5,
-                showsRefreshHint: true,
-                widgetID: "atp-medium"
-            )
-        case "atp-large":
-            RankingsLargeWidgetView(
-                tour: .atp,
-                entries: dataStore.rankings(for: .atp),
-                showsRefreshHint: true,
-                widgetID: "atp-large"
-            )
-        case "wta-medium":
-            RankingsWidgetView(
-                tour: .wta,
-                entries: dataStore.rankings(for: .wta),
-                limit: 5,
-                showsRefreshHint: true,
-                widgetID: "wta-medium"
-            )
-        case "wta-large":
-            RankingsLargeWidgetView(
-                tour: .wta,
-                entries: dataStore.rankings(for: .wta),
-                showsRefreshHint: true,
-                widgetID: "wta-large"
-            )
-        case "live":
-            LiveScoresWidgetView(
-                match: dataStore.payload?.liveMatches.first,
-                showsRefreshHint: true,
-                widgetID: "live"
-            )
-        case "order":
-            OrderOfPlayListView(
-                matches: dataStore.payload?.upcomingMatches ?? [],
-                showsRefreshHint: true,
-                widgetID: "order"
-            )
-        case "lock-rank":
-            LockScreenCircularRankView(player: favoritePlayer)
-                .clipShape(Circle())
-                .overlay {
-                    Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
-                }
-        case "lock-countdown":
-            LockScreenCircularCountdownView(tour: preferredTour)
-                .clipShape(Circle())
-                .overlay {
-                    Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
-                }
-        case "lock-next":
-            LockScreenRectangularNextView(tour: preferredTour)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
-                }
-        case "lock-live":
-            LockScreenRectangularLiveView(match: dataStore.payload?.liveMatches.first)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
-                }
-        default: EmptyView()
-        }
     }
 }
 

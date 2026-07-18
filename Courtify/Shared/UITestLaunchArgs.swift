@@ -49,6 +49,18 @@ enum UITestLaunchArgs {
         return nil
     }
 
+    /// Opens the widget share screen for a gallery id (default `favorite`).
+    /// Example: `-UITestWidgetShare` or `-UITestWidgetShare live`
+    static var widgetShareItemID: String? {
+        if let value = value(after: "-UITestWidgetShare") {
+            return value
+        }
+        if ProcessInfo.processInfo.arguments.contains("-UITestWidgetShare") {
+            return "favorite"
+        }
+        return nil
+    }
+
     static func value(after flag: String) -> String? {
         let args = ProcessInfo.processInfo.arguments
         guard let index = args.firstIndex(of: flag), index + 1 < args.count else { return nil }

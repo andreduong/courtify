@@ -60,6 +60,7 @@ struct WidgetColorPickerSheet: View {
                     }
                     .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
                     .foregroundStyle(.white.opacity(0.7))
+                    .courtifyButton(.ghost)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -70,6 +71,7 @@ struct WidgetColorPickerSheet: View {
                     }
                     .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
                     .tint(ThemeManager.opticYellow)
+                    .courtifyButton(.ghost)
                 }
             }
             .toolbarBackground(ThemeManager.midnightGreen, for: .navigationBar)
@@ -185,70 +187,73 @@ struct WidgetColorPickerSheet: View {
     }
 
     private var customColorSwatch: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(
-                        AngularGradient(
-                            colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red],
-                            center: .center
-                        )
-                    )
-                    .frame(width: 36, height: 36)
-                    .overlay {
-                        Circle()
-                            .fill(customColor)
-                            .frame(width: 22, height: 22)
-                    }
-                    .overlay {
-                        Circle()
-                            .strokeBorder(
-                                draft.isCustom ? ThemeManager.opticYellow : .white.opacity(0.15),
-                                lineWidth: draft.isCustom ? 2.5 : 1
-                            )
-                    }
-
-                // Full-size ColorPicker hit target (visually hidden) over the swatch.
-                ColorPicker(
-                    "",
-                    selection: Binding(
-                        get: { customColor },
-                        set: { newColor in
-                            guard isEntitled else {
-                                presentPaywall()
-                                return
-                            }
-                            customColor = newColor
-                            draft.presetID = WidgetColorConfig.customPresetID
-                            draft.customAccentHex = WidgetColorStyle.rgbHex(from: newColor)
-                            persistDraft(reloadTimelines: false)
-                        }
-                    ),
-                    supportsOpacity: false
-                )
-                .labelsHidden()
-                .scaleEffect(1.6)
-                .opacity(0.02)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-            }
-            .frame(width: 36, height: 36)
-
-            Text("Custom")
-                .font(ThemeManager.roundedFont(.caption2, weight: .medium))
-                .foregroundStyle(.white.opacity(0.7))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(.white.opacity(draft.isCustom ? 0.1 : 0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .onTapGesture {
+        Button {
             if !isEntitled {
                 presentPaywall()
             }
+        } label: {
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            AngularGradient(
+                                colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red],
+                                center: .center
+                            )
+                        )
+                        .frame(width: 36, height: 36)
+                        .overlay {
+                            Circle()
+                                .fill(customColor)
+                                .frame(width: 22, height: 22)
+                        }
+                        .overlay {
+                            Circle()
+                                .strokeBorder(
+                                    draft.isCustom ? ThemeManager.opticYellow : .white.opacity(0.15),
+                                    lineWidth: draft.isCustom ? 2.5 : 1
+                                )
+                        }
+
+                    // Full-size ColorPicker hit target (visually hidden) over the swatch.
+                    ColorPicker(
+                        "",
+                        selection: Binding(
+                            get: { customColor },
+                            set: { newColor in
+                                guard isEntitled else {
+                                    presentPaywall()
+                                    return
+                                }
+                                customColor = newColor
+                                draft.presetID = WidgetColorConfig.customPresetID
+                                draft.customAccentHex = WidgetColorStyle.rgbHex(from: newColor)
+                                persistDraft(reloadTimelines: false)
+                            }
+                        ),
+                        supportsOpacity: false
+                    )
+                    .labelsHidden()
+                    .scaleEffect(1.6)
+                    .opacity(0.02)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
+                    .allowsHitTesting(isEntitled)
+                }
+                .frame(width: 36, height: 36)
+
+                Text("Custom")
+                    .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(.white.opacity(draft.isCustom ? 0.1 : 0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
+        .courtifyButton(.ghost)
     }
 
     private func colorSwatch(fill: Color, title: String, isSelected: Bool) -> some View {
