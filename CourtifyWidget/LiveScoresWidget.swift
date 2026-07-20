@@ -13,7 +13,7 @@ struct LiveScoresEntry: TimelineEntry {
 
 struct LiveScoresProvider: TimelineProvider {
     func placeholder(in context: Context) -> LiveScoresEntry {
-        LiveScoresEntry(date: .now, match: WidgetPreviewSamples.liveMatch, isLocked: false)
+        LiveScoresEntry(date: .now, match: LockScreenGallerySamples.liveMatch, isLocked: false)
     }
 
     private func lockedEntry() -> LiveScoresEntry {

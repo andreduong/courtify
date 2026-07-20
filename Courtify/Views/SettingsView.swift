@@ -46,10 +46,13 @@ struct SettingsView: View {
 
     @StateObject private var revenueCat = RevenueCatManager.shared
     @ObservedObject private var dataStore = WidgetDataStore.shared
+    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     @State private var showPlayerPicker = false
     @State private var showSlamPicker = false
     @State private var showPaywall = false
+    @State private var showThemePicker = false
+    @State private var showBallPicker = false
     @State private var isRestoring = false
     @State private var restoreMessage: String?
 
@@ -59,6 +62,10 @@ struct SettingsView: View {
 
     private var favoriteSlam: GrandSlam? {
         GrandSlam(rawValue: favoriteGrandSlamRaw)
+    }
+
+    private var isEntitled: Bool {
+        revenueCat.isProUser || AppGroupConstants.referralBypassActive
     }
 
     private var appVersion: String {
@@ -78,6 +85,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     favoritesSection
                     personalSection
+                    appearanceSection
                     helpSection
                     footer
                 }
@@ -85,7 +93,7 @@ struct SettingsView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 32)
             }
-            .background(ThemeManager.midnightGreen.ignoresSafeArea())
+            .background(appearance.canvasColor.ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -103,7 +111,7 @@ struct SettingsView: View {
                     .courtifyButton(.icon)
                 }
             }
-            .toolbarBackground(ThemeManager.midnightGreen, for: .navigationBar)
+            .toolbarBackground(appearance.canvasColor, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
         .onAppear {
@@ -120,6 +128,12 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showSlamPicker) {
             FavoriteSlamPickerSheet(selectedRaw: $favoriteGrandSlamRaw)
+        }
+        .sheet(isPresented: $showThemePicker) {
+            AppThemePickerSheet()
+        }
+        .sheet(isPresented: $showBallPicker) {
+            LogoBallPickerSheet()
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(
@@ -229,6 +243,44 @@ struct SettingsView: View {
                         restoreMessage = restored
                             ? "Your purchases have been restored."
                             : "No previous purchases found."
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: Appearance
+
+    private var appearanceSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Appearance")
+
+            VStack(spacing: 10) {
+                SettingsPremiumRow(
+                    icon: "paintpalette.fill",
+                    title: "App theme",
+                    value: appearance.theme.displayName,
+                    showsPremiumBadge: !isEntitled,
+                    swatch: appearance.canvasColor
+                ) {
+                    if isEntitled {
+                        showThemePicker = true
+                    } else {
+                        showPaywall = true
+                    }
+                }
+
+                SettingsPremiumRow(
+                    icon: "tennisball.fill",
+                    title: "Logo ball",
+                    value: appearance.logoBall.displayName,
+                    showsPremiumBadge: !isEntitled,
+                    swatch: appearance.logoBallColor
+                ) {
+                    if isEntitled {
+                        showBallPicker = true
+                    } else {
+                        showPaywall = true
                     }
                 }
             }
@@ -467,6 +519,153 @@ private struct SettingsButtonRow: View {
     }
 }
 
+private struct SettingsPremiumRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    let showsPremiumBadge: Bool
+    var swatch: Color? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .frame(width: 24)
+
+                Text(title)
+                    .font(ThemeManager.roundedFont(.headline, weight: .semibold))
+                    .foregroundStyle(.white)
+
+                if showsPremiumBadge {
+                    Text("Premium")
+                        .font(ThemeManager.roundedFont(.caption2, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(.black.opacity(0.55))
+                        .clipShape(Capsule())
+                }
+
+                Spacer(minLength: 8)
+
+                if let swatch {
+                    Circle()
+                        .fill(swatch)
+                        .frame(width: 14, height: 14)
+                        .overlay {
+                            Circle()
+                                .strokeBorder(Color.white.opacity(0.25), lineWidth: 1)
+                        }
+                }
+                Text(value)
+                    .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
+            .background(.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .courtifyButton(.card)
+    }
+}
+
+// MARK: - Appearance pickers
+
+private struct AppThemePickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var appearance = AppAppearanceStore.shared
+
+    var body: some View {
+        PickerSheetShell(title: "App theme") {
+            ForEach(AppThemePreset.allCases) { preset in
+                Button {
+                    CourtifyMotion.animateSelection {
+                        appearance.setTheme(preset)
+                    }
+                    dismiss()
+                } label: {
+                    HStack(spacing: 14) {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(preset.color)
+                            .frame(width: 44, height: 44)
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
+                            }
+
+                        Text(preset.displayName)
+                            .font(ThemeManager.roundedFont(.headline, weight: .semibold))
+                            .foregroundStyle(.white)
+
+                        Spacer(minLength: 0)
+
+                        if appearance.theme == preset {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(ThemeManager.opticYellow)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .courtifyButton(.card)
+            }
+        }
+    }
+}
+
+private struct LogoBallPickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var appearance = AppAppearanceStore.shared
+
+    var body: some View {
+        PickerSheetShell(title: "Logo ball") {
+            ForEach(LogoBallPreset.allCases) { preset in
+                Button {
+                    CourtifyMotion.animateSelection {
+                        appearance.setLogoBall(preset)
+                    }
+                    dismiss()
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "tennisball.fill")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(preset.color)
+                            .frame(width: 44, height: 44)
+                            .background(.white.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                        Text(preset.displayName)
+                            .font(ThemeManager.roundedFont(.headline, weight: .semibold))
+                            .foregroundStyle(.white)
+
+                        Spacer(minLength: 0)
+
+                        if appearance.logoBall == preset {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(ThemeManager.opticYellow)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .courtifyButton(.card)
+            }
+        }
+    }
+}
+
 // MARK: - Pickers
 
 private struct FavoriteSlamPickerSheet: View {
@@ -520,6 +719,7 @@ private struct PickerSheetShell<Content: View>: View {
     let title: String
     @ViewBuilder var content: () -> Content
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     var body: some View {
         NavigationStack {
@@ -529,7 +729,7 @@ private struct PickerSheetShell<Content: View>: View {
                 }
                 .padding(.top, 8)
             }
-            .background(ThemeManager.midnightGreen.ignoresSafeArea())
+            .background(appearance.canvasColor.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -540,7 +740,7 @@ private struct PickerSheetShell<Content: View>: View {
                         .courtifyButton(.ghost)
                 }
             }
-            .toolbarBackground(ThemeManager.midnightGreen, for: .navigationBar)
+            .toolbarBackground(appearance.canvasColor, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
         .presentationDetents([.medium, .large])
@@ -550,6 +750,7 @@ private struct PickerSheetShell<Content: View>: View {
 // MARK: - Widgets how-to
 
 private struct HowToAddWidgetsView: View {
+    @ObservedObject private var appearance = AppAppearanceStore.shared
     private let steps: [(icon: String, text: String)] = [
         ("hand.tap.fill", "Touch and hold an empty area on your Home Screen until the apps jiggle."),
         ("plus.circle.fill", "Tap the + button in the top-left corner."),
@@ -586,10 +787,10 @@ private struct HowToAddWidgetsView: View {
             }
             .padding(20)
         }
-        .background(ThemeManager.midnightGreen.ignoresSafeArea())
+        .background(appearance.canvasColor.ignoresSafeArea())
         .navigationTitle("How to add widgets")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(ThemeManager.midnightGreen, for: .navigationBar)
+        .toolbarBackground(appearance.canvasColor, for: .navigationBar)
     }
 }
 

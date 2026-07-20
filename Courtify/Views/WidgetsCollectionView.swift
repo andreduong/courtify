@@ -4,12 +4,25 @@ import SwiftUI
 
 private enum WidgetGalleryFilter: String, CaseIterable, Identifiable {
     case all = "All"
+    case lockscreen = "Lock"
     case small = "Small"
     case medium = "Medium"
     case large = "Large"
     case free = "Free"
 
     var id: String { rawValue }
+
+    static func fromLaunchArg(_ raw: String) -> WidgetGalleryFilter? {
+        switch raw.lowercased() {
+        case "all": return .all
+        case "lockscreen", "lock": return .lockscreen
+        case "small": return .small
+        case "medium": return .medium
+        case "large": return .large
+        case "free": return .free
+        default: return nil
+        }
+    }
 }
 
 // MARK: - View
@@ -32,12 +45,11 @@ struct WidgetsCollectionView: View {
     @State private var shareItem: CourtifyWidgetCatalog.Item?
     @State private var colorRefreshTick = 0
 
-    /// DEBUG-only: launch with `-UITestWidgetFilter free|small|medium|large` to
-    /// preselect a gallery filter (used by agents to screenshot filter states).
+    /// DEBUG-only: launch with `-UITestWidgetFilter free|small|medium|large|lockscreen`
     private static var initialFilter: WidgetGalleryFilter {
         #if DEBUG
         if let raw = UITestLaunchArgs.widgetFilter,
-           let filter = WidgetGalleryFilter(rawValue: raw.capitalized) {
+           let filter = WidgetGalleryFilter.fromLaunchArg(raw) {
             return filter
         }
         #endif
@@ -57,11 +69,8 @@ struct WidgetsCollectionView: View {
         revenueCat.isProUser || AppGroupConstants.referralBypassActive
     }
 
-    /// Gallery sections come from `CourtifyWidgetCatalog` — same source as WidgetKit kinds.
     private var sections: [CourtifyWidgetCatalog.Section] { CourtifyWidgetCatalog.sections }
 
-    /// DEBUG-only: launch with `-UITestWidgetOnly <itemID>` to render a single
-    /// widget (used by agents to screenshot widgets that are below the fold).
     private static var debugOnlyItemID: String? {
         #if DEBUG
         return UITestLaunchArgs.widgetOnlyItemID
@@ -76,6 +85,7 @@ struct WidgetsCollectionView: View {
                 if let onlyID = Self.debugOnlyItemID, item.id != onlyID { return false }
                 switch selectedFilter {
                 case .all: return true
+                case .lockscreen: return item.placement == .lockScreen
                 case .free: return item.isFree
                 case .small: return item.size == .small
                 case .medium: return item.size == .medium
@@ -87,6 +97,7 @@ struct WidgetsCollectionView: View {
                 id: section.id,
                 title: section.title,
                 subtitle: section.subtitle,
+                accessLabel: section.accessLabel,
                 items: items
             )
         }
@@ -206,7 +217,7 @@ struct WidgetsCollectionView: View {
     }
 
     private var freeExplainer: some View {
-        Text("Free includes your favorite player widgets (home + Lock Screen rank). Unlock Premium for badges, season progress, live scores, rankings, and tournament Lock Screen widgets.")
+        Text("Free includes Favorite player widgets (home + Lock Screen). Unlock Premium for badges, season progress, live scores, rankings, and tournament widgets.")
             .font(ThemeManager.roundedFont(.footnote))
             .foregroundStyle(.white.opacity(0.6))
             .fixedSize(horizontal: false, vertical: true)
@@ -215,54 +226,75 @@ struct WidgetsCollectionView: View {
     // MARK: Filter bar
 
     private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(WidgetGalleryFilter.allCases) { filter in
-                    Button {
-                        CourtifyMotion.animateSelection { selectedFilter = filter }
-                    } label: {
-                        Text(filter.rawValue)
-                            .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
-                            .foregroundStyle(selectedFilter == filter ? .white : .white.opacity(0.7))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(selectedFilter == filter ? Color.white.opacity(0.18) : Color.clear)
-                            .clipShape(Capsule())
-                    }
-                    .courtifyButton(.ghost)
+        HStack(spacing: 3) {
+            ForEach(WidgetGalleryFilter.allCases) { filter in
+                Button {
+                    CourtifyMotion.animateSelection { selectedFilter = filter }
+                } label: {
+                    Text(filter.rawValue)
+                        .font(ThemeManager.roundedFont(size: 11, weight: .semibold))
+                        .foregroundStyle(selectedFilter == filter ? .white : .white.opacity(0.65))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(selectedFilter == filter ? Color.white.opacity(0.18) : Color.clear)
+                        .clipShape(Capsule())
                 }
+                .courtifyButton(.ghost)
             }
         }
-        .padding(.horizontal, -20)
-        .contentMargins(.horizontal, 20, for: .scrollContent)
     }
 
     // MARK: Sections
 
     private func sectionView(_ section: CourtifyWidgetCatalog.Section) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        let isLockSection = section.items.contains { $0.placement == .lockScreen }
+
+        return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(section.title)
-                    .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                    .foregroundStyle(.white)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(section.title)
+                        .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                        .foregroundStyle(.white)
+                    if let access = section.accessLabel {
+                        Text(access.rawValue.uppercased())
+                            .font(ThemeManager.roundedFont(.caption2, weight: .bold))
+                            .foregroundStyle(
+                                access == .free ? ThemeManager.opticYellow : .white.opacity(0.55)
+                            )
+                    }
+                }
                 if let subtitle = section.subtitle {
-                    sectionSubtitle(subtitle)
+                    Text(subtitle)
+                        .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            ForEach(chunkedRows(section.items), id: \.first!.id) { row in
-                if row.count == 2 {
-                    HStack(alignment: .top, spacing: 16) {
-                        widgetCard(for: row[0])
-                        widgetCard(for: row[1])
+            if isLockSection {
+                HStack(alignment: .top, spacing: 20) {
+                    ForEach(section.items) { item in
+                        lockWidgetCard(for: item)
                     }
-                } else if row[0].size == .small {
-                    HStack(alignment: .top, spacing: 16) {
+                    Spacer(minLength: 0)
+                }
+            } else {
+                ForEach(chunkedRows(section.items), id: \.first!.id) { row in
+                    if row.count == 2 {
+                        HStack(alignment: .top, spacing: 16) {
+                            widgetCard(for: row[0])
+                            widgetCard(for: row[1])
+                        }
+                    } else if row[0].size == .small {
+                        HStack(alignment: .top, spacing: 16) {
+                            widgetCard(for: row[0])
+                            Spacer(minLength: 0)
+                        }
+                    } else {
                         widgetCard(for: row[0])
-                        Spacer(minLength: 0)
                     }
-                } else {
-                    widgetCard(for: row[0])
                 }
             }
 
@@ -275,27 +307,6 @@ struct WidgetsCollectionView: View {
         }
     }
 
-    /// Renders trailing “Premium.” as the stylized PREMIUM wordmark (Box Box Ultra style).
-    @ViewBuilder
-    private func sectionSubtitle(_ subtitle: String) -> some View {
-        let premiumSuffix = "Premium."
-        if subtitle.hasSuffix(premiumSuffix) {
-            let lead = String(subtitle.dropLast(premiumSuffix.count)).trimmingCharacters(in: .whitespaces)
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(lead)
-                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
-                PremiumWordmark(size: 10)
-            }
-            .fixedSize(horizontal: false, vertical: true)
-        } else {
-            Text(subtitle)
-                .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                .foregroundStyle(.white.opacity(0.5))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
     private var showsFavoriteMediaHint: Bool {
         guard let player = favoritePlayer, player.isCustom else { return false }
         if FavoritePlayerEnricher.mediaUnavailable { return true }
@@ -303,7 +314,6 @@ struct WidgetsCollectionView: View {
             && !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
-    /// Small widgets pair up two per row; medium/large span the full width.
     private func chunkedRows(_ items: [CourtifyWidgetCatalog.Item]) -> [[CourtifyWidgetCatalog.Item]] {
         var rows: [[CourtifyWidgetCatalog.Item]] = []
         var pendingSmall: CourtifyWidgetCatalog.Item?
@@ -339,6 +349,36 @@ struct WidgetsCollectionView: View {
         CourtifyWidgetCatalog.item(id: id)
     }
 
+    /// Lock Screen cards — accessory-sized widgets only (no purple container).
+    @ViewBuilder
+    private func lockWidgetCard(for item: CourtifyWidgetCatalog.Item) -> some View {
+        let locked = isLocked(item)
+
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                if locked {
+                    showPaywall = true
+                } else {
+                    CourtifyMotion.animateModal { shareItem = item }
+                }
+            } label: {
+                WidgetGalleryPreview(
+                    item: item,
+                    favoritePlayer: favoritePlayer,
+                    favoritePlayerID: favoritePlayerID,
+                    tour: preferredTour,
+                    payload: dataStore.payload
+                )
+                .id("\(item.id)-\(colorRefreshTick)")
+            }
+            .courtifyButton(.card)
+
+            Text(item.title)
+                .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                .foregroundStyle(.white.opacity(0.7))
+        }
+    }
+
     @ViewBuilder
     private func widgetCard(for item: CourtifyWidgetCatalog.Item) -> some View {
         let locked = isLocked(item)
@@ -350,7 +390,6 @@ struct WidgetsCollectionView: View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topTrailing) {
                 Button {
-                    // Free users on Premium widgets → paywall only (never share).
                     if isLocked(item) {
                         showPaywall = true
                     } else {
@@ -391,25 +430,15 @@ struct WidgetsCollectionView: View {
                     .padding(10)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 } else if locked {
-                    if item.placement == .lockScreen {
-                        PremiumWordmark(size: 10)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(.black.opacity(0.5))
-                            .clipShape(Capsule())
-                            .padding(10)
-                            .allowsHitTesting(false)
-                    } else {
-                        Text("Premium 🎾")
-                            .font(ThemeManager.roundedFont(.caption2, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.black.opacity(0.45))
-                            .clipShape(Capsule())
-                            .padding(10)
-                            .allowsHitTesting(false)
-                    }
+                    Text("Premium")
+                        .font(ThemeManager.roundedFont(.caption2, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.45))
+                        .clipShape(Capsule())
+                        .padding(10)
+                        .allowsHitTesting(false)
                 }
 
                 if !locked, item.id == "favorite" || item.id == "favorite-medium" {
@@ -439,11 +468,6 @@ struct WidgetsCollectionView: View {
                 Text(item.size.rawValue)
                     .font(ThemeManager.roundedFont(.caption2, weight: .medium))
                     .foregroundStyle(.white.opacity(0.4))
-                if item.isFree {
-                    Text("FREE")
-                        .font(ThemeManager.roundedFont(.caption2, weight: .bold))
-                        .foregroundStyle(ThemeManager.opticYellow)
-                }
             }
             .lineLimit(1)
         }

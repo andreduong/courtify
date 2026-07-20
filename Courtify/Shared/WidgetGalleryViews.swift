@@ -810,7 +810,7 @@ struct LiveScoresWidgetView: View {
                 } else {
                     WidgetColorStyle.gradient(
                         for: widgetID,
-                        fallbackAccent: Color(hex: 0x1A5C3A),
+                        fallbackAccent: Color(hex: 0x121212),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -823,46 +823,64 @@ struct LiveScoresWidgetView: View {
             )
 
             if let match {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 5) {
                         Circle()
                             .fill(isClassicMatch(match) ? WidgetTheme.opticYellow : Color.red)
-                            .frame(width: 6, height: 6)
+                            .frame(width: 5, height: 5)
                         Text(liveBadgeTitle(for: match))
-                            .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
-                            .foregroundStyle(WidgetTheme.opticYellow)
+                            .font(WidgetTheme.roundedFont(size: 9, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.55))
                             .lineLimit(1)
-                            .tracking(0.4)
+                            .tracking(0.6)
+                        Spacer(minLength: 0)
+                        if let court = match.court {
+                            Text(court.uppercased())
+                                .font(WidgetTheme.roundedFont(size: 8, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.35))
+                                .lineLimit(1)
+                        }
                     }
 
                     if let tournament = match.tournament {
                         Text(tournament.uppercased())
-                            .font(WidgetTheme.roundedFont(size: 9, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.7))
                             .lineLimit(1)
+                            .tracking(0.5)
                     }
 
-                    Spacer(minLength: 0)
+                    Spacer(minLength: 2)
 
-                    Text(match.player1.name)
-                        .font(WidgetTheme.roundedFont(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                    Text(match.player2.name)
-                        .font(WidgetTheme.roundedFont(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.75))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-
-                    if let score = match.score {
-                        Text(score)
-                            .font(WidgetTheme.displayFont(size: 18, weight: .heavy))
-                            .foregroundStyle(WidgetTheme.opticYellow)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(match.player1.name)
+                            .font(WidgetTheme.roundedFont(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.65)
-                            .padding(.top, 2)
+                            .minimumScaleFactor(0.75)
+                        Text(match.player2.name)
+                            .font(WidgetTheme.roundedFont(size: 13, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.72))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
+
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        if let score = match.score {
+                            Text(score)
+                                .font(WidgetTheme.displayFont(size: 17, weight: .heavy))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.65)
+                        }
+                        if let game = match.gameScore {
+                            Text(game)
+                                .font(WidgetTheme.roundedFont(size: 11, weight: .bold))
+                                .foregroundStyle(WidgetTheme.opticYellow)
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.top, 2)
                 }
                 .padding(WidgetTheme.contentInsets)
             } else {
@@ -924,7 +942,7 @@ struct OrderOfPlayListView: View {
                 } else {
                     WidgetColorStyle.gradient(
                         for: widgetID,
-                        fallbackAccent: Color(hex: 0x0C3A5C),
+                        fallbackAccent: Color(hex: GrandSlam.australianOpen.accentColor),
                         startPoint: .leading,
                         endPoint: .bottomTrailing
                     )
@@ -1009,18 +1027,15 @@ struct OrderOfPlayListView: View {
 
 // MARK: - Lock Screen (accessory) views
 
-/// Stylized Premium wordmark — Box Box “ULTRA” energy, Courtify “PREMIUM”.
-struct PremiumWordmark: View {
+/// Stylized COURTIFY wordmark for locked Premium CTAs (upright — matches “Subscribe to”).
+struct CourtifyWordmark: View {
     var size: CGFloat = 14
 
     var body: some View {
-        Text("PREMIUM")
+        Text("COURTIFY")
             .font(.system(size: size, weight: .black, design: .rounded))
-            .italic()
-            .tracking(1.6)
+            .tracking(1.4)
             .foregroundStyle(.white)
-            .rotationEffect(.degrees(-3))
-            .shadow(color: .white.opacity(0.2), radius: 0, x: 0.6, y: 0)
     }
 }
 
@@ -1048,31 +1063,18 @@ struct LockScreenPreviewPlate: View {
     }
 }
 
-/// Centers accessory-sized Lock Screen content inside the gallery card.
-struct LockScreenGalleryFrame<Content: View>: View {
-    enum Kind {
-        case circular
-        case rectangular
+/// Showcase data for Lock Screen gallery / WidgetKit previews (Alcaraz + Wimbledon).
+enum LockScreenGallerySamples {
+    static var player: TennisPlayer {
+        WidgetPreviewSamples.favoritePlayer
     }
 
-    let kind: Kind
-    @ViewBuilder let content: () -> Content
+    static var slam: GrandSlam { .wimbledon }
 
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.35, green: 0.22, blue: 0.40).opacity(0.55),
-                    Color(red: 0.12, green: 0.14, blue: 0.22).opacity(0.9),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+    static var tour: TourPreference { .atp }
 
-            content()
-                .frame(width: kind == .circular ? 72 : 158, height: kind == .circular ? 72 : 68)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    static var liveMatch: WidgetLiveMatch? {
+        WidgetPreviewSamples.galleryLiveMatch
     }
 }
 
@@ -1108,7 +1110,7 @@ struct LockScreenCircularRankView: View {
     private var shortName: String {
         guard let player else { return "—" }
         let last = player.name.split(separator: " ").last.map(String.init) ?? player.name
-        return String(last.prefix(6)).uppercased()
+        return last.uppercased()
     }
 
     private var gaugeProgress: Double {
@@ -1120,12 +1122,16 @@ struct LockScreenCircularRankView: View {
 
 struct LockScreenCircularCountdownView: View {
     let tour: TourPreference
+    var forceSlam: GrandSlam? = nil
     var showsPreviewPlate: Bool = false
 
     var body: some View {
-        let event = TournamentCalendar.nextMajor(for: tour)
+        let event = resolvedEvent
         let days = event.map { TournamentCalendar.countdown(to: $0).days } ?? 0
-        let code = event?.shortName ?? "—"
+        let code = forceSlam?.lockDisplayName
+            ?? grandSlamMatching(event)?.lockDisplayName
+            ?? event?.shortName
+            ?? "—"
 
         ZStack {
             if showsPreviewPlate {
@@ -1140,14 +1146,23 @@ struct LockScreenCircularCountdownView: View {
                         .minimumScaleFactor(0.7)
                         .lineLimit(1)
                     Text(code)
-                        .font(WidgetTheme.roundedFont(size: 7, weight: .bold))
+                        .font(WidgetTheme.roundedFont(size: 6, weight: .bold))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.55)
                 }
             }
             .gaugeStyle(.accessoryCircularCapacity)
             .tint(.white)
         }
+    }
+
+    private var resolvedEvent: TournamentEvent? {
+        if let forceSlam {
+            return TournamentCalendar.events(for: tour).first { grandSlamMatching($0) == forceSlam }
+                ?? TournamentCalendar.nextGrandSlam(for: tour)
+        }
+        return TournamentCalendar.nextMajor(for: tour)
     }
 }
 
@@ -1156,7 +1171,7 @@ struct LockScreenCircularBadgeView: View {
     var showsPreviewPlate: Bool = false
 
     var body: some View {
-        let code = slam?.shortCode ?? "GS"
+        let title = slam?.lockDisplayName ?? "GRAND SLAM"
 
         ZStack {
             if showsPreviewPlate {
@@ -1164,18 +1179,19 @@ struct LockScreenCircularBadgeView: View {
             }
             VStack(spacing: 2) {
                 Image(systemName: "tennisball.fill")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .widgetAccentable()
-                Text(code)
-                    .font(WidgetTheme.displayFont(size: 15, weight: .heavy))
+                Text(title)
+                    .font(WidgetTheme.displayFont(size: 8, weight: .heavy))
                     .textCase(.uppercase)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.65)
+                    .multilineTextAlignment(.center)
             }
+            .padding(6)
         }
     }
 }
-
 struct LockScreenCircularSeasonView: View {
     let player: TennisPlayer?
     let tour: TourPreference
@@ -1224,10 +1240,11 @@ struct LockScreenCircularSeasonView: View {
 
 struct LockScreenRectangularNextView: View {
     let tour: TourPreference
+    var forceSlam: GrandSlam? = nil
     var showsPreviewPlate: Bool = false
 
     var body: some View {
-        let event = TournamentCalendar.nextMajor(for: tour)
+        let event = resolvedEvent
 
         ZStack {
             if showsPreviewPlate {
@@ -1236,10 +1253,11 @@ struct LockScreenRectangularNextView: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 1) {
                     if let event {
-                        Text(event.shortName)
+                        Text(event.lockDisplayName)
                             .font(WidgetTheme.roundedFont(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                         Text(event.location)
                             .font(WidgetTheme.roundedFont(size: 10, weight: .medium))
                             .foregroundStyle(.white.opacity(0.55))
@@ -1279,6 +1297,14 @@ struct LockScreenRectangularNextView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
         }
+    }
+
+    private var resolvedEvent: TournamentEvent? {
+        if let forceSlam {
+            return TournamentCalendar.events(for: tour).first { grandSlamMatching($0) == forceSlam }
+                ?? TournamentCalendar.nextGrandSlam(for: tour)
+        }
+        return TournamentCalendar.nextMajor(for: tour)
     }
 }
 
@@ -1324,7 +1350,8 @@ struct LockScreenRectangularLiveView: View {
 
     private func shortCode(_ name: String) -> String {
         let last = name.split(separator: " ").last.map(String.init) ?? name
-        return String(last.prefix(4)).uppercased()
+        // Accessory rectangular is tight — keep abbreviated last names here.
+        return String(last.prefix(5)).uppercased()
     }
 }
 
@@ -1349,10 +1376,11 @@ struct LockScreenRectangularBadgeView: View {
                     .widgetAccentable()
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(slam?.shortCode ?? "GS")
-                        .font(WidgetTheme.displayFont(size: 16, weight: .heavy))
+                    Text(slam?.lockDisplayName ?? "GRAND SLAM")
+                        .font(WidgetTheme.displayFont(size: 13, weight: .heavy))
                         .foregroundStyle(.white)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text(slam.map { "\($0.cityShort) · \($0.surface)" } ?? "Grand Slam")
                         .font(WidgetTheme.roundedFont(size: 10, weight: .medium))
                         .foregroundStyle(.white.opacity(0.55))
@@ -1380,41 +1408,38 @@ struct LockScreenRectangularFavoriteView: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(shortName)
-                        .font(WidgetTheme.displayFont(size: 15, weight: .heavy))
+                        .font(WidgetTheme.displayFont(size: 14, weight: .heavy))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
+                        .minimumScaleFactor(0.65)
 
-                    HStack(spacing: 8) {
-                        Label {
-                            Text(WidgetTheme.ordinalRank(player?.ranking))
-                                .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
-                        } icon: {
-                            Image(systemName: "trophy.fill")
-                                .font(.system(size: 8, weight: .semibold))
-                        }
+                    HStack(spacing: 6) {
+                        Image(systemName: "trophy.fill")
+                            .font(.system(size: 8, weight: .semibold))
+                        Text(WidgetTheme.ordinalRank(player?.ranking))
+                            .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                         if let record = player?.displaySeasonRecord {
-                            Label {
-                                Text("\(record.wins)-\(record.losses)")
-                                    .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
-                            } icon: {
-                                Image(systemName: "chart.bar.fill")
-                                    .font(.system(size: 8, weight: .semibold))
-                            }
+                            Image(systemName: "chart.bar.fill")
+                                .font(.system(size: 8, weight: .semibold))
+                            Text("\(record.wins)-\(record.losses)")
+                                .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
                         }
                     }
                     .foregroundStyle(.white.opacity(0.55))
-                    .labelStyle(.titleAndIcon)
                 }
 
                 Spacer(minLength: 4)
 
                 Text(rankNumber)
-                    .font(WidgetTheme.displayFont(size: 28, weight: .heavy))
+                    .font(WidgetTheme.displayFont(size: 26, weight: .heavy))
                     .foregroundStyle(.white)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 42, height: 42)
                     .background(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color.white.opacity(0.12))
@@ -1428,7 +1453,7 @@ struct LockScreenRectangularFavoriteView: View {
     private var shortName: String {
         guard let player else { return "PLAYER" }
         let last = player.name.split(separator: " ").last.map(String.init) ?? player.name
-        return String(last.prefix(8)).uppercased()
+        return last.uppercased()
     }
 
     private var rankNumber: String {

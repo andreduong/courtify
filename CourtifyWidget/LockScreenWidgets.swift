@@ -28,25 +28,99 @@ private struct LockScreenAccessoryContainer<Content: View>: View {
     }
 }
 
+// MARK: - Badge entry / provider (showcase = Wimbledon in system picker)
+
+private struct LockScreenBadgeEntry: TimelineEntry {
+    let date: Date
+    let slam: GrandSlam?
+    let isLocked: Bool
+}
+
+private struct LockScreenBadgeProvider: TimelineProvider {
+    func placeholder(in context: Context) -> LockScreenBadgeEntry {
+        LockScreenBadgeEntry(date: .now, slam: LockScreenGallerySamples.slam, isLocked: false)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (LockScreenBadgeEntry) -> Void) {
+        if context.isPreview {
+            completion(placeholder(in: context))
+            return
+        }
+        completion(buildEntry())
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<LockScreenBadgeEntry>) -> Void) {
+        let entry = buildEntry()
+        let refresh = Calendar.current.date(byAdding: .hour, value: 6, to: .now) ?? .now.addingTimeInterval(21_600)
+        completion(Timeline(entries: [entry], policy: .after(refresh)))
+    }
+
+    private func buildEntry() -> LockScreenBadgeEntry {
+        guard AppGroupConstants.widgetAccessEnabled else {
+            return LockScreenBadgeEntry(date: .now, slam: nil, isLocked: true)
+        }
+        return LockScreenBadgeEntry(
+            date: .now,
+            slam: LockScreenFavorites.favoriteSlam ?? LockScreenGallerySamples.slam,
+            isLocked: false
+        )
+    }
+}
+
+// MARK: - Favorite stats entry / provider (showcase = Alcaraz)
+
+private struct LockScreenFavoriteEntry: TimelineEntry {
+    let date: Date
+    let player: TennisPlayer?
+    let isLocked: Bool
+}
+
+private struct LockScreenFavoriteProvider: TimelineProvider {
+    func placeholder(in context: Context) -> LockScreenFavoriteEntry {
+        LockScreenFavoriteEntry(date: .now, player: LockScreenGallerySamples.player, isLocked: false)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (LockScreenFavoriteEntry) -> Void) {
+        if context.isPreview {
+            completion(placeholder(in: context))
+            return
+        }
+        completion(buildEntry())
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<LockScreenFavoriteEntry>) -> Void) {
+        let entry = buildEntry()
+        completion(Timeline(entries: [entry], policy: .after(WidgetPayloadReader.nextRefreshDate())))
+    }
+
+    private func buildEntry() -> LockScreenFavoriteEntry {
+        // Favorite Lock Screen category is free (rank + stats).
+        let player = LockScreenFavorites.favoritePlayer ?? LockScreenGallerySamples.player
+        return LockScreenFavoriteEntry(date: .now, player: player, isLocked: false)
+    }
+}
+
+// MARK: - Season / countdown use TournamentProvider (isPreview already unlocked)
+
 // MARK: - Badges (circular + rectangular)
 
 struct LockScreenBadgeWidget: Widget {
     let kind = WidgetTimelineRefresher.lockScreenBadgeKind
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: TournamentProvider()) { entry in
+        StaticConfiguration(kind: kind, provider: LockScreenBadgeProvider()) { entry in
             LockScreenAccessoryContainer {
                 Group {
                     if entry.isLocked {
                         LockScreenLockedContainer()
                     } else {
-                        LockScreenBadgeContainer(slam: LockScreenFavorites.favoriteSlam)
+                        LockScreenBadgeContainer(slam: entry.slam)
                     }
                 }
             }
         }
-        .configurationDisplayName("Badges")
-        .description("Style your Lock Screen with Grand Slam badges. Premium.")
+        .configurationDisplayName("Lockscreen Badges")
+        .description("Grand Slam badges for your Lock Screen. Premium.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular])
     }
 }
@@ -73,7 +147,7 @@ struct LockScreenRankWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: SelectFavoritePlayerIntent.self, provider: FavoritePlayerProvider()) { entry in
             LockScreenAccessoryContainer {
-                LockScreenCircularRankView(player: entry.player)
+                LockScreenCircularRankView(player: entry.player ?? LockScreenGallerySamples.player)
             }
         }
         .configurationDisplayName("Favorite rank")
@@ -82,25 +156,25 @@ struct LockScreenRankWidget: Widget {
     }
 }
 
-// MARK: - Favorite player stats (rectangular)
+// MARK: - Favorite player stats (rectangular, free with favorite category)
 
 struct LockScreenFavoriteWidget: Widget {
     let kind = WidgetTimelineRefresher.lockScreenFavoriteKind
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: SelectFavoritePlayerIntent.self, provider: FavoritePlayerProvider()) { entry in
+        StaticConfiguration(kind: kind, provider: LockScreenFavoriteProvider()) { entry in
             LockScreenAccessoryContainer {
                 Group {
-                    if AppGroupConstants.widgetAccessEnabled {
-                        LockScreenRectangularFavoriteView(player: entry.player)
-                    } else {
+                    if entry.isLocked {
                         LockScreenLockedRectangular()
+                    } else {
+                        LockScreenRectangularFavoriteView(player: entry.player)
                     }
                 }
             }
         }
         .configurationDisplayName("Favorite player")
-        .description("Rank and season record for your player. Premium.")
+        .description("Rank and season record for your player.")
         .supportedFamilies([.accessoryRectangular])
     }
 }
@@ -118,8 +192,10 @@ struct LockScreenSeasonWidget: Widget {
                         LockScreenLockedContainer()
                     } else {
                         LockScreenSeasonContainer(
-                            player: LockScreenFavorites.favoritePlayer,
-                            tour: entry.tour
+                            player: entry.isShowcase
+                                ? LockScreenGallerySamples.player
+                                : (LockScreenFavorites.favoritePlayer ?? LockScreenGallerySamples.player),
+                            tour: entry.isShowcase ? LockScreenGallerySamples.tour : entry.tour
                         )
                     }
                 }
@@ -158,7 +234,10 @@ struct LockScreenCountdownWidget: Widget {
                     if entry.isLocked {
                         LockScreenLockedCircular()
                     } else {
-                        LockScreenCircularCountdownView(tour: entry.tour)
+                        LockScreenCircularCountdownView(
+                            tour: entry.tour,
+                            forceSlam: entry.isShowcase ? LockScreenGallerySamples.slam : nil
+                        )
                     }
                 }
             }
@@ -181,7 +260,10 @@ struct LockScreenNextWidget: Widget {
                     if entry.isLocked {
                         LockScreenLockedRectangular()
                     } else {
-                        LockScreenRectangularNextView(tour: entry.tour)
+                        LockScreenRectangularNextView(
+                            tour: entry.tour,
+                            forceSlam: entry.isShowcase ? LockScreenGallerySamples.slam : nil
+                        )
                     }
                 }
             }
@@ -204,7 +286,7 @@ struct LockScreenLiveWidget: Widget {
                     if entry.isLocked {
                         LockScreenLockedRectangular()
                     } else {
-                        LockScreenRectangularLiveView(match: entry.match)
+                        LockScreenRectangularLiveView(match: entry.match ?? LockScreenGallerySamples.liveMatch)
                     }
                 }
             }
@@ -215,7 +297,7 @@ struct LockScreenLiveWidget: Widget {
     }
 }
 
-// MARK: - Locked placeholders (Subscribe to PREMIUM)
+// MARK: - Locked placeholders (Subscribe to COURTIFY)
 
 private struct LockScreenLockedContainer: View {
     @Environment(\.widgetFamily) private var family
@@ -252,7 +334,7 @@ struct LockScreenLockedRectangular: View {
                     Text("Subscribe to")
                         .font(WidgetTheme.roundedFont(size: 11, weight: .medium))
                         .foregroundStyle(.white.opacity(0.7))
-                    PremiumWordmark(size: 15)
+                    CourtifyWordmark(size: 15)
                 }
 
                 Spacer(minLength: 0)

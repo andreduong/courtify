@@ -7,13 +7,15 @@ struct TournamentEntry: TimelineEntry {
     let date: Date
     let tour: TourPreference
     let isLocked: Bool
+    /// System widget gallery / placeholder — use Wimbledon showcase copy.
+    var isShowcase: Bool = false
 }
 
 // MARK: - Provider
 
 struct TournamentProvider: TimelineProvider {
     func placeholder(in context: Context) -> TournamentEntry {
-        TournamentEntry(date: .now, tour: WidgetPreviewSamples.previewTour, isLocked: false)
+        TournamentEntry(date: .now, tour: LockScreenGallerySamples.tour, isLocked: false, isShowcase: true)
     }
 
     private func lockedEntry() -> TournamentEntry {

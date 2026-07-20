@@ -1,33 +1,58 @@
 import SwiftUI
 import WidgetKit
 
+/// Home-screen locked Premium state — same CTA as Lock Screen accessories, no stamp.
 struct WidgetLockedView: View {
+    @Environment(\.widgetFamily) private var family
+
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [WidgetTheme.emeraldGreen.opacity(0.35), WidgetTheme.midnightGreen],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            WidgetTheme.midnightGreen
 
-            VStack(spacing: 8) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(WidgetTheme.opticYellow)
-
-                Text("Premium Widget")
-                    .font(WidgetTheme.roundedFont(.headline, weight: .bold))
-                    .foregroundStyle(.white)
-
-                Text("Press to unlock.")
-                    .font(WidgetTheme.roundedFont(.caption))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
+            Group {
+                switch family {
+                case .systemSmall:
+                    compactLockedContent
+                default:
+                    wideLockedContent
+                }
             }
-            .padding(12)
+            .padding(WidgetTheme.contentInset)
         }
-        .courtifyWidgetCanvas()
+        .courtifyWidgetCanvas(stamp: .none)
         .widgetURL(CourtifyDeepLinks.paywallURL)
+    }
+
+    private var compactLockedContent: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.75))
+            VStack(spacing: 2) {
+                Text("Subscribe to")
+                    .font(WidgetTheme.roundedFont(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                CourtifyWordmark(size: 18)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var wideLockedContent: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.75))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Subscribe to")
+                    .font(WidgetTheme.roundedFont(size: 14, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                CourtifyWordmark(size: 20)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 }

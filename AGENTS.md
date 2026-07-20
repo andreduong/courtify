@@ -299,19 +299,20 @@ Every tab shows `ProfileIconButton` (top-right) → `SettingsView` sheet via
 - **Slam picker logos:** `AssetCatalogImage` (fresh from asset catalog). Settings cards use circular `FavoriteSlamLogoBadge`.
 - **Personal** — time zone (display only), 24h format toggle, Premium activate
   (paywall), Restore purchase (RevenueCat).
+- **Appearance (Premium)** — `AppAppearanceStore`: **App theme** (canvas color; default **Courtify** = midnight green) and **Logo ball** (splash/logo tennis-ball color; default **Courtify** green). Free users see a Premium badge and open the paywall on tap.
 - **Help** — `mailto:support@courtify.xyz`, How to add widgets (in-app guide),
   Rate us (`SKStoreReviewController`).
 - DEBUG: `-UITestSettings` auto-opens the sheet from Home.
 
 ### Tab screen design language
 
-All tabs share: `ThemeManager.midnightGreen` base, gradient hero top
-(`emeraldGreen` → `midnightGreen`), white bold rounded type, `opticYellow` for
-highlights/countdowns, `courtGreen` for accent subtitles on tiles, hairline
-`CourtifyTileDivider` between rows. Haptics/animation come exclusively from
-`CourtifyMotion` + `.courtifyButton(...)` (soft `sensoryFeedback` impact on
-press-down) — applied app-wide via `.courtifyInteractiveChrome()` on the root,
-with per-control overrides (`.primary` / `.card` / `.icon` / `.row` / …).
+All tabs share: app-theme canvas via `AppAppearanceStore` (default Courtify
+`midnightGreen`), gradient hero top (`emeraldGreen` → canvas), white bold rounded
+type, `opticYellow` for highlights/countdowns, `courtGreen` for accent subtitles
+on tiles, hairline `CourtifyTileDivider` between rows. Haptics/animation come
+exclusively from `CourtifyMotion` + `.courtifyButton(...)` (soft `sensoryFeedback`
+impact on press-down) — applied app-wide via `.courtifyInteractiveChrome()` on the
+root, with per-control overrides (`.primary` / `.card` / `.icon` / `.row` / …).
 Selection changes (tabs, tour pills, toggles) use `.courtifySelectionFeedback`.
 Do not introduce other animation curves or haptic APIs.
 
@@ -584,7 +585,7 @@ After rebuild/install, SpringBoard may cache old chrome: relaunch app, `launchct
 - Background: `AccessoryWidgetBackground` via `containerBackground` only (once)
 - No white `strokeBorder`; no `contentMarginsDisabled`; no `.courtifyWidgetCanvas` (its max-frame causes full-bleed boxing); `stamp: .none`
 - Short copy (`USO` / `NYC`, not `USO · NEW YORK`); circular gauges via `.accessoryCircularCapacity`
-- Locked CTA: `PremiumWordmark` (“Subscribe to PREMIUM”)
+- Locked CTA: upright `CourtifyWordmark` (“Subscribe to COURTIFY”); home locked widgets use the same CTA with `stamp: .none`
 - Gallery previews: `LockScreenGalleryFrame` + `showsPreviewPlate` (system `AccessoryWidgetBackground` is empty outside WidgetKit)
 
 ### Local dev modes (agents)

@@ -17,6 +17,7 @@ private struct AppRootView: View {
     @AppStorage(AppGroupConstants.Keys.referralBypassActive, store: AppGroupConstants.appGroupStorage)
     private var referralBypassActive = false
     @StateObject private var revenueCat = RevenueCatManager.shared
+    @ObservedObject private var appearance = AppAppearanceStore.shared
     @State private var isBootstrapped = false
 
     /// Home requires finished onboarding — not bare Pro/referral.
@@ -49,7 +50,7 @@ private struct AppRootView: View {
         }
         .animation(CourtifyMotion.screen, value: isBootstrapped)
         .animation(CourtifyMotion.screen, value: shouldShowHome)
-        .background(ThemeManager.midnightGreen.ignoresSafeArea())
+        .background(appearance.canvasColor.ignoresSafeArea())
         // Default press scale + soft haptic for every Button in the hierarchy.
         // Explicit `.courtifyButton(.primary/.card/.icon/…)` still overrides per control.
         .courtifyInteractiveChrome()
@@ -79,7 +80,7 @@ private struct AppRootView: View {
 
     private var bootstrapView: some View {
         ZStack {
-            ThemeManager.midnightGreen.ignoresSafeArea()
+            appearance.canvasColor.ignoresSafeArea()
             ProgressView()
                 .tint(ThemeManager.opticYellow)
         }

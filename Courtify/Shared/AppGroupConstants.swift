@@ -35,10 +35,14 @@ enum AppGroupConstants {
         static let widgetAccessEnabled = "widgetAccessEnabled"
         static let notificationsEnabled = "notificationsEnabled"
         static let widgetColorStyles = "widgetColorStyles"
+        static let appThemePreset = "appThemePreset"
+        static let logoBallPreset = "logoBallPreset"
         #if DEBUG
         static let debugProUser = "debugProUser"
         #endif
     }
+
+    static let appAppearanceDidChange = Notification.Name("appAppearanceDidChange")
 
     static var referralBypassActive: Bool {
         userDefaults.bool(forKey: Keys.referralBypassActive)

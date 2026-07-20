@@ -397,6 +397,16 @@ enum GrandSlam: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Lock Screen badge title — readable slam name (not AO/RG codes).
+    var lockDisplayName: String {
+        switch self {
+        case .australianOpen: "AUS OPEN"
+        case .frenchOpen: "ROLAND GARROS"
+        case .wimbledon: "WIMBLEDON"
+        case .usOpen: "US OPEN"
+        }
+    }
+
     /// Short city label for Lock Screen copy (avoids truncation).
     var cityShort: String {
         switch self {

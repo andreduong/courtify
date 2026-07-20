@@ -44,6 +44,17 @@ struct TournamentEvent: Identifiable, Hashable {
         formatter.dateFormat = "dd MMM"
         return formatter.string(from: startDate).uppercased()
     }
+
+    /// Lock Screen–friendly slam title when this event is a Grand Slam.
+    var lockDisplayName: String {
+        switch shortName {
+        case "AO": "AUS OPEN"
+        case "RG": "ROLAND GARROS"
+        case "WIM": "WIMBLEDON"
+        case "USO": "US OPEN"
+        default: shortName
+        }
+    }
 }
 
 enum TournamentCalendar {

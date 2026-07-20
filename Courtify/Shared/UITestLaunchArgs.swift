@@ -22,7 +22,7 @@ enum UITestLaunchArgs {
         value(after: "-UITestTab")
     }
 
-    /// `free`, `small`, `medium`, or `large` (case-insensitive).
+    /// `free`, `small`, `medium`, `large`, or `lockscreen` (case-insensitive).
     static var widgetFilter: String? {
         value(after: "-UITestWidgetFilter")
     }

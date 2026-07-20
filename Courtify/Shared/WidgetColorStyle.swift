@@ -186,7 +186,43 @@ enum WidgetColorStyle {
     }
 
     static func defaultConfig(for widgetID: String) -> WidgetColorConfig {
-        defaultsToTournamentTheme(widgetID) ? .tournamentDefault : .default
+        if defaultsToTournamentTheme(widgetID) {
+            return .tournamentDefault
+        }
+        switch widgetID {
+        case "atp-medium", "atp-large":
+            return WidgetColorConfig(
+                presetID: WidgetColorPreset.hardcourt.rawValue,
+                gradientLevel: 0.72,
+                customAccentHex: nil,
+                textureID: WidgetTexturePreset.aurora.rawValue
+            )
+        case "wta-medium", "wta-large":
+            return WidgetColorConfig(
+                presetID: WidgetColorPreset.berry.rawValue,
+                gradientLevel: 0.72,
+                customAccentHex: nil,
+                textureID: WidgetTexturePreset.aurora.rawValue
+            )
+        case "live":
+            // Sleek near-black gradient for live scores (gallery + home widget default).
+            return WidgetColorConfig(
+                presetID: WidgetColorConfig.customPresetID,
+                gradientLevel: 0.42,
+                customAccentHex: 0x121212,
+                textureID: WidgetTexturePreset.spotlight.rawValue
+            )
+        case "order":
+            // Australian Open sky blue as the Order of Play default.
+            return WidgetColorConfig(
+                presetID: WidgetColorConfig.customPresetID,
+                gradientLevel: 0.68,
+                customAccentHex: GrandSlam.australianOpen.accentColor,
+                textureID: WidgetTexturePreset.aurora.rawValue
+            )
+        default:
+            return .default
+        }
     }
 
     static func config(for widgetID: String) -> WidgetColorConfig {

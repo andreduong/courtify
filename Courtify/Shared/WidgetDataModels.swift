@@ -108,6 +108,26 @@ struct WidgetUpcomingMatch: Codable, Identifiable {
         case id, tour, tournament, court, round, startTime, player1, player2
     }
 
+    init(
+        id: Int?,
+        tour: String,
+        tournament: String?,
+        court: String?,
+        round: String?,
+        startTime: Date?,
+        player1: WidgetPlayer,
+        player2: WidgetPlayer
+    ) {
+        self.id = id
+        self.tour = tour
+        self.tournament = tournament
+        self.court = court
+        self.round = round
+        self.startTime = startTime
+        self.player1 = player1
+        self.player2 = player2
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeFlexibleIntIfPresent(forKey: .id)
@@ -135,6 +155,13 @@ struct WidgetPlayer: Codable {
     var imageURL: URL? {
         guard let imageUrl, !imageUrl.isEmpty else { return nil }
         return URL(string: imageUrl)
+    }
+
+    init(id: Int?, name: String, country: String?, imageUrl: String?) {
+        self.id = id
+        self.name = name
+        self.country = country
+        self.imageUrl = imageUrl
     }
 }
 

@@ -18,9 +18,9 @@ enum WidgetMockData {
           "tournament": "Wimbledon",
           "court": "Centre Court",
           "status": "LIVE",
-          "score": "6-4 4-4",
-          "gameScore": "30-15",
-          "server": 2,
+          "score": "6-4 3-6 4-4",
+          "gameScore": "40-30",
+          "server": 1,
           "player1": { "id": 5993, "name": "Carlos Alcaraz", "country": "ESP", "imageUrl": null },
           "player2": { "id": 5992, "name": "Jannik Sinner", "country": "ITA", "imageUrl": null }
         }
@@ -29,12 +29,22 @@ enum WidgetMockData {
         {
           "id": 102,
           "tour": "ATP",
-          "tournament": "Wimbledon",
-          "court": "Centre Court",
-          "round": "SF",
-          "startTime": "2026-07-10T23:00:00Z",
-          "player1": { "id": 5994, "name": "Novak Djokovic", "country": "SRB", "imageUrl": null },
-          "player2": { "id": 5992, "name": "Jannik Sinner", "country": "ITA", "imageUrl": null }
+          "tournament": "Australian Open",
+          "court": "Rod Laver Arena",
+          "round": "QF",
+          "startTime": "2026-01-22T02:00:00Z",
+          "player1": { "id": 5992, "name": "Jannik Sinner", "country": "ITA", "imageUrl": null },
+          "player2": { "id": 5993, "name": "Carlos Alcaraz", "country": "ESP", "imageUrl": null }
+        },
+        {
+          "id": 103,
+          "tour": "WTA",
+          "tournament": "Australian Open",
+          "court": "Rod Laver Arena",
+          "round": "QF",
+          "startTime": "2026-01-22T04:00:00Z",
+          "player1": { "id": 7002, "name": "Aryna Sabalenka", "country": "BLR", "imageUrl": null },
+          "player2": { "id": 7001, "name": "Iga Świątek", "country": "POL", "imageUrl": null }
         }
       ],
       "rankings": {

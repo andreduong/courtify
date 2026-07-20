@@ -37,7 +37,14 @@ enum CourtifyWidgetCatalog {
         let title: String
         /// Box Box–style gallery / picker subtitle under the section title.
         var subtitle: String? = nil
+        /// Shown next to the section title (`Free` / `Premium`).
+        var accessLabel: AccessLabel? = nil
         let items: [Item]
+
+        enum AccessLabel: String {
+            case free = "Free"
+            case premium = "Premium"
+        }
     }
 
     // MARK: - WidgetKit kinds (must match registered `Widget` kinds)
@@ -78,71 +85,76 @@ enum CourtifyWidgetCatalog {
     ]
 
     static let sections: [Section] = [
-        Section(id: "favorite", title: "Favorite player", items: [
+        Section(id: "favorite", title: "Favorite player", accessLabel: .free, items: [
             Item(id: "favorite", title: "Favorite player", size: .small, kind: favoritePlayerKind, placement: .homeScreen, isFree: true),
             Item(id: "favorite-medium", title: "Favorite player", size: .medium, kind: favoritePlayerKind, placement: .homeScreen, isFree: true),
         ]),
-        Section(id: "tournaments", title: "Tournament widgets", items: [
+        Section(id: "tournaments", title: "Tournament widgets", accessLabel: .premium, items: [
             Item(id: "next-small", title: "Next tournament", size: .small, kind: nextTournamentKind, placement: .homeScreen),
             Item(id: "countdown", title: "Tournament countdown", size: .medium, kind: tournamentCountdownKind, placement: .homeScreen),
             Item(id: "next-large", title: "Next tournament", size: .large, kind: nextTournamentKind, placement: .homeScreen),
             Item(id: "calendar", title: "Season calendar", size: .large, kind: seasonCalendarKind, placement: .homeScreen),
         ]),
-        Section(id: "atp", title: "ATP widgets", items: [
+        Section(id: "atp", title: "ATP widgets", accessLabel: .premium, items: [
             Item(id: "atp-medium", title: "ATP standings", size: .medium, kind: atpStandingsKind, placement: .homeScreen),
             Item(id: "atp-large", title: "ATP standings", size: .large, kind: atpStandingsKind, placement: .homeScreen),
         ]),
-        Section(id: "wta", title: "WTA widgets", items: [
+        Section(id: "wta", title: "WTA widgets", accessLabel: .premium, items: [
             Item(id: "wta-medium", title: "WTA standings", size: .medium, kind: wtaStandingsKind, placement: .homeScreen),
             Item(id: "wta-large", title: "WTA standings", size: .large, kind: wtaStandingsKind, placement: .homeScreen),
         ]),
-        Section(id: "live", title: "Live widgets", items: [
+        Section(id: "live", title: "Live widgets", accessLabel: .premium, items: [
             Item(id: "live", title: "Live scores", size: .small, kind: liveScoresKind, placement: .homeScreen),
             Item(id: "order", title: "Order of play", size: .large, kind: orderOfPlayKind, placement: .homeScreen),
         ]),
-        // Lock Screen — hardcore-fan order (mirrors Box Box: badges → favorite → season → countdown → live)
+        // Lock Screen — hardcore-fan order (badges → favorite → season → countdown → live)
         Section(
             id: "lock-badges",
-            title: "Badges",
-            subtitle: "Style your Lock Screen with Grand Slam badges. Premium.",
+            title: "Lockscreen Badges",
+            subtitle: "Grand Slam badges for your Lock Screen.",
+            accessLabel: .premium,
             items: [
-                Item(id: "lock-badge", title: "Slam badge", size: .small, kind: lockScreenBadgeKind, placement: .lockScreen),
-                Item(id: "lock-badge-rect", title: "Slam badge", size: .medium, kind: lockScreenBadgeKind, placement: .lockScreen),
+                Item(id: "lock-badge", title: "Circular", size: .small, kind: lockScreenBadgeKind, placement: .lockScreen),
+                Item(id: "lock-badge-rect", title: "Rectangular", size: .medium, kind: lockScreenBadgeKind, placement: .lockScreen),
             ]
         ),
         Section(
             id: "lock-favorite",
             title: "Favorite player",
-            subtitle: "Rank and season stats for your player. Rank is free.",
+            subtitle: "Rank and season stats for your player.",
+            accessLabel: .free,
             items: [
-                Item(id: "lock-rank", title: "Favorite rank", size: .small, kind: lockScreenRankKind, placement: .lockScreen, isFree: true),
-                Item(id: "lock-player", title: "Favorite player", size: .medium, kind: lockScreenFavoriteKind, placement: .lockScreen),
+                Item(id: "lock-rank", title: "Rank", size: .small, kind: lockScreenRankKind, placement: .lockScreen, isFree: true),
+                Item(id: "lock-player", title: "Stats", size: .medium, kind: lockScreenFavoriteKind, placement: .lockScreen, isFree: true),
             ]
         ),
         Section(
             id: "lock-season",
             title: "Season progress",
-            subtitle: "Win rate and Grand Slam progress. Premium.",
+            subtitle: "Win rate and Grand Slam progress.",
+            accessLabel: .premium,
             items: [
-                Item(id: "lock-season", title: "Season progress", size: .small, kind: lockScreenSeasonKind, placement: .lockScreen),
-                Item(id: "lock-season-rect", title: "Season progress", size: .medium, kind: lockScreenSeasonKind, placement: .lockScreen),
+                Item(id: "lock-season", title: "Circular", size: .small, kind: lockScreenSeasonKind, placement: .lockScreen),
+                Item(id: "lock-season-rect", title: "Rectangular", size: .medium, kind: lockScreenSeasonKind, placement: .lockScreen),
             ]
         ),
         Section(
             id: "lock-countdown",
             title: "Tournament countdown",
-            subtitle: "Next major on your tour. Premium.",
+            subtitle: "Next major on your tour.",
+            accessLabel: .premium,
             items: [
-                Item(id: "lock-countdown", title: "Countdown", size: .small, kind: lockScreenCountdownKind, placement: .lockScreen),
-                Item(id: "lock-next", title: "Next tournament", size: .medium, kind: lockScreenNextKind, placement: .lockScreen),
+                Item(id: "lock-countdown", title: "Circular", size: .small, kind: lockScreenCountdownKind, placement: .lockScreen),
+                Item(id: "lock-next", title: "Rectangular", size: .medium, kind: lockScreenNextKind, placement: .lockScreen),
             ]
         ),
         Section(
             id: "lock-live",
             title: "Live score",
-            subtitle: "Live match score on the Lock Screen. Premium.",
+            subtitle: "Live match score on the Lock Screen.",
+            accessLabel: .premium,
             items: [
-                Item(id: "lock-live", title: "Live score", size: .medium, kind: lockScreenLiveKind, placement: .lockScreen),
+                Item(id: "lock-live", title: "Rectangular", size: .medium, kind: lockScreenLiveKind, placement: .lockScreen),
             ]
         ),
     ]

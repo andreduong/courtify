@@ -39,7 +39,9 @@ enum CourtifyLayout {
 struct CourtifyFullBleedScreen<Content: View>: View {
     /// Canvas behind content — bleeds under the tab bar / home indicator.
     /// Home passes the next slam brand so navy (etc.) shows through the material tab bar.
-    var canvasColor: Color = ThemeManager.midnightGreen
+    /// `nil` uses the Settings app-theme canvas (default Courtify midnight green).
+    var canvasColor: Color? = nil
+    @ObservedObject private var appearance = AppAppearanceStore.shared
     @ViewBuilder var content: (_ safeTop: CGFloat, _ size: CGSize) -> Content
 
     var body: some View {
@@ -50,7 +52,7 @@ struct CourtifyFullBleedScreen<Content: View>: View {
                 .frame(width: size.width, height: size.height, alignment: .top)
                 .offset(y: -safeTop)
         }
-        .background(canvasColor.ignoresSafeArea())
+        .background((canvasColor ?? appearance.canvasColor).ignoresSafeArea())
     }
 }
 
@@ -64,6 +66,7 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
     let heroHeight: CGFloat
     let scrollTrigger: ScrollTrigger
     let onScroll: ((ScrollViewProxy) -> Void)?
+    @ObservedObject private var appearance = AppAppearanceStore.shared
     @ViewBuilder var heroBackground: () -> HeroBackground
     @ViewBuilder var heroContent: () -> HeroContent
     @ViewBuilder var listContent: () -> ListContent
@@ -95,6 +98,7 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
                         CourtifyHeroBlock(
                             heroHeight: heroHeight,
                             safeTop: safeTop,
+                            fadeColor: appearance.canvasColor,
                             heroBackground: heroBackground,
                             heroContent: heroContent
                         )
@@ -120,7 +124,7 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
                 }
             }
         }
-        .background(ThemeManager.midnightGreen.ignoresSafeArea())
+        .background(appearance.canvasColor.ignoresSafeArea())
     }
 }
 
@@ -129,6 +133,7 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
 private struct CourtifyHeroBlock<HeroBackground: View, HeroContent: View>: View {
     let heroHeight: CGFloat
     let safeTop: CGFloat
+    var fadeColor: Color = ThemeManager.midnightGreen
     @ViewBuilder var heroBackground: () -> HeroBackground
     @ViewBuilder var heroContent: () -> HeroContent
 
@@ -140,7 +145,7 @@ private struct CourtifyHeroBlock<HeroBackground: View, HeroContent: View>: View 
                     // Fade the hero into the screen background *behind* the hero
                     // content so text near the bottom stays fully legible.
                     LinearGradient(
-                        colors: [.clear, ThemeManager.midnightGreen],
+                        colors: [.clear, fadeColor],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -170,6 +175,7 @@ struct CourtifyTileDivider: View {
 // MARK: - Plain scroll (Widgets)
 
 struct CourtifyPlainScrollScreen<Content: View>: View {
+    @ObservedObject private var appearance = AppAppearanceStore.shared
     @ViewBuilder var content: () -> Content
 
     var body: some View {
@@ -183,7 +189,7 @@ struct CourtifyPlainScrollScreen<Content: View>: View {
             }
             .scrollContentBackground(.hidden)
         }
-        .background(ThemeManager.midnightGreen.ignoresSafeArea())
+        .background(appearance.canvasColor.ignoresSafeArea())
     }
 }
 

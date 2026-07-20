@@ -8,11 +8,6 @@ struct WidgetGalleryPreview: View {
     let tour: TourPreference
     let payload: WidgetDataPayload?
 
-    private var favoriteSlam: GrandSlam? {
-        let raw = AppGroupConstants.userDefaults.string(forKey: AppGroupConstants.Keys.favoriteGrandSlam) ?? ""
-        return GrandSlam(rawValue: raw)
-    }
-
     var body: some View {
         switch item.id {
         case "favorite":
@@ -61,52 +56,59 @@ struct WidgetGalleryPreview: View {
             )
         case "live":
             LiveScoresWidgetView(
-                match: payload?.liveMatches.first,
-                showsRefreshHint: true,
+                match: WidgetPreviewSamples.galleryLiveMatch,
+                showsRefreshHint: false,
                 widgetID: "live"
             )
         case "order":
             OrderOfPlayListView(
-                matches: payload?.upcomingMatches ?? [],
-                showsRefreshHint: true,
+                matches: WidgetPreviewSamples.galleryOrderMatches,
+                showsRefreshHint: false,
                 widgetID: "order"
             )
         case "lock-badge":
-            LockScreenGalleryFrame(kind: .circular) {
-                LockScreenCircularBadgeView(slam: favoriteSlam, showsPreviewPlate: true)
-            }
+            LockScreenCircularBadgeView(slam: LockScreenGallerySamples.slam, showsPreviewPlate: true)
+                .frame(width: 72, height: 72)
         case "lock-badge-rect":
-            LockScreenGalleryFrame(kind: .rectangular) {
-                LockScreenRectangularBadgeView(slam: favoriteSlam, showsPreviewPlate: true)
-            }
+            LockScreenRectangularBadgeView(slam: LockScreenGallerySamples.slam, showsPreviewPlate: true)
+                .frame(width: 158, height: 68)
         case "lock-rank":
-            LockScreenGalleryFrame(kind: .circular) {
-                LockScreenCircularRankView(player: favoritePlayer, showsPreviewPlate: true)
-            }
+            LockScreenCircularRankView(player: LockScreenGallerySamples.player, showsPreviewPlate: true)
+                .frame(width: 72, height: 72)
         case "lock-player":
-            LockScreenGalleryFrame(kind: .rectangular) {
-                LockScreenRectangularFavoriteView(player: favoritePlayer, showsPreviewPlate: true)
-            }
+            LockScreenRectangularFavoriteView(player: LockScreenGallerySamples.player, showsPreviewPlate: true)
+                .frame(width: 158, height: 68)
         case "lock-season":
-            LockScreenGalleryFrame(kind: .circular) {
-                LockScreenCircularSeasonView(player: favoritePlayer, tour: tour, showsPreviewPlate: true)
-            }
+            LockScreenCircularSeasonView(
+                player: LockScreenGallerySamples.player,
+                tour: LockScreenGallerySamples.tour,
+                showsPreviewPlate: true
+            )
+            .frame(width: 72, height: 72)
         case "lock-season-rect":
-            LockScreenGalleryFrame(kind: .rectangular) {
-                LockScreenRectangularSeasonView(player: favoritePlayer, tour: tour, showsPreviewPlate: true)
-            }
+            LockScreenRectangularSeasonView(
+                player: LockScreenGallerySamples.player,
+                tour: LockScreenGallerySamples.tour,
+                showsPreviewPlate: true
+            )
+            .frame(width: 158, height: 68)
         case "lock-countdown":
-            LockScreenGalleryFrame(kind: .circular) {
-                LockScreenCircularCountdownView(tour: tour, showsPreviewPlate: true)
-            }
+            LockScreenCircularCountdownView(
+                tour: LockScreenGallerySamples.tour,
+                forceSlam: LockScreenGallerySamples.slam,
+                showsPreviewPlate: true
+            )
+            .frame(width: 72, height: 72)
         case "lock-next":
-            LockScreenGalleryFrame(kind: .rectangular) {
-                LockScreenRectangularNextView(tour: tour, showsPreviewPlate: true)
-            }
+            LockScreenRectangularNextView(
+                tour: LockScreenGallerySamples.tour,
+                forceSlam: LockScreenGallerySamples.slam,
+                showsPreviewPlate: true
+            )
+            .frame(width: 158, height: 68)
         case "lock-live":
-            LockScreenGalleryFrame(kind: .rectangular) {
-                LockScreenRectangularLiveView(match: payload?.liveMatches.first, showsPreviewPlate: true)
-            }
+            LockScreenRectangularLiveView(match: LockScreenGallerySamples.liveMatch, showsPreviewPlate: true)
+                .frame(width: 158, height: 68)
         default:
             EmptyView()
         }

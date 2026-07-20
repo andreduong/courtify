@@ -2,10 +2,11 @@ import SwiftUI
 
 struct SplashScreenView: View {
     let onContinue: () -> Void
+    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     var body: some View {
         ZStack {
-            ThemeManager.midnightGreen.ignoresSafeArea()
+            appearance.canvasColor.ignoresSafeArea()
 
             CourtifyMarqueeBackground()
                 .allowsHitTesting(false)
@@ -22,7 +23,7 @@ struct SplashScreenView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "tennisball.fill")
                         .font(.system(size: 56, weight: .bold, design: .rounded))
-                        .foregroundStyle(ThemeManager.opticYellow)
+                        .foregroundStyle(appearance.logoBallColor)
                         .shadow(color: ThemeManager.emeraldGreen.opacity(0.6), radius: 20)
                         .shadow(color: .black.opacity(0.55), radius: 10, y: 2)
 
