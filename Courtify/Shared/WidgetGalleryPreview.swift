@@ -27,31 +27,31 @@ struct WidgetGalleryPreview: View {
         case "atp-medium":
             RankingsWidgetView(
                 tour: .atp,
-                entries: payload?.rankings.atp ?? [],
+                entries: WidgetPreviewSamples.rankings(for: .atp),
                 limit: 5,
-                showsRefreshHint: true,
+                showsRefreshHint: false,
                 widgetID: "atp-medium"
             )
         case "atp-large":
             RankingsLargeWidgetView(
                 tour: .atp,
-                entries: payload?.rankings.atp ?? [],
-                showsRefreshHint: true,
+                entries: WidgetPreviewSamples.rankings(for: .atp),
+                showsRefreshHint: false,
                 widgetID: "atp-large"
             )
         case "wta-medium":
             RankingsWidgetView(
                 tour: .wta,
-                entries: payload?.rankings.wta ?? [],
+                entries: WidgetPreviewSamples.rankings(for: .wta),
                 limit: 5,
-                showsRefreshHint: true,
+                showsRefreshHint: false,
                 widgetID: "wta-medium"
             )
         case "wta-large":
             RankingsLargeWidgetView(
                 tour: .wta,
-                entries: payload?.rankings.wta ?? [],
-                showsRefreshHint: true,
+                entries: WidgetPreviewSamples.rankings(for: .wta),
+                showsRefreshHint: false,
                 widgetID: "wta-large"
             )
         case "live":

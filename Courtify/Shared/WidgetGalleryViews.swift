@@ -39,10 +39,12 @@ struct FavoritePlayerWidgetView: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(player?.tour.rawValue ?? "ATP")
-                    .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
-                    .foregroundStyle(WidgetTheme.opticYellow)
-                    .tracking(0.6)
+                if let player {
+                    Text(player.tour == .wta ? "WTA" : "ATP")
+                        .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                        .foregroundStyle(WidgetTheme.opticYellow)
+                        .tracking(0.6)
+                }
 
                 Text(favoriteDisplayName)
                     .font(WidgetTheme.roundedFont(size: 12, weight: .semibold))
@@ -80,6 +82,9 @@ struct FavoritePlayerWidgetView: View {
         .courtifyWidgetCanvas(stamp: .bottomCenter)
         .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
             guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.appAppearanceDidChange)) { _ in
             colorTick += 1
         }
     }
@@ -131,11 +136,19 @@ struct FavoritePlayerMediumWidgetView: View {
 
             HStack(alignment: .top, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(player?.tour.rawValue ?? "ATP")
-                            .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
-                            .foregroundStyle(WidgetTheme.opticYellow)
-                        Text(player?.name.uppercased() ?? "PICK A PLAYER")
+                    if let player {
+                        HStack(spacing: 6) {
+                            Text(player.tour == .wta ? "WTA" : "ATP")
+                                .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                                .foregroundStyle(WidgetTheme.opticYellow)
+                            Text(player.name.uppercased())
+                                .font(WidgetTheme.roundedFont(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                        }
+                    } else {
+                        Text("PICK A PLAYER")
                             .font(WidgetTheme.roundedFont(size: 11, weight: .bold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
@@ -179,6 +192,9 @@ struct FavoritePlayerMediumWidgetView: View {
         .courtifyWidgetCanvas(stamp: .bottomCenter)
         .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
             guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.appAppearanceDidChange)) { _ in
             colorTick += 1
         }
     }

@@ -60,6 +60,14 @@ final class WidgetDataStore: ObservableObject {
         await task.value
     }
 
+    /// Loads cached rankings when present; otherwise fetches once from the Worker.
+    /// Safe to call from pickers and onboarding — concurrent callers coalesce via `refresh()`.
+    func ensureRankingsLoaded() async {
+        loadCachedPayload()
+        guard payload == nil else { return }
+        await refresh()
+    }
+
     /// One-time fetch so onboarding can show real rankings on the very first
     /// app open (API cost: a single Worker request, ever). Skipped when a
     /// cached payload already exists; the success flag prevents refetching if
@@ -71,7 +79,7 @@ final class WidgetDataStore: ObservableObject {
         let flagKey = AppGroupConstants.Keys.didFetchOnboardingRankings
         guard !AppGroupConstants.userDefaults.bool(forKey: flagKey) else { return }
 
-        await refresh()
+        await ensureRankingsLoaded()
         if payload != nil {
             AppGroupConstants.userDefaults.set(true, forKey: flagKey)
         }

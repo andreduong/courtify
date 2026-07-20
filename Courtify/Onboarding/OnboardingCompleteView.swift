@@ -56,18 +56,6 @@ struct OnboardingCompleteView: View {
     }
 }
 
-struct CourtifyLogoMark: View {
-    var size: CGFloat = 120
-
-    var body: some View {
-        CachedBundledImage(name: "courtify-logo", contentMode: .fill)
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
-            .shadow(color: ThemeManager.emeraldGreen.opacity(0.55), radius: 28, y: 10)
-            .shadow(color: ThemeManager.opticYellow.opacity(0.2), radius: 12, y: 4)
-    }
-}
-
 private struct OnboardingCelebrationBackground: View {
     var body: some View {
         ZStack {

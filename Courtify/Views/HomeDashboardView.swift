@@ -9,12 +9,18 @@ struct HomeDashboardView: View {
 
     @StateObject private var revenueCat = RevenueCatManager.shared
     @ObservedObject private var dataStore = WidgetDataStore.shared
+    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     @State private var showPaywall = false
     @State private var showSettings = false
+    @State private var showPlayerPicker = false
     @State private var now = Date()
     @State private var photoRefreshToken = 0
     @State private var showMediaUnavailableAlert = false
+
+    private var hasFavoritePlayer: Bool {
+        !favoritePlayerID.isEmpty
+    }
 
     private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
@@ -31,42 +37,13 @@ struct HomeDashboardView: View {
         TournamentCalendar.nextGrandSlam(for: selectedTour)
     }
 
-    private var nextSlam: GrandSlam? {
-        nextGrandSlam?.grandSlam
-    }
-
     private var liveRank: Int? {
         FavoritePlayerCatalog.displayRank(for: favoritePlayerID, payload: dataStore.payload)
     }
 
-    private var slamHighlight: Color {
-        guard let slam = nextSlam else { return ThemeManager.opticYellow }
-        return Color(hex: slam.highlightColor)
-    }
-
-    private var slamBase: Color {
-        guard let slam = nextSlam else { return ThemeManager.midnightGreen }
-        switch slam {
-        case .australianOpen: return Color(hex: 0x08263D)
-        case .frenchOpen: return Color(hex: 0x3B1404)
-        case .wimbledon: return Color(hex: 0x140B22)
-        case .usOpen: return Color(hex: 0x07111F)
-        }
-    }
-
-    private var slamLift: Color {
-        guard let slam = nextSlam else { return ThemeManager.emeraldGreen.opacity(0.35) }
-        switch slam {
-        case .australianOpen: return Color(hex: 0x0E4A72)
-        case .frenchOpen: return Color(hex: 0x8A2E05)
-        case .wimbledon: return Color(hex: 0x2A1848)
-        case .usOpen: return Color(hex: 0x0C2340)
-        }
-    }
-
     var body: some View {
-        // Slam canvas bleeds under the translucent tab bar + home indicator.
-        CourtifyFullBleedScreen(canvasColor: slamBase) { safeTop, size in
+        // App-theme canvas bleeds under the translucent tab bar + home indicator.
+        CourtifyFullBleedScreen { safeTop, size in
             VStack(spacing: 0) {
                 playerHeroSection(safeTop: safeTop)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -78,8 +55,8 @@ struct HomeDashboardView: View {
             }
             .frame(width: size.width, height: size.height, alignment: .top)
         }
-        // Solid slam chrome on Home so brand color fills behind + below the tab bar.
-        .toolbarBackground(slamBase, for: .tabBar)
+        // Solid app-theme chrome on Home so canvas fills behind + below the tab bar.
+        .toolbarBackground(appearance.canvasColor, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
         .onAppear {
@@ -108,6 +85,9 @@ struct HomeDashboardView: View {
         }
         .onReceive(timer) { now = $0 }
         .settingsSheet(isPresented: $showSettings)
+        .sheet(isPresented: $showPlayerPicker) {
+            FavoritePlayerPickerSheet(favoritePlayerID: $favoritePlayerID)
+        }
         .alert("Player photo unavailable", isPresented: $showMediaUnavailableAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -134,13 +114,13 @@ struct HomeDashboardView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(selectedTour == .wta ? "WTA RANKING" : "ATP RANKING")
-                            .font(ThemeManager.roundedFont(size: 11, weight: .bold))
-                            .foregroundStyle(ThemeManager.opticYellow)
-                            .tracking(1.6)
+                    if hasFavoritePlayer, let player = favoritePlayer {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(player.tour == .wta ? "WTA RANKING" : "ATP RANKING")
+                                .font(ThemeManager.roundedFont(size: 11, weight: .bold))
+                                .foregroundStyle(appearance.accentColor)
+                                .tracking(1.6)
 
-                        if let player = favoritePlayer {
                             Text(player.name)
                                 .font(ThemeManager.roundedFont(size: 26, weight: .bold))
                                 .foregroundStyle(.white)
@@ -148,8 +128,8 @@ struct HomeDashboardView: View {
                                 .minimumScaleFactor(0.85)
                                 .shadow(color: .black.opacity(0.35), radius: 6, y: 1)
                         }
+                        .frame(maxWidth: 200, alignment: .leading)
                     }
-                    .frame(maxWidth: 200, alignment: .leading)
 
                     Spacer(minLength: 8)
 
@@ -158,45 +138,49 @@ struct HomeDashboardView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, safeTop + 10)
 
-                if showsFavoriteMediaHint {
-                    Text("Photo & season record unavailable (API limit). Rank still updates from cache.")
-                        .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .padding(.horizontal, 20)
-                        .padding(.top, 10)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-
-                // Rank + record sit low; name stays high so it doesn't fight the torso.
-                VStack(alignment: .leading, spacing: 6) {
-                    if let rank = liveRank {
-                        Text("\(rank)")
-                            .font(WidgetTheme.displayFont(size: 92, weight: .black))
-                            .fontWidth(.compressed)
-                            .foregroundStyle(.white)
-                            .tracking(-5)
-                            .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
+                if hasFavoritePlayer {
+                    if showsFavoriteMediaHint {
+                        Text("Photo & season record unavailable (API limit). Rank still updates from cache.")
+                            .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.5))
+                            .padding(.horizontal, 20)
+                            .padding(.top, 10)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    if let record = favoritePlayer?.displaySeasonRecord {
-                        let total = record.wins + record.losses
-                        let winRate = total > 0
-                            ? Int((Double(record.wins) / Double(total) * 100).rounded())
-                            : 0
-                        Text(verbatim: "\(record.wins)–\(record.losses)  ·  \(winRate)%")
-                            .font(ThemeManager.roundedFont(size: 14, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.58))
-                    } else if favoritePlayer?.isCustom == true {
-                        Text("Season record unavailable")
-                            .font(ThemeManager.roundedFont(size: 13, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.4))
+                    Spacer(minLength: 0)
+
+                    // Rank + record sit low; name stays high so it doesn't fight the torso.
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let rank = liveRank {
+                            Text("\(rank)")
+                                .font(WidgetTheme.displayFont(size: 92, weight: .black))
+                                .fontWidth(.compressed)
+                                .foregroundStyle(.white)
+                                .tracking(-5)
+                                .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
+                        }
+
+                        if let record = favoritePlayer?.displaySeasonRecord {
+                            let total = record.wins + record.losses
+                            let winRate = total > 0
+                                ? Int((Double(record.wins) / Double(total) * 100).rounded())
+                                : 0
+                            Text(verbatim: "\(record.wins)–\(record.losses)  ·  \(winRate)%")
+                                .font(ThemeManager.roundedFont(size: 14, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.58))
+                        } else if favoritePlayer?.isCustom == true {
+                            Text("Season record unavailable")
+                                .font(ThemeManager.roundedFont(size: 13, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.4))
+                        }
                     }
+                    .padding(.leading, 20)
+                    .padding(.bottom, 28)
+                    .frame(maxWidth: 180, alignment: .leading)
+                } else {
+                    favoritePlayerEmptyState
                 }
-                .padding(.leading, 20)
-                .padding(.bottom, 28)
-                .frame(maxWidth: 180, alignment: .leading)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -205,20 +189,11 @@ struct HomeDashboardView: View {
     @ViewBuilder
     private func playerHeroBackground(safeTop: CGFloat) -> some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(hex: 0x1F7A4A),
-                    ThemeManager.emeraldGreen,
-                    Color(hex: 0x0C2A1A),
-                    ThemeManager.midnightGreen,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            CourtifyHeroBackground(topOpacity: 0.95, midOpacity: 0.5)
 
             LinearGradient(
                 colors: [
-                    ThemeManager.opticYellow.opacity(0.08),
+                    appearance.accentColor.opacity(0.08),
                     .clear,
                 ],
                 startPoint: .top,
@@ -244,6 +219,49 @@ struct HomeDashboardView: View {
             && !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
+    private var favoritePlayerEmptyState: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Spacer(minLength: 0)
+
+            Image(systemName: "star.fill")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(appearance.accentColor)
+
+            Text("Pick your favorite player")
+                .font(ThemeManager.roundedFont(size: 26, weight: .bold))
+                .foregroundStyle(.white)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Your #1 pick shows up here with live rank, season record, and hero photo.")
+                .font(ThemeManager.roundedFont(size: 15, weight: .medium))
+                .foregroundStyle(.white.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                showPlayerPicker = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.system(size: 15, weight: .bold))
+                    Text("Choose player")
+                        .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
+                }
+                .foregroundStyle(appearance.canvasColor)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(appearance.accentColor)
+                .clipShape(Capsule())
+            }
+            .courtifyButton(.primary)
+            .padding(.top, 4)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
     // MARK: - Grand Slam countdown
 
     private var grandSlamCountdownSection: some View {
@@ -252,8 +270,8 @@ struct HomeDashboardView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            slamHighlight.opacity(0.9),
-                            slamHighlight.opacity(0.3),
+                            appearance.accentColor.opacity(0.9),
+                            appearance.accentColor.opacity(0.3),
                             .white.opacity(0.06),
                         ],
                         startPoint: .leading,
@@ -266,11 +284,11 @@ struct HomeDashboardView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
                         Capsule()
-                            .fill(slamHighlight)
+                            .fill(appearance.accentColor)
                             .frame(width: 18, height: 3)
                         Text("NEXT GRAND SLAM")
                             .font(ThemeManager.roundedFont(size: 11, weight: .bold))
-                            .foregroundStyle(slamHighlight.opacity(0.95))
+                            .foregroundStyle(appearance.accentColor.opacity(0.95))
                             .tracking(1.5)
                     }
 
@@ -311,13 +329,13 @@ struct HomeDashboardView: View {
     private var grandSlamBackground: some View {
         ZStack(alignment: .leading) {
             LinearGradient(
-                colors: [slamLift, slamBase],
+                colors: [appearance.liftColor.opacity(0.55), appearance.canvasColor],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
             Rectangle()
-                .fill(slamHighlight)
+                .fill(appearance.accentColor)
                 .frame(width: 3)
                 .opacity(0.9)
 
@@ -334,29 +352,15 @@ struct HomeDashboardView: View {
                 .monospacedDigit()
             Text(label)
                 .font(ThemeManager.roundedFont(size: 10, weight: .bold))
-                .foregroundStyle(slamHighlight.opacity(0.8))
+                .foregroundStyle(appearance.accentColor.opacity(0.8))
                 .tracking(1.3)
-        }
-    }
-}
-
-// MARK: - Tournament → Grand Slam
-
-private extension TournamentEvent {
-    var grandSlam: GrandSlam? {
-        guard tier == .grandSlam else { return nil }
-        return GrandSlam.allCases.first {
-            name.localizedCaseInsensitiveContains($0.rawValue)
-                || (shortName == "AO" && $0 == .australianOpen)
-                || (shortName == "RG" && $0 == .frenchOpen)
-                || (shortName == "WIM" && $0 == .wimbledon)
-                || (shortName == "USO" && $0 == .usOpen)
         }
     }
 }
 
 struct GetPremiumPill: View {
     let action: () -> Void
+    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     var body: some View {
         Button(action: action) {
@@ -371,7 +375,7 @@ struct GetPremiumPill: View {
             .padding(.vertical, 9)
             .background(
                 LinearGradient(
-                    colors: [ThemeManager.emeraldGreen, ThemeManager.emeraldGreen.opacity(0.85)],
+                    colors: [appearance.liftColor, appearance.liftColor.opacity(0.85)],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
@@ -379,7 +383,7 @@ struct GetPremiumPill: View {
             .clipShape(Capsule())
             .overlay {
                 Capsule()
-                    .strokeBorder(ThemeManager.opticYellow.opacity(0.25), lineWidth: 1)
+                    .strokeBorder(appearance.accentColor.opacity(0.25), lineWidth: 1)
             }
         }
         .courtifyButton(.ghost)

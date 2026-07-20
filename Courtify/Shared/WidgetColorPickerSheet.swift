@@ -7,6 +7,7 @@ struct WidgetColorPickerSheet: View {
     var onRequestPaywall: (() -> Void)?
 
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var appearance = AppAppearanceStore.shared
     @StateObject private var revenueCat = RevenueCatManager.shared
     @AppStorage(AppGroupConstants.Keys.tourPreference, store: AppGroupConstants.userDefaults)
     private var tourPreferenceRaw = TourPreference.atp.rawValue
@@ -55,7 +56,7 @@ struct WidgetColorPickerSheet: View {
                 .padding(20)
                 .padding(.bottom, 36)
             }
-            .background(ThemeManager.midnightGreen.ignoresSafeArea())
+            .background(appearance.canvasColor.ignoresSafeArea())
             .navigationTitle("Customize")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -91,7 +92,7 @@ struct WidgetColorPickerSheet: View {
                     .courtifyButton(.ghost)
                 }
             }
-            .toolbarBackground(ThemeManager.midnightGreen, for: .navigationBar)
+            .courtifyThemedNavigationBar()
         }
         .preferredColorScheme(.dark)
         .presentationDetents([.medium, .large], selection: $sheetDetent)

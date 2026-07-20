@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         OfferNotificationManager.registerCategories()
+        AppIconManager.applyStoredLogoBall()
         return true
     }
 

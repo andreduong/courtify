@@ -29,6 +29,32 @@ enum FavoritePlayerEnricher {
         AppGroupConstants.userDefaults.removeObject(forKey: mediaAlertPresentedKey)
     }
 
+    /// Headshots for picker top-5 rows — apiIds from cached rankings, no lookup calls.
+    @MainActor
+    static func prefetchPickerHeadshots(payload: WidgetDataPayload?) async {
+        guard let payload else { return }
+        let players = FavoritePlayerCatalog.topRankedPlayers(payload: payload, preferLivePhotos: true)
+        for player in players {
+            guard let entry = FavoritePlayerCatalog.payloadRankingEntry(for: player, payload: payload),
+                  let apiId = entry.player.id, apiId > 0 else { continue }
+
+            if PlayerRankCache.apiId(for: player.id) == nil {
+                PlayerRankCache.store(
+                    rank: entry.rank ?? player.ranking,
+                    apiId: apiId,
+                    name: player.name,
+                    photosVerified: false,
+                    for: player.id
+                )
+            }
+
+            guard !PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head) else { continue }
+            if await PlayerPhotoFetcher.ensureHeadPhoto(for: player, payload: payload, apiId: apiId) {
+                PlayerRankCache.markPhotosVerified(for: player.id)
+            }
+        }
+    }
+
     @MainActor
     static func ensureLoaded(playerID: String, payload: WidgetDataPayload?) async {
         guard let player = FavoritePlayerCatalog.resolvedPlayer(id: playerID, payload: payload),

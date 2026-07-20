@@ -70,6 +70,35 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
     }
 
     var color: Color { Color(hex: hex) }
+
+    /// Highlights — stars, ranking labels, primary buttons, countdown accents.
+    var accentHex: UInt {
+        switch self {
+        case .courtify: 0xCCFF00
+        case .midnight: 0xCCFF00
+        case .hardcourt: 0x4A90D9
+        case .clay: 0xE35205
+        case .grass: 0x35C77F
+        case .berry: 0x9B6BFF
+        case .carbon: 0xB8C0C8
+        }
+    }
+
+    /// Hero / widget gradient lift atop the canvas.
+    var liftHex: UInt {
+        switch self {
+        case .courtify: 0x00703C
+        case .midnight: 0x1A2820
+        case .hardcourt: 0x1A4A78
+        case .clay: 0x8A2E05
+        case .grass: 0x0A4A28
+        case .berry: 0x4A2868
+        case .carbon: 0x2A3238
+        }
+    }
+
+    var accentColor: Color { Color(hex: accentHex) }
+    var liftColor: Color { Color(hex: liftHex) }
 }
 
 enum LogoBallPreset: String, CaseIterable, Identifiable {
@@ -118,6 +147,8 @@ final class AppAppearanceStore: ObservableObject {
     @Published private(set) var logoBall: LogoBallPreset
 
     var canvasColor: Color { theme.color }
+    var accentColor: Color { theme.accentColor }
+    var liftColor: Color { theme.liftColor }
     var logoBallColor: Color { logoBall.color }
 
     private init() {
@@ -138,11 +169,64 @@ final class AppAppearanceStore: ObservableObject {
         guard logoBall != preset else { return }
         logoBall = preset
         AppGroupConstants.userDefaults.set(preset.rawValue, forKey: AppGroupConstants.Keys.logoBallPreset)
+        AppIconManager.applyLogoBall(preset)
         NotificationCenter.default.post(name: AppGroupConstants.appAppearanceDidChange, object: nil)
     }
 }
 
 // MARK: - View Modifiers
+
+/// Emerald → app canvas gradient (Rankings, Schedule hero tops).
+struct CourtifyHeroBackground: View {
+    var topOpacity: Double = 0.95
+    var midOpacity: Double = 0.5
+    @ObservedObject private var appearance = AppAppearanceStore.shared
+
+    var body: some View {
+        LinearGradient(
+            colors: [
+                appearance.liftColor.opacity(topOpacity),
+                appearance.liftColor.opacity(midOpacity),
+                appearance.canvasColor,
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+}
+
+/// Full-screen canvas with optional soft emerald wash (share screen, modals).
+struct CourtifyThemeBackdrop: View {
+    var heroWash: Bool = false
+    @ObservedObject private var appearance = AppAppearanceStore.shared
+
+    var body: some View {
+        ZStack {
+            appearance.canvasColor.ignoresSafeArea()
+            if heroWash {
+                LinearGradient(
+                    colors: [
+                        appearance.liftColor.opacity(0.35),
+                        appearance.canvasColor,
+                        appearance.canvasColor,
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            }
+        }
+    }
+}
+
+struct CourtifyThemedNavigationBar: ViewModifier {
+    @ObservedObject private var appearance = AppAppearanceStore.shared
+
+    func body(content: Content) -> some View {
+        content.toolbarBackground(appearance.canvasColor, for: .navigationBar)
+    }
+}
 
 struct CourtifyBackground: ViewModifier {
     @ObservedObject private var appearance = AppAppearanceStore.shared
@@ -177,6 +261,10 @@ struct GlassCardModifier: ViewModifier {
 extension View {
     func courtifyBackground() -> some View {
         modifier(CourtifyBackground())
+    }
+
+    func courtifyThemedNavigationBar() -> some View {
+        modifier(CourtifyThemedNavigationBar())
     }
 
     func glassCard(cornerRadius: CGFloat = 20, padding: CGFloat = 16) -> some View {

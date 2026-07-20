@@ -7,11 +7,12 @@ enum FavoritePlayerCatalog {
 
     static func topRankedPlayers(
         payload: WidgetDataPayload?,
-        perTourLimit: Int = defaultPerTourLimit
+        perTourLimit: Int = defaultPerTourLimit,
+        preferLivePhotos: Bool = false
     ) -> [TennisPlayer] {
         guard let payload else { return [] }
-        let atp = rankedPlayers(from: payload.rankings.atp, tour: .atp, limit: perTourLimit)
-        let wta = rankedPlayers(from: payload.rankings.wta, tour: .wta, limit: perTourLimit)
+        let atp = rankedPlayers(from: payload.rankings.atp, tour: .atp, limit: perTourLimit, preferLivePhotos: preferLivePhotos)
+        let wta = rankedPlayers(from: payload.rankings.wta, tour: .wta, limit: perTourLimit, preferLivePhotos: preferLivePhotos)
         return atp + wta
     }
 
@@ -19,18 +20,33 @@ enum FavoritePlayerCatalog {
         topRankedPlayers(payload: WidgetPayloadReader.loadCached(), perTourLimit: perTourLimit)
     }
 
+    /// Cached Worker top ranks when available; bundled featured catalog otherwise.
+    static func pickerPlayers(
+        payload: WidgetDataPayload?,
+        perTourLimit: Int = defaultPerTourLimit
+    ) -> [TennisPlayer] {
+        let cached = topRankedPlayers(payload: payload, perTourLimit: perTourLimit, preferLivePhotos: true)
+        if !cached.isEmpty { return cached }
+        return TennisPlayer.topPlayers
+    }
+
     static func rankedPlayers(
         from entries: [WidgetRankingEntry],
         tour: TourPreference,
-        limit: Int
+        limit: Int,
+        preferLivePhotos: Bool = false
     ) -> [TennisPlayer] {
         entries
             .filter { $0.rank != nil }
             .prefix(limit)
-            .map { player(from: $0, tour: tour) }
+            .map { player(from: $0, tour: tour, preferLivePhotos: preferLivePhotos) }
     }
 
-    static func player(from entry: WidgetRankingEntry, tour: TourPreference) -> TennisPlayer {
+    static func player(
+        from entry: WidgetRankingEntry,
+        tour: TourPreference,
+        preferLivePhotos: Bool = false
+    ) -> TennisPlayer {
         let rank = entry.rank ?? 0
         let apiName = entry.player.name
         if let bundled = bundledPlayer(matching: apiName, tour: tour) {
@@ -38,7 +54,7 @@ enum FavoritePlayerCatalog {
                 id: bundled.id,
                 name: bundled.name,
                 tour: tour,
-                imageName: bundled.imageName,
+                imageName: preferLivePhotos ? nil : bundled.imageName,
                 ranking: rank
             )
         }

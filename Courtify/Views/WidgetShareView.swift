@@ -22,19 +22,7 @@ struct WidgetShareView: View {
 
     var body: some View {
         ZStack {
-            ThemeManager.midnightGreen.ignoresSafeArea()
-
-            LinearGradient(
-                colors: [
-                    ThemeManager.emeraldGreen.opacity(0.35),
-                    ThemeManager.midnightGreen,
-                    ThemeManager.midnightGreen,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            CourtifyThemeBackdrop(heroWash: true)
 
             VStack(spacing: 0) {
                 header
@@ -198,6 +186,8 @@ private struct WidgetShareCanvas: View {
     let tour: TourPreference
     let payload: WidgetDataPayload?
 
+    @ObservedObject private var appearance = AppAppearanceStore.shared
+
     private let canvasWidth: CGFloat = 360
     private let canvasHeight: CGFloat = 640
 
@@ -220,9 +210,9 @@ private struct WidgetShareCanvas: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(hex: 0x00703C),
-                    ThemeManager.midnightGreen,
-                    ThemeManager.midnightGreen,
+                    ThemeManager.emeraldGreen.opacity(0.85),
+                    appearance.canvasColor,
+                    appearance.canvasColor,
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

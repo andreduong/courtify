@@ -3,13 +3,19 @@ import SwiftUI
 struct FavoritePlayerPickerSheet: View {
     @Binding var favoritePlayerID: String
     @ObservedObject private var dataStore = WidgetDataStore.shared
+    @ObservedObject private var appearance = AppAppearanceStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var searchQuery = ""
     @State private var isSaving = false
+    @State private var photoRefreshToken = 0
     @FocusState private var isSearchFocused: Bool
 
     private var rankedPlayers: [TennisPlayer] {
-        FavoritePlayerCatalog.topRankedPlayers(payload: dataStore.payload)
+        FavoritePlayerCatalog.pickerPlayers(payload: dataStore.payload)
+    }
+
+    private var isRefreshingRankings: Bool {
+        dataStore.isLoading && dataStore.payload == nil
     }
 
     private var searchSuggestions: [TennisPlayer] {
@@ -22,22 +28,22 @@ struct FavoritePlayerPickerSheet: View {
                 VStack(spacing: 0) {
                     searchSection
 
-                    if rankedPlayers.isEmpty {
-                        emptyRankingsHint
-                    } else {
-                        if !atpPlayers.isEmpty {
-                            sectionHeader("ATP")
-                            playerRows(atpPlayers)
-                        }
-                        if !wtaPlayers.isEmpty {
-                            sectionHeader("WTA")
-                            playerRows(wtaPlayers)
-                        }
+                    if isRefreshingRankings {
+                        rankingsLoadingRow
+                    }
+
+                    if !atpPlayers.isEmpty {
+                        sectionHeader("ATP")
+                        playerRows(atpPlayers)
+                    }
+                    if !wtaPlayers.isEmpty {
+                        sectionHeader("WTA")
+                        playerRows(wtaPlayers)
                     }
                 }
                 .padding(.top, 8)
             }
-            .background(ThemeManager.midnightGreen.ignoresSafeArea())
+            .background(appearance.canvasColor.ignoresSafeArea())
             .navigationTitle("Favorite player")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -48,8 +54,11 @@ struct FavoritePlayerPickerSheet: View {
                         .courtifyButton(.ghost)
                 }
             }
-            .onAppear {
-                dataStore.loadCachedPayload()
+            .courtifyThemedNavigationBar()
+            .task {
+                await dataStore.ensureRankingsLoaded()
+                await FavoritePlayerEnricher.prefetchPickerHeadshots(payload: dataStore.payload)
+                photoRefreshToken += 1
             }
             .overlay {
                 if isSaving {
@@ -72,13 +81,17 @@ struct FavoritePlayerPickerSheet: View {
         rankedPlayers.filter { $0.tour == .wta }
     }
 
-    private var emptyRankingsHint: some View {
-        Text("Pull to refresh on Rankings or Widgets to load the latest top 5.")
-            .font(ThemeManager.roundedFont(.footnote))
-            .foregroundStyle(.white.opacity(0.55))
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 16)
+    private var rankingsLoadingRow: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+                .tint(ThemeManager.opticYellow)
+            Text("Loading latest rankings…")
+                .font(ThemeManager.roundedFont(.footnote, weight: .medium))
+                .foregroundStyle(.white.opacity(0.55))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -104,6 +117,7 @@ struct FavoritePlayerPickerSheet: View {
         } label: {
             HStack(spacing: 14) {
                 TennisPlayerPhotoView(player: player, style: .headshot, size: 44)
+                    .id("\(player.id)-\(photoRefreshToken)")
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(player.name)
@@ -157,6 +171,7 @@ struct FavoritePlayerPickerSheet: View {
                         } label: {
                             HStack(spacing: 12) {
                                 TennisPlayerPhotoView(player: player, style: .headshot, size: 36)
+                                    .id("\(player.id)-\(photoRefreshToken)")
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(player.name)

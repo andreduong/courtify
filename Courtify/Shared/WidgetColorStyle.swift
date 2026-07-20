@@ -190,6 +190,8 @@ enum WidgetColorStyle {
             return .tournamentDefault
         }
         switch widgetID {
+        case "favorite", "favorite-medium":
+            return favoriteConfigFromAppTheme()
         case "atp-medium", "atp-large":
             return WidgetColorConfig(
                 presetID: WidgetColorPreset.hardcourt.rawValue,
@@ -341,6 +343,30 @@ enum WidgetColorStyle {
 
     static func texture(for widgetID: String) -> WidgetTexturePreset {
         config(for: widgetID).resolvedTexture
+    }
+
+    private static func favoriteConfigFromAppTheme() -> WidgetColorConfig {
+        let preset = widgetColorPresetMatchingAppTheme()
+        return WidgetColorConfig(
+            presetID: preset.rawValue,
+            gradientLevel: 0.72,
+            customAccentHex: nil,
+            textureID: WidgetTexturePreset.aurora.rawValue
+        )
+    }
+
+    /// Maps app-group `appThemePreset` without importing app-only theme types (widget target shares this file).
+    private static func widgetColorPresetMatchingAppTheme() -> WidgetColorPreset {
+        let raw = AppGroupConstants.userDefaults.string(forKey: AppGroupConstants.Keys.appThemePreset) ?? "courtify"
+        switch raw {
+        case WidgetColorPreset.midnight.rawValue: return .midnight
+        case WidgetColorPreset.hardcourt.rawValue: return .hardcourt
+        case WidgetColorPreset.clay.rawValue: return .clay
+        case WidgetColorPreset.grass.rawValue: return .grass
+        case WidgetColorPreset.berry.rawValue: return .berry
+        case "carbon": return .slate
+        default: return .courtify
+        }
     }
 
     private static func preferredTour() -> TourPreference {

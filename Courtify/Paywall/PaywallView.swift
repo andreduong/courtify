@@ -200,7 +200,7 @@ struct PaywallView: View {
     @ViewBuilder
     private var paywallBackground: some View {
         ZStack {
-            ThemeManager.midnightGreen.ignoresSafeArea()
+            CourtifyThemeBackdrop()
             // Full-bleed size so GeometryReader clip doesn't truncate the loop;
             // marquee still uses window safe-top to pin row 0 under the clock.
             CourtifyMarqueeBackground()

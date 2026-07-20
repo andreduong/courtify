@@ -204,16 +204,17 @@ private struct CourtifyPrimaryButtonLabelModifier: ViewModifier {
     var verticalPadding: CGFloat = 16
     var isFilled: Bool = true
     var fillOpacity: Double = 1
+    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     func body(content: Content) -> some View {
         content
             .font(ThemeManager.roundedFont(.headline, weight: .semibold))
-            .foregroundStyle(isFilled ? ThemeManager.midnightGreen : .white)
+            .foregroundStyle(isFilled ? appearance.canvasColor : .white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, verticalPadding)
             .background {
                 if isFilled {
-                    ThemeManager.opticYellow.opacity(fillOpacity)
+                    appearance.accentColor.opacity(fillOpacity)
                 } else {
                     Color.white.opacity(0.12)
                 }

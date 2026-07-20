@@ -49,15 +49,7 @@ struct RankingsView: View {
 
     private var heroBackground: some View {
         ZStack(alignment: .bottomTrailing) {
-            LinearGradient(
-                colors: [
-                    ThemeManager.emeraldGreen.opacity(0.95),
-                    ThemeManager.emeraldGreen.opacity(0.5),
-                    ThemeManager.midnightGreen,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            CourtifyHeroBackground()
 
             if let leader, let bundled = bundledPlayer(for: leader) {
                 CachedBundledImage(name: bundled.heroImageName, contentMode: .fit)

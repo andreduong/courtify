@@ -43,15 +43,7 @@ struct ScheduleView: View {
     // MARK: - Hero
 
     private var heroBackground: some View {
-        LinearGradient(
-            colors: [
-                ThemeManager.emeraldGreen.opacity(0.9),
-                ThemeManager.emeraldGreen.opacity(0.45),
-                ThemeManager.midnightGreen,
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
+        CourtifyHeroBackground(topOpacity: 0.9, midOpacity: 0.45)
     }
 
     @ViewBuilder

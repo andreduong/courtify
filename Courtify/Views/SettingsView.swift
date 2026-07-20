@@ -323,9 +323,7 @@ struct SettingsView: View {
 
     private var footer: some View {
         VStack(spacing: 10) {
-            CachedBundledImage(name: "courtify-logo", contentMode: .fill)
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            CourtifyLogoMark(size: 56)
 
             Text("Courtify")
                 .font(ThemeManager.roundedFont(.headline, weight: .bold))
@@ -403,11 +401,12 @@ private struct FavoriteCard<Artwork: View>: View {
     let subtitle: String
     let action: () -> Void
     @ViewBuilder var artwork: () -> Artwork
+    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             LinearGradient(
-                colors: [ThemeManager.emeraldGreen.opacity(0.85), ThemeManager.midnightGreen],
+                colors: [appearance.liftColor.opacity(0.85), appearance.canvasColor],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -437,7 +436,7 @@ private struct FavoriteCard<Artwork: View>: View {
                 Button(action: action) {
                     Text("Change")
                         .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
-                        .foregroundStyle(ThemeManager.midnightGreen)
+                        .foregroundStyle(appearance.canvasColor)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(Color.white)

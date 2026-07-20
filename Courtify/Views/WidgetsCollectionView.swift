@@ -4,7 +4,7 @@ import SwiftUI
 
 private enum WidgetGalleryFilter: String, CaseIterable, Identifiable {
     case all = "All"
-    case lockscreen = "Lock"
+    case lockscreen = "Lockscreen"
     case small = "Small"
     case medium = "Medium"
     case large = "Large"
@@ -214,6 +214,9 @@ struct WidgetsCollectionView: View {
         .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { _ in
             colorRefreshTick += 1
         }
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.appAppearanceDidChange)) { _ in
+            colorRefreshTick += 1
+        }
     }
 
     private var freeExplainer: some View {
@@ -228,22 +231,30 @@ struct WidgetsCollectionView: View {
     private var filterBar: some View {
         HStack(spacing: 3) {
             ForEach(WidgetGalleryFilter.allCases) { filter in
+                let isSelected = selectedFilter == filter
                 Button {
                     CourtifyMotion.animateSelection { selectedFilter = filter }
                 } label: {
                     Text(filter.rawValue)
-                        .font(ThemeManager.roundedFont(size: 11, weight: .semibold))
-                        .foregroundStyle(selectedFilter == filter ? .white : .white.opacity(0.65))
+                        .font(ThemeManager.roundedFont(size: 11, weight: isSelected ? .bold : .semibold))
+                        .foregroundStyle(isSelected ? ThemeManager.opticYellow : .white.opacity(0.65))
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
-                        .background(selectedFilter == filter ? Color.white.opacity(0.18) : Color.clear)
-                        .clipShape(Capsule())
+                        .overlay(alignment: .bottom) {
+                            if isSelected {
+                                Capsule()
+                                    .fill(ThemeManager.opticYellow)
+                                    .frame(height: 2)
+                                    .padding(.horizontal, 2)
+                            }
+                        }
                 }
                 .courtifyButton(.ghost)
             }
         }
+        .courtifySelectionFeedback(selectedFilter)
     }
 
     // MARK: Sections

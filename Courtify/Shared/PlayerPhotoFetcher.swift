@@ -9,6 +9,30 @@ enum PlayerPhotoFetcher {
     }
 
     @discardableResult
+    static func ensureHeadPhoto(
+        for player: TennisPlayer,
+        payload: WidgetDataPayload?,
+        apiId: Int? = nil
+    ) async -> Bool {
+        if player.imageName != nil {
+            return true
+        }
+
+        let resolvedPayload = payload ?? WidgetPayloadReader.loadCached()
+        guard let ref = apiPlayer(for: player, payload: resolvedPayload, overrideApiId: apiId) else {
+            return false
+        }
+
+        do {
+            try PlayerPhotoStore.ensureDirectory()
+        } catch {
+            return false
+        }
+
+        return await download(playerID: player.id, ref: ref, variant: .head)
+    }
+
+    @discardableResult
     static func ensurePhotos(
         for player: TennisPlayer,
         payload: WidgetDataPayload?,
