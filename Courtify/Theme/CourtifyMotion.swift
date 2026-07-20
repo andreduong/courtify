@@ -1,9 +1,11 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Motion Tokens
 
 /// Central motion + press system for Courtify. Apply via `.courtifyButton(...)`
-/// (or the app-root default) so every control shares the same haptic and spring.
+/// (or the app-root `.courtifyInteractiveChrome()`) so every control — and every
+/// non-button surface tap — shares the same haptic and spring.
 enum CourtifyMotion {
     enum Direction {
         case forward
@@ -18,10 +20,13 @@ enum CourtifyMotion {
     static let reveal = Animation.spring(response: 0.5, dampingFraction: 0.9)
     static let exit = Animation.spring(response: 0.36, dampingFraction: 0.92)
 
-    static let pressedScalePrimary: CGFloat = 0.968
-    static let pressedScaleCard: CGFloat = 0.982
+    static let pressedScalePrimary: CGFloat = 0.96
+    static let pressedScaleCard: CGFloat = 0.97
     static let pressedScaleIcon: CGFloat = 0.88
-    static let pressedScaleGhost: CGFloat = 0.975
+    static let pressedScaleGhost: CGFloat = 0.96
+    static let pressedScaleRow: CGFloat = 0.978
+    /// Whole-surface press (non-button taps) — subtle so scrollable screens stay calm.
+    static let pressedScaleSurface: CGFloat = 0.991
     static let selectedScale: CGFloat = 1.02
 
     /// Soft impact on touch-down — matches system control feel (iOS 17+).
@@ -36,6 +41,11 @@ enum CourtifyMotion {
         case .ghost, .row:
             .impact(flexibility: .soft, intensity: 0.5)
         }
+    }
+
+    /// Soft tap for empty canvas / non-control presses (buttons keep their own haptic).
+    static var surfacePressFeedback: SensoryFeedback {
+        .impact(flexibility: .soft, intensity: 0.4)
     }
 
     static func screenTransition(_ direction: Direction) -> AnyTransition {
@@ -140,13 +150,13 @@ struct CourtifyPressButtonStyle: ButtonStyle {
         case .ghost:
             return CourtifyMotion.pressedScaleGhost
         case .row:
-            return CourtifyMotion.pressedScaleCard
+            return CourtifyMotion.pressedScaleRow
         }
     }
 
     private func opacity(isPressed: Bool) -> Double {
         if !effectivelyEnabled { return 0.5 }
-        return isPressed ? 0.92 : 1
+        return isPressed ? 0.9 : 1
     }
 }
 
@@ -199,6 +209,223 @@ private struct CourtifySelectionModifier: ViewModifier {
     }
 }
 
+/// Default `Button` press style + installs the window-level surface press once.
+/// Nested calls are safe (gesture is idempotent per window).
+private struct CourtifyInteractiveChromeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .buttonStyle(.courtify(.ghost))
+            .background {
+                CourtifyWindowPressInstaller()
+            }
+    }
+}
+
+/// Passive window gesture: soft scale + dim on *any* touch (including non-buttons),
+/// cancelled when the finger moves (scroll). Does not steal taps from controls.
+private struct CourtifyWindowPressInstaller: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        context.coordinator.hostView = view
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.hostView = uiView
+        context.coordinator.attachIfNeeded()
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.hostView = nil
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        weak var hostView: UIView?
+
+        func attachIfNeeded() {
+            guard let window = hostView?.window else { return }
+            CourtifyWindowSurfacePress.shared.install(on: window, delegate: self)
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            false
+        }
+
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            false
+        }
+    }
+}
+
+/// Singleton per-window press feedback so the entire app (including sheets) animates
+/// without stacking SwiftUI `scaleEffect` modifiers.
+@MainActor
+private final class CourtifyWindowSurfacePress: NSObject {
+    static let shared = CourtifyWindowSurfacePress()
+
+    private weak var window: UIWindow?
+    private var recognizer: UILongPressGestureRecognizer?
+    private weak var dimView: UIView?
+    private var pressOrigin: CGPoint = .zero
+    private var isPressed = false
+    private let moveSlop: CGFloat = 10
+    private let haptic = UIImpactFeedbackGenerator(style: .soft)
+
+    func install(on window: UIWindow, delegate: UIGestureRecognizerDelegate) {
+        if self.window === window, recognizer != nil {
+            recognizer?.delegate = delegate
+            return
+        }
+
+        if let recognizer, let old = self.window {
+            old.removeGestureRecognizer(recognizer)
+        }
+        dimView?.removeFromSuperview()
+        dimView = nil
+        resetVisuals(animated: false)
+
+        let gesture = UILongPressGestureRecognizer(
+            target: self,
+            action: #selector(handlePress(_:))
+        )
+        gesture.minimumPressDuration = 0
+        gesture.cancelsTouchesInView = false
+        gesture.delaysTouchesBegan = false
+        gesture.delaysTouchesEnded = false
+        gesture.delegate = delegate
+        window.addGestureRecognizer(gesture)
+
+        self.window = window
+        recognizer = gesture
+        haptic.prepare()
+    }
+
+    @objc private func handlePress(_ gesture: UILongPressGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            pressOrigin = gesture.location(in: gesture.view)
+            setPressed(true)
+        case .changed:
+            let point = gesture.location(in: gesture.view)
+            let dx = point.x - pressOrigin.x
+            let dy = point.y - pressOrigin.y
+            if hypot(dx, dy) > moveSlop {
+                setPressed(false)
+                gesture.isEnabled = false
+                gesture.isEnabled = true
+            }
+        case .ended, .cancelled, .failed:
+            setPressed(false)
+        default:
+            break
+        }
+    }
+
+    private func setPressed(_ pressed: Bool) {
+        guard isPressed != pressed else { return }
+        isPressed = pressed
+        if pressed {
+            haptic.impactOccurred(intensity: 0.4)
+            haptic.prepare()
+            applyPressedVisuals()
+        } else {
+            resetVisuals(animated: true)
+        }
+    }
+
+    private func applyPressedVisuals() {
+        guard let window else { return }
+        let target = window.rootViewController?.view ?? window
+
+        UIView.animate(
+            withDuration: 0.18,
+            delay: 0,
+            options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseOut]
+        ) {
+            target.transform = CGAffineTransform(
+                scaleX: CourtifyMotion.pressedScaleSurface,
+                y: CourtifyMotion.pressedScaleSurface
+            )
+        }
+
+        let dim = dimView ?? {
+            let view = UIView(frame: window.bounds)
+            view.backgroundColor = UIColor.black.withAlphaComponent(0.05)
+            view.isUserInteractionEnabled = false
+            view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            view.alpha = 0
+            window.addSubview(view)
+            dimView = view
+            return view
+        }()
+        dim.frame = window.bounds
+        window.bringSubviewToFront(dim)
+
+        UIView.animate(
+            withDuration: 0.18,
+            delay: 0,
+            options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseOut]
+        ) {
+            dim.alpha = 1
+        }
+    }
+
+    private func resetVisuals(animated: Bool) {
+        guard let window else {
+            dimView?.removeFromSuperview()
+            dimView = nil
+            return
+        }
+        let target = window.rootViewController?.view ?? window
+        let dim = dimView
+
+        let animations = {
+            target.transform = .identity
+            dim?.alpha = 0
+        }
+        let completion: (Bool) -> Void = { _ in
+            if !self.isPressed {
+                dim?.removeFromSuperview()
+                if self.dimView === dim {
+                    self.dimView = nil
+                }
+            }
+        }
+
+        if animated {
+            UIView.animate(
+                withDuration: 0.22,
+                delay: 0,
+                options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut],
+                animations: animations,
+                completion: completion
+            )
+        } else {
+            animations()
+            completion(true)
+        }
+    }
+}
+
 private struct CourtifyPrimaryButtonLabelModifier: ViewModifier {
     var cornerRadius: CGFloat = 14
     var verticalPadding: CGFloat = 16
@@ -229,9 +456,10 @@ extension View {
         buttonStyle(.courtify(style, enabled: enabled))
     }
 
-    /// App-root default so unlabeled buttons still get Courtify press feedback.
+    /// App-root chrome: default button press + universal surface press (scale/dim/haptic)
+    /// for any tap, including non-buttons. Safe to call from sheets — gesture is one per window.
     func courtifyInteractiveChrome() -> some View {
-        buttonStyle(.courtify(.ghost))
+        modifier(CourtifyInteractiveChromeModifier())
     }
 
     func courtifySelection(_ isSelected: Bool, scale: CGFloat = CourtifyMotion.selectedScale) -> some View {

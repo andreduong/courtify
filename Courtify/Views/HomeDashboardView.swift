@@ -17,6 +17,7 @@ struct HomeDashboardView: View {
     @State private var now = Date()
     @State private var photoRefreshToken = 0
     @State private var showMediaUnavailableAlert = false
+    @State private var showQuotaAlert = false
 
     private var hasFavoritePlayer: Bool {
         !favoritePlayerID.isEmpty
@@ -72,17 +73,29 @@ struct HomeDashboardView: View {
 
     var body: some View {
         // App-theme canvas bleeds under the translucent tab bar + home indicator.
+        // ScrollView is viewport-tall (no free scroll) so pull-to-refresh works
+        // without changing the flex hero + fixed countdown layout.
         CourtifyFullBleedScreen { safeTop, size in
-            VStack(spacing: 0) {
-                playerHeroSection(safeTop: safeTop)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+            ScrollView {
+                VStack(spacing: 0) {
+                    playerHeroSection(safeTop: safeTop)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
 
-                // Content-sized band; slam `canvasColor` bleeds under the tab bar.
-                grandSlamCountdownSection
-                    .fixedSize(horizontal: false, vertical: true)
+                    // Content-sized band; slam `canvasColor` bleeds under the tab bar.
+                    grandSlamCountdownSection
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(width: size.width, height: size.height, alignment: .top)
             }
-            .frame(width: size.width, height: size.height, alignment: .top)
+            .scrollIndicators(.hidden)
+            .refreshable {
+                await dataStore.refresh()
+                if dataStore.quotaExceededOnLastRefresh {
+                    showQuotaAlert = true
+                }
+            }
+            .tint(ThemeManager.opticYellow)
         }
         // Slam chrome under the countdown panel + tab bar; hero above stays on app theme.
         .toolbarBackground(slamBase, for: .tabBar)
@@ -121,6 +134,11 @@ struct HomeDashboardView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("We've hit today's tennis API photo limit. Your rank still shows from cache; the photo will load automatically once quota resets.")
+        }
+        .alert("API quota reached", isPresented: $showQuotaAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("We've hit the Tennis API quota for now. Your last saved rankings are still shown.")
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(
@@ -180,33 +198,48 @@ struct HomeDashboardView: View {
                     Spacer(minLength: 0)
 
                     // Rank + record sit low; name stays high so it doesn't fight the torso.
-                    VStack(alignment: .leading, spacing: 6) {
-                        if let rank = liveRank {
-                            Text("\(rank)")
-                                .font(WidgetTheme.displayFont(size: 92, weight: .black))
-                                .fontWidth(.compressed)
-                                .foregroundStyle(.white)
-                                .tracking(-5)
-                                .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
-                        }
+                    VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            if let rank = liveRank {
+                                Text("\(rank)")
+                                    .font(WidgetTheme.displayFont(size: 92, weight: .black))
+                                    .fontWidth(.compressed)
+                                    .foregroundStyle(.white)
+                                    .tracking(-5)
+                                    .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
+                            }
 
-                        if let record = favoritePlayer?.displaySeasonRecord {
-                            let total = record.wins + record.losses
-                            let winRate = total > 0
-                                ? Int((Double(record.wins) / Double(total) * 100).rounded())
-                                : 0
-                            Text(verbatim: "\(record.wins)–\(record.losses)  ·  \(winRate)%")
-                                .font(ThemeManager.roundedFont(size: 14, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.58))
-                        } else if favoritePlayer?.isCustom == true {
-                            Text("Season record unavailable")
-                                .font(ThemeManager.roundedFont(size: 13, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.4))
+                            if let record = favoritePlayer?.displaySeasonRecord {
+                                let total = record.wins + record.losses
+                                let winRate = total > 0
+                                    ? Int((Double(record.wins) / Double(total) * 100).rounded())
+                                    : 0
+                                Text(verbatim: "\(record.wins)–\(record.losses)  ·  \(winRate)%")
+                                    .font(ThemeManager.roundedFont(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.58))
+                            } else if favoritePlayer?.isCustom == true {
+                                Text("Season record unavailable")
+                                    .font(ThemeManager.roundedFont(size: 13, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.4))
+                            }
                         }
+                        .frame(maxWidth: 180, alignment: .leading)
+
+                        HStack(spacing: 4) {
+                            LastUpdatedLabel(date: dataStore.lastUpdated)
+                            if dataStore.lastUpdated != nil {
+                                Text("· Pull down to refresh")
+                                    .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                                    .foregroundStyle(.white.opacity(0.35))
+                            }
+                        }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                     }
                     .padding(.leading, 20)
+                    .padding(.trailing, 20)
                     .padding(.bottom, 28)
-                    .frame(maxWidth: 180, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     favoritePlayerEmptyState
                 }
@@ -282,6 +315,16 @@ struct HomeDashboardView: View {
                 .clipShape(Capsule())
             }
             .courtifyButton(.primary)
+            .padding(.top, 4)
+
+            HStack(spacing: 4) {
+                LastUpdatedLabel(date: dataStore.lastUpdated)
+                if dataStore.lastUpdated != nil {
+                    Text("· Pull down to refresh")
+                        .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.35))
+                }
+            }
             .padding(.top, 4)
 
             Spacer(minLength: 0)

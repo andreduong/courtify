@@ -161,10 +161,13 @@ struct OnboardingFlowView: View {
             .courtifyScreenContent()
             .padding(.top, onboardingContentTopInset)
         case .allSet:
-            OnboardingCompleteView(
-                favoritePlayerName: TennisPlayer.displayName(for: draftFavoritePlayerID),
-                onContinue: { navigateForward(.paywall) }
-            )
+            CourtifyLoadingScreen()
+                .task {
+                    // Brief beat so the transition reads before paywall.
+                    try? await Task.sleep(for: .milliseconds(650))
+                    guard path.last == .allSet else { return }
+                    navigateForward(.paywall)
+                }
         case .paywall:
             PaywallView(
                 favoritePlayerID: draftFavoritePlayerID,

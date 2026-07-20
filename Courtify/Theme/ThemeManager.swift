@@ -126,7 +126,7 @@ enum LogoBallPreset: String, CaseIterable, Identifiable {
 
     var hex: UInt {
         switch self {
-        case .courtify: 0x35C77F // Courtify green (logo ball default)
+        case .courtify: AppThemePreset.courtify.accentHex
         case .hardcourt: 0x4A90D9
         case .clay: 0xE35205
         case .grass: 0x006633

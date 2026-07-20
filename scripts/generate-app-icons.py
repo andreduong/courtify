@@ -14,7 +14,7 @@ ASSETS = ROOT / "Courtify" / "Assets.xcassets"
 ICON_MASTER = ASSETS / "AppIcon.appiconset" / "AppIcon-1024.png"
 
 ICON_PRESETS: dict[str, tuple[int, int, int]] = {
-    "AppIcon": (0x35, 0xC7, 0x7F),  # courtify (primary)
+    "AppIcon": (0xCC, 0xFF, 0x00),  # courtify (primary) — brand optic accent
     "AppIcon-Hardcourt": (0x4A, 0x90, 0xD9),
     "AppIcon-Clay": (0xE3, 0x52, 0x05),
     "AppIcon-Grass": (0x00, 0x66, 0x33),

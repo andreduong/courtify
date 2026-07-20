@@ -51,7 +51,9 @@ private struct AppRootView: View {
         .animation(CourtifyMotion.screen, value: isBootstrapped)
         .animation(CourtifyMotion.screen, value: shouldShowHome)
         .background(appearance.canvasColor.ignoresSafeArea())
-        // Default press scale + soft haptic for every Button in the hierarchy.
+        // Universal press: every Button gets scale + haptic; any surface tap
+        // (hero, empty canvas, non-controls) also soft-scales. Nested sheets can
+        // call this again — only the outermost install owns the window gesture.
         // Explicit `.courtifyButton(.primary/.card/.icon/…)` still overrides per control.
         .courtifyInteractiveChrome()
         .task {
@@ -79,10 +81,6 @@ private struct AppRootView: View {
     }
 
     private var bootstrapView: some View {
-        ZStack {
-            appearance.canvasColor.ignoresSafeArea()
-            ProgressView()
-                .tint(ThemeManager.opticYellow)
-        }
+        CourtifyLoadingScreen()
     }
 }

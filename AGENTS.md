@@ -38,9 +38,9 @@ This repo has two parts:
 | Settings / favorites | `SettingsView` + `AppGroupConstants` | Write prefs outside app group (widgets won't see them) |
 | Simulator screenshots | `UITestLaunchArgs` + `simctl launch` flags | Install tap/scroll automation (none available) |
 
-**UI language:** F1-app dark mode — `midnightGreen` base, `emeraldGreen`→`midnightGreen` gradient heroes, white rounded type, `opticYellow` highlights, `courtGreen` tile subtitles, hairline dividers. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)` — root `.courtifyInteractiveChrome()` gives every `Button` soft press-down `sensoryFeedback` + scale; override with `.courtifyButton(.primary/.card/.icon/.row/…)`. Selection (tabs, tour, toggles) uses `.courtifySelectionFeedback`.
+**UI language:** F1-app dark mode — `midnightGreen` base, `emeraldGreen`→`midnightGreen` gradient heroes, white rounded type, `opticYellow` highlights, `courtGreen` tile subtitles, hairline dividers. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)` — root `.courtifyInteractiveChrome()` gives every `Button` soft press-down `sensoryFeedback` + scale, **and** a universal surface press (subtle scale + dim + soft haptic) on any non-button tap so Home / Schedule / Rankings feel responsive without per-screen wiring. Override buttons with `.courtifyButton(.primary/.card/.icon/.row/…)`. Selection (tabs, tour, toggles) uses `.courtifySelectionFeedback`.
 
-**API cost rule:** RapidAPI Matchstat **Pro ($29/mo)** is required — Basic 50/day is insufficient. Worker data refreshes on **user pull-to-refresh** (Rankings, Widgets) or the **one-time onboarding exception**. Custom lookup / photo / season-record only on favorite **pick**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
+**API cost rule:** RapidAPI Matchstat **Pro ($29/mo)** is required — Basic 50/day is insufficient. Worker data refreshes on **user pull-to-refresh** (Home, Rankings, Widgets) or the **one-time onboarding exception**. Custom lookup / photo / season-record only on favorite **pick**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
 
 **Verify your work:** build → `simctl install` → `simctl launch … -UITestHome [-UITestTab …]` → wait ~7s (bootstrap spinner) → screenshot. See [Simulator testing](#simulator-testing-for-agents) below.
 
@@ -269,7 +269,7 @@ If a new screen needs a full-bleed top, **extend one of these** — do not hand-
 - **Hero image:** bundled `player-{id}-hero` for featured players; `PlayerTorsoPhotoView` for custom picks (verified API cache) or `PlayerSilhouetteView` (ATP/WTA) — **never** letter placeholders.
 - **Rank:** `FavoritePlayerCatalog.displayRank` — widget payload top 20 first, then `PlayerRankCache` only when `photosVerified`.
 - **Get Premium:** single pill beside "Next Grand Slam" only (not in the status-bar toolbar).
-- **Data:** `loadCachedPayload()` on appear only — no automatic Worker refresh.
+- **Data:** `loadCachedPayload()` on appear; pull-to-refresh via viewport-tall `ScrollView` + `.refreshable { await dataStore.refresh() }` (same quota alert as Rankings). Hero shows `LastUpdatedLabel` + "· Pull down to refresh".
 - **Grand Slam countdown bg:** `AssetCatalogImage` for slam logos (not `CachedBundledImage`).
 
 ### Schedule tab (`ScheduleView`)
@@ -312,8 +312,9 @@ type, `opticYellow` for highlights/countdowns, `courtGreen` for accent subtitles
 on tiles, hairline `CourtifyTileDivider` between rows. Haptics/animation come
 exclusively from `CourtifyMotion` + `.courtifyButton(...)` (soft `sensoryFeedback`
 impact on press-down) — applied app-wide via `.courtifyInteractiveChrome()` on the
-root, with per-control overrides (`.primary` / `.card` / `.icon` / `.row` / …).
-Selection changes (tabs, tour pills, toggles) use `.courtifySelectionFeedback`.
+root (also animates non-button surface taps). Override with per-control
+`.courtifyButton(...)`. Selection changes (tabs, tour pills, toggles) use
+`.courtifySelectionFeedback`.
 Do not introduce other animation curves or haptic APIs.
 
 ### Widgets tab (gallery)
@@ -342,12 +343,13 @@ Gating rules:
 ### Data refresh policy (API cost control)
 
 **Default rule:** live Worker data refreshes **only when the user pulls to refresh**
-(Rankings and Widgets tabs). On appear, screens call `dataStore.loadCachedPayload()`
+(Home, Rankings, and Widgets tabs). On appear, screens call `dataStore.loadCachedPayload()`
 only, and show `LastUpdatedLabel` plus a pull-to-refresh hint. Do not add
 auto-refresh timers or on-appear `refresh()` without an explicit product request.
 
 | Surface | Data source | Network? |
 |---------|-------------|----------|
+| Home tab (favorite rank) | Cached Worker payload | Pull-to-refresh only |
 | Rankings tab (20 rows/tour) | Cached Worker payload | Pull-to-refresh only |
 | Widgets gallery — rankings / live / order of play | Same cache | Pull-to-refresh only |
 | Widgets gallery — tournaments | `TournamentCalendar` (bundled 2026) | Never |
