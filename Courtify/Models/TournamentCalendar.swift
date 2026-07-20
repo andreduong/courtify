@@ -128,4 +128,12 @@ enum TournamentCalendar {
             max(0, components.minute ?? 0)
         )
     }
+
+    /// Grand Slam progress for Lock Screen season widgets (bundled calendar only).
+    static func seasonSlamProgress(for tour: TourPreference) -> (completed: Int, total: Int) {
+        let today = calendar.startOfDay(for: Date())
+        let slams = events(for: tour).filter { $0.tier == .grandSlam }
+        let completed = slams.filter { $0.endDate < today }.count
+        return (completed, max(slams.count, 1))
+    }
 }

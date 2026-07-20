@@ -31,7 +31,7 @@ This repo has two parts:
 | Widget content inset | `WidgetTheme.contentInsets` (16pt + stamp clearance) on home widget copy | Per-widget ad-hoc `.padding(14)`; bare `contentInset` that crowds the stamp |
 | Widget “made by” stamp | `.courtifyWidgetCanvas()` (default stamp) / `WidgetMadeByStamp` | Home widgets without stamp; Lock Screen with stamp (use `stamp: .none`) |
 | Widget atmosphere | `WidgetAtmosphere` + hatch + surface accent bars (no muddy slam logos as bg) | Flat single-color fills; faded tournament logos behind copy |
-| Widget colors (Premium) | `WidgetColorStyle` + `WidgetColorPickerSheet` (app group) | Recoloring tournament widgets (`next-*`, `countdown`, `calendar`) |
+| Widget colors (Premium) | `WidgetColorStyle` + `WidgetColorPickerSheet` (app group) | Skipping Tournament theme default on `next-*` / `countdown` / `calendar` |
 | Widgets gallery catalog | `CourtifyWidgetCatalog` (+ `WidgetsCollectionView`) | Duplicate gallery lists that drift from WidgetKit kinds |
 | Home-screen + Lock Screen widgets | `CourtifyWidget/` + `CourtifyWidgetBundle` (`OtherBundle().body` when >10) | Leave gallery-only widgets unregistered; nest `WidgetBundle()` as a `Widget` |
 | Tab chrome | `ProfileIconButton`, `TourPillToggle`, `LastUpdatedLabel`, `CourtifyTileDivider` | Duplicate profile/settings entry points or introduce new haptic/animation curves |
@@ -333,7 +333,7 @@ Gating rules:
 - The Favorite player widget uses **bundled season record** + `FavoritePlayerCatalog.resolvedPlayer` for rank when available; bundled `-hero` for featured players. Custom picks show verified API photos or empty hero (no letter placeholders).
 - **Gallery small widgets** are **165×165 pt squares** (`previewHeight` width = height); lone small cards align leading, not full-width.
 - **Unlocked card tap** → `WidgetShareView` (`.courtifyButton(.card)` haptic + modal) with Share → system share sheet. Shared image includes **Made by Courtify on App Store** stamp.
-- Person control on favorite opens `FavoritePlayerPickerSheet`; color control opens `WidgetColorPickerSheet` (or paywall when free).
+- Person control on favorite opens `FavoritePlayerPickerSheet`; color control on home-screen cards opens `WidgetColorPickerSheet` (or paywall when free). Tournament cards default to Tournament theme.
 - Rankings / live / order-of-play cards read `WidgetDataStore` (cached payload;
   pull-to-refresh only). Tournament cards read the bundled
   `TournamentCalendar` (zero API cost).
@@ -523,16 +523,69 @@ Use this loop every session — do not rediscover setup:
 7. **Widget gallery item IDs** for `-UITestWidgetOnly`:
    `favorite`, `favorite-medium`, `next-small`, `countdown`, `next-large`, `calendar`,
    `atp-medium`, `atp-large`, `wta-medium`, `wta-large`, `live`, `order`,
-   `lock-rank`, `lock-countdown`, `lock-next`, `lock-live`
+   `lock-badge`, `lock-badge-rect`, `lock-rank`, `lock-player`, `lock-season`,
+   `lock-season-rect`, `lock-countdown`, `lock-next`, `lock-live`
 
 8. **No tap/scroll automation** — relaunch with different args/prefs instead of
-   trying to tap filter pills or pull to refresh.
+   trying to tap filter pills or pull to refresh. (Lock Screen add-widget flow is the
+   exception — see [Lock Screen widget testing](#lock-screen-widget-testing-for-agents).)
 
 9. **Layout checks from screenshots:** PRO badge overlapping row 1 (reserve ~56pt
    trailing inset in widget previews), slam logos stretched (use `.fit` not
    `.fill`), bottom tab bar cropping (scroll bottom padding in layout containers).
 
 **Simulator:** iPhone 17 Pro `744F6ACA-F0CC-4105-8794-D798EF7726CC`
+
+## Lock Screen widget testing (for agents)
+
+`simctl` cannot lock the device, long-press the Lock Screen, or add widgets. Use gallery
+flags for visual QA; use **axe** for real Lock Screen install.
+
+**IDs / tooling**
+
+| | |
+|--|--|
+| Simulator | `744F6ACA-F0CC-4105-8794-D798EF7726CC` |
+| Bundle | `com.courtify.xyz` |
+| axe | `/usr/local/Cellar/xcodebuildmcp/2.6.2/libexec/bundled/axe` |
+| Gallery QA | `-UITestWidgetOnly lock-*` — `lock-badge`, `lock-badge-rect`, `lock-rank`, `lock-player`, `lock-season`, `lock-season-rect`, `lock-countdown`, `lock-next`, `lock-live` |
+| Catalog groups | Badges → Favorite player → Season progress → Tournament countdown → Live score |
+
+**Gallery (fast visual QA)**
+
+```bash
+xcrun simctl launch "$UDID" com.courtify.xyz -UITestHome -UITestTab widgets -UITestWidgetOnly lock-next
+sleep 6
+xcrun simctl io "$UDID" screenshot /tmp/lock-next-gallery.png
+```
+
+**Real Lock Screen (verified — sim passcode off)**
+
+```bash
+UDID=744F6ACA-F0CC-4105-8794-D798EF7726CC
+AXE=/usr/local/Cellar/xcodebuildmcp/2.6.2/libexec/bundled/axe
+open -a Simulator
+# Launch Courtify once after install so CourtifyWidget.appex registers
+xcrun simctl launch "$UDID" com.courtify.xyz -UITestHome; sleep 2
+"$AXE" button home --udid "$UDID"; sleep 0.6
+"$AXE" button lock --udid "$UDID"; sleep 0.8
+"$AXE" button lock --udid "$UDID"; sleep 1.0   # often need lock twice from Home
+"$AXE" touch -x 201 -y 400 --down --up --delay 2.0 --udid "$UDID"; sleep 2
+"$AXE" tap --label Customize --element-type Button --wait-timeout 3 --udid "$UDID" || true
+# ADD WIDGETS — on iPhone 17 Pro tap ~y 650 (clock/date open the wrong sheet)
+"$AXE" tap -x 201 -y 650 --tap-style physical --udid "$UDID"; sleep 1.2
+"$AXE" tap --label Courtify --wait-timeout 2 --udid "$UDID"   # if ambiguous, tap list row coords from describe-ui
+```
+
+After rebuild/install, SpringBoard may cache old chrome: relaunch app, `launchctl kickstart -k system/com.apple.SpringBoard`, lock again.
+
+**Design rules (Lock Screen kinds)**
+
+- Background: `AccessoryWidgetBackground` via `containerBackground` only (once)
+- No white `strokeBorder`; no `contentMarginsDisabled`; no `.courtifyWidgetCanvas` (its max-frame causes full-bleed boxing); `stamp: .none`
+- Short copy (`USO` / `NYC`, not `USO · NEW YORK`); circular gauges via `.accessoryCircularCapacity`
+- Locked CTA: `PremiumWordmark` (“Subscribe to PREMIUM”)
+- Gallery previews: `LockScreenGalleryFrame` + `showsPreviewPlate` (system `AccessoryWidgetBackground` is empty outside WidgetKit)
 
 ### Local dev modes (agents)
 
@@ -635,12 +688,12 @@ after TestFlight install.
   (`Premium 🎾` badge → paywall). Unlocked card tap → `WidgetShareView` + Share
   (system share sheet) with `MadeByCourtifyAppStoreStamp` on the share asset.
   Small = 165×165 leading-aligned. Overlay chrome:
-  color control (top-trailing, Premium) on customizable ids; person control (bottom-trailing)
-  on favorite for player pick. Tournament ids (`next-small`, `countdown`, `next-large`,
-  `calendar`) keep surface/brand gradients — no recolor.
+  color control (top-trailing, Premium) on all home-screen gallery cards; person control
+  (bottom-trailing) on favorite for player pick. Tournament ids default to **Tournament**
+  theme (live slam/surface brand); users can switch to fixed color presets.
   Previews via `WidgetGalleryPreview` (shared with share screen).
 - **Widget color prefs:** app-group key `widgetColorStyles` via `WidgetColorStyle`;
-  preset accent + gradient level; free users tapping color → paywall.
+  Tournament theme + preset accents + gradient/texture; free users tapping color → paywall.
 - **Onboarding player cards:** horizontal scroll, star on primary pick, bundled search sheet
   for out-of-top-10 names.
 

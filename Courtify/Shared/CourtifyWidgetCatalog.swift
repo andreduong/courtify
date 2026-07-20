@@ -35,6 +35,8 @@ enum CourtifyWidgetCatalog {
     struct Section: Identifiable {
         let id: String
         let title: String
+        /// Box Box–style gallery / picker subtitle under the section title.
+        var subtitle: String? = nil
         let items: [Item]
     }
 
@@ -48,12 +50,15 @@ enum CourtifyWidgetCatalog {
     static let wtaStandingsKind = "WTAStandingsWidget"
     static let liveScoresKind = "LiveScoresWidget"
     static let orderOfPlayKind = "OrderOfPlayWidget"
+    static let lockScreenBadgeKind = "LockScreenBadgeWidget"
     static let lockScreenRankKind = "LockScreenRankWidget"
+    static let lockScreenFavoriteKind = "LockScreenFavoriteWidget"
+    static let lockScreenSeasonKind = "LockScreenSeasonWidget"
     static let lockScreenCountdownKind = "LockScreenCountdownWidget"
     static let lockScreenNextKind = "LockScreenNextWidget"
     static let lockScreenLiveKind = "LockScreenLiveWidget"
 
-    /// Unique WidgetKit kinds in registration order.
+    /// Unique WidgetKit kinds in registration order (Lock Screen fan-first).
     static let allKinds: [String] = [
         favoritePlayerKind,
         nextTournamentKind,
@@ -63,7 +68,10 @@ enum CourtifyWidgetCatalog {
         wtaStandingsKind,
         liveScoresKind,
         orderOfPlayKind,
+        lockScreenBadgeKind,
         lockScreenRankKind,
+        lockScreenFavoriteKind,
+        lockScreenSeasonKind,
         lockScreenCountdownKind,
         lockScreenNextKind,
         lockScreenLiveKind,
@@ -92,12 +100,51 @@ enum CourtifyWidgetCatalog {
             Item(id: "live", title: "Live scores", size: .small, kind: liveScoresKind, placement: .homeScreen),
             Item(id: "order", title: "Order of play", size: .large, kind: orderOfPlayKind, placement: .homeScreen),
         ]),
-        Section(id: "lock", title: "Lock Screen", items: [
-            Item(id: "lock-rank", title: "Favorite rank", size: .small, kind: lockScreenRankKind, placement: .lockScreen, isFree: true),
-            Item(id: "lock-countdown", title: "Countdown", size: .small, kind: lockScreenCountdownKind, placement: .lockScreen),
-            Item(id: "lock-next", title: "Next tournament", size: .medium, kind: lockScreenNextKind, placement: .lockScreen),
-            Item(id: "lock-live", title: "Live score", size: .medium, kind: lockScreenLiveKind, placement: .lockScreen),
-        ]),
+        // Lock Screen — hardcore-fan order (mirrors Box Box: badges → favorite → season → countdown → live)
+        Section(
+            id: "lock-badges",
+            title: "Badges",
+            subtitle: "Style your Lock Screen with Grand Slam badges. Premium.",
+            items: [
+                Item(id: "lock-badge", title: "Slam badge", size: .small, kind: lockScreenBadgeKind, placement: .lockScreen),
+                Item(id: "lock-badge-rect", title: "Slam badge", size: .medium, kind: lockScreenBadgeKind, placement: .lockScreen),
+            ]
+        ),
+        Section(
+            id: "lock-favorite",
+            title: "Favorite player",
+            subtitle: "Rank and season stats for your player. Rank is free.",
+            items: [
+                Item(id: "lock-rank", title: "Favorite rank", size: .small, kind: lockScreenRankKind, placement: .lockScreen, isFree: true),
+                Item(id: "lock-player", title: "Favorite player", size: .medium, kind: lockScreenFavoriteKind, placement: .lockScreen),
+            ]
+        ),
+        Section(
+            id: "lock-season",
+            title: "Season progress",
+            subtitle: "Win rate and Grand Slam progress. Premium.",
+            items: [
+                Item(id: "lock-season", title: "Season progress", size: .small, kind: lockScreenSeasonKind, placement: .lockScreen),
+                Item(id: "lock-season-rect", title: "Season progress", size: .medium, kind: lockScreenSeasonKind, placement: .lockScreen),
+            ]
+        ),
+        Section(
+            id: "lock-countdown",
+            title: "Tournament countdown",
+            subtitle: "Next major on your tour. Premium.",
+            items: [
+                Item(id: "lock-countdown", title: "Countdown", size: .small, kind: lockScreenCountdownKind, placement: .lockScreen),
+                Item(id: "lock-next", title: "Next tournament", size: .medium, kind: lockScreenNextKind, placement: .lockScreen),
+            ]
+        ),
+        Section(
+            id: "lock-live",
+            title: "Live score",
+            subtitle: "Live match score on the Lock Screen. Premium.",
+            items: [
+                Item(id: "lock-live", title: "Live score", size: .medium, kind: lockScreenLiveKind, placement: .lockScreen),
+            ]
+        ),
     ]
 
     static var allItems: [Item] {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Premium sheet: pick a preset / custom accent + gradient strength for one gallery widget.
+/// Premium sheet: pick Tournament theme / preset / custom accent + gradient for one gallery widget.
 struct WidgetColorPickerSheet: View {
     let widgetID: String
     let title: String
@@ -8,6 +8,8 @@ struct WidgetColorPickerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var revenueCat = RevenueCatManager.shared
+    @AppStorage(AppGroupConstants.Keys.tourPreference, store: AppGroupConstants.userDefaults)
+    private var tourPreferenceRaw = TourPreference.atp.rawValue
     @State private var draft: WidgetColorConfig
     @State private var sheetDetent: PresentationDetent = .large
     @State private var customColor: Color
@@ -17,13 +19,20 @@ struct WidgetColorPickerSheet: View {
         revenueCat.isProUser || AppGroupConstants.referralBypassActive
     }
 
+    private var preferredTour: TourPreference {
+        let tour = TourPreference(rawValue: tourPreferenceRaw) ?? .atp
+        return tour == .both ? .atp : tour
+    }
+
     init(widgetID: String, title: String, onRequestPaywall: (() -> Void)? = nil) {
         self.widgetID = widgetID
         self.title = title
         self.onRequestPaywall = onRequestPaywall
         let initial = WidgetColorStyle.config(for: widgetID)
         _draft = State(initialValue: initial)
-        _customColor = State(initialValue: initial.resolvedAccent)
+        _customColor = State(initialValue: initial.isTournament
+            ? WidgetColorStyle.tournamentThemeAccent()
+            : initial.resolvedAccent)
     }
 
     var body: some View {
@@ -37,32 +46,40 @@ struct WidgetColorPickerSheet: View {
                     }
 
                     // Gradient sits above the color grid so the thumb stays clear of the home indicator.
-                    gradientSection
-                    textureSection
+                    if !draft.isTournament {
+                        gradientSection
+                        textureSection
+                    }
                     presetSection
                 }
                 .padding(20)
                 .padding(.bottom, 36)
             }
             .background(ThemeManager.midnightGreen.ignoresSafeArea())
-            .navigationTitle("Widget color")
+            .navigationTitle("Customize")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Reset") {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
                         guard isEntitled else {
                             presentPaywall()
                             return
                         }
                         WidgetColorStyle.reset(widgetID)
-                        draft = .default
-                        customColor = draft.resolvedAccent
+                        draft = WidgetColorStyle.defaultConfig(for: widgetID)
+                        customColor = draft.isTournament
+                            ? WidgetColorStyle.tournamentThemeAccent(tour: preferredTour)
+                            : draft.resolvedAccent
+                    } label: {
+                        Text("Reset")
+                            .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .fixedSize()
                     }
-                    .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
                     .courtifyButton(.ghost)
+                    .accessibilityLabel("Reset to default")
                 }
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {
                         if isEntitled {
                             persistDraft(reloadTimelines: true)
@@ -95,28 +112,45 @@ struct WidgetColorPickerSheet: View {
                 .foregroundStyle(.white.opacity(0.5))
 
             ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: previewColors,
-                            startPoint: .top,
-                            endPoint: .bottom
+                if draft.isTournament {
+                    tournamentPreviewBackground
+                } else {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: previewColors,
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                         )
+                    WidgetTextureOverlay(
+                        texture: draft.resolvedTexture,
+                        accent: draft.resolvedAccent
                     )
-                WidgetTextureOverlay(
-                    texture: draft.resolvedTexture,
-                    accent: draft.resolvedAccent
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
             }
             .frame(height: 88)
             .overlay(alignment: .bottomLeading) {
-                Text("Preview")
+                Text(draft.isTournament ? "Tournament theme" : "Preview")
                     .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(14)
             }
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+    }
+
+    @ViewBuilder
+    private var tournamentPreviewBackground: some View {
+        let event = TournamentCalendar.nextMajor(for: preferredTour)
+        if WidgetColorStyle.defaultsToTournamentTheme(widgetID),
+           widgetID == "calendar" {
+            WidgetAtmosphere(accent: Color(hex: 0x143D2B), glowOpacity: 0.35, texture: .velvet)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        } else {
+            widgetSurfaceGradient(for: event)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
 
@@ -159,6 +193,8 @@ struct WidgetColorPickerSheet: View {
                 .foregroundStyle(.white.opacity(0.45))
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 10)], spacing: 10) {
+                tournamentSwatch
+
                 ForEach(WidgetColorPreset.allCases) { preset in
                     Button {
                         guard isEntitled else {
@@ -175,7 +211,7 @@ struct WidgetColorPickerSheet: View {
                         colorSwatch(
                             fill: preset.accent,
                             title: preset.title,
-                            isSelected: !draft.isCustom && draft.presetID == preset.rawValue
+                            isSelected: !draft.isCustom && !draft.isTournament && draft.presetID == preset.rawValue
                         )
                     }
                     .courtifyButton(.ghost)
@@ -184,6 +220,55 @@ struct WidgetColorPickerSheet: View {
                 customColorSwatch
             }
         }
+    }
+
+    private var tournamentSwatch: some View {
+        Button {
+            guard isEntitled else {
+                presentPaywall()
+                return
+            }
+            CourtifyMotion.animateSelection {
+                draft.presetID = WidgetColorConfig.tournamentPresetID
+                draft.customAccentHex = nil
+                customColor = WidgetColorStyle.tournamentThemeAccent(tour: preferredTour)
+            }
+            persistDraft(reloadTimelines: false)
+        } label: {
+            VStack(spacing: 6) {
+                Circle()
+                    .fill(
+                        AngularGradient(
+                            colors: [
+                                Color(hex: GrandSlam.australianOpen.accentColor),
+                                Color(hex: GrandSlam.frenchOpen.accentColor),
+                                Color(hex: GrandSlam.wimbledon.accentColor),
+                                Color(hex: GrandSlam.usOpen.accentColor),
+                                Color(hex: GrandSlam.australianOpen.accentColor),
+                            ],
+                            center: .center
+                        )
+                    )
+                    .frame(width: 36, height: 36)
+                    .overlay {
+                        Circle()
+                            .strokeBorder(
+                                draft.isTournament ? ThemeManager.opticYellow : .white.opacity(0.15),
+                                lineWidth: draft.isTournament ? 2.5 : 1
+                            )
+                    }
+                Text("Tournament")
+                    .font(ThemeManager.roundedFont(.caption2, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(.white.opacity(draft.isTournament ? 0.1 : 0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .courtifyButton(.ghost)
     }
 
     private var customColorSwatch: some View {

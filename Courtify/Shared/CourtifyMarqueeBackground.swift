@@ -291,28 +291,16 @@ private struct MarqueeLiveRow: View {
                 forceAccent: Color(hex: slam.accentColor)
             )
         case .lockRank(let playerID):
-            LockScreenCircularRankView(player: MarqueeShowcaseData.player(id: playerID))
-                .clipShape(Circle())
-                .overlay {
-                    Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
-                }
-                .padding(8)
-                .background(WidgetTheme.midnightGreen)
+            LockScreenCircularRankView(
+                player: MarqueeShowcaseData.player(id: playerID),
+                showsPreviewPlate: true
+            )
+            .padding(10)
         case .lockCountdown:
-            LockScreenCircularCountdownView(tour: tour)
-                .clipShape(Circle())
-                .overlay {
-                    Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
-                }
-                .padding(8)
-                .background(WidgetTheme.midnightGreen)
+            LockScreenCircularCountdownView(tour: tour, showsPreviewPlate: true)
+                .padding(10)
         case .lockNext:
-            LockScreenRectangularNextView(tour: tour)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
-                }
+            LockScreenRectangularNextView(tour: tour, showsPreviewPlate: true)
         }
     }
 }

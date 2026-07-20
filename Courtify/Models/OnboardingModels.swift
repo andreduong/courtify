@@ -386,4 +386,24 @@ enum GrandSlam: String, CaseIterable, Identifiable, Codable {
         case .usOpen: "slam-us-open"
         }
     }
+
+    /// Lock Screen–safe slam code (fits accessory circular/rectangular).
+    var shortCode: String {
+        switch self {
+        case .australianOpen: "AO"
+        case .frenchOpen: "RG"
+        case .wimbledon: "WIM"
+        case .usOpen: "USO"
+        }
+    }
+
+    /// Short city label for Lock Screen copy (avoids truncation).
+    var cityShort: String {
+        switch self {
+        case .australianOpen: "Melbourne"
+        case .frenchOpen: "Paris"
+        case .wimbledon: "London"
+        case .usOpen: "NYC"
+        }
+    }
 }

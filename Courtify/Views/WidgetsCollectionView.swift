@@ -83,7 +83,12 @@ struct WidgetsCollectionView: View {
                 }
             }
             guard !items.isEmpty else { return nil }
-            return CourtifyWidgetCatalog.Section(id: section.id, title: section.title, items: items)
+            return CourtifyWidgetCatalog.Section(
+                id: section.id,
+                title: section.title,
+                subtitle: section.subtitle,
+                items: items
+            )
         }
     }
 
@@ -201,7 +206,7 @@ struct WidgetsCollectionView: View {
     }
 
     private var freeExplainer: some View {
-        Text("Free includes your favorite player widgets (home + Lock Screen rank) — no live data needed. Unlock Premium for live scores, rankings, tournament and Lock Screen countdown widgets.")
+        Text("Free includes your favorite player widgets (home + Lock Screen rank). Unlock Premium for badges, season progress, live scores, rankings, and tournament Lock Screen widgets.")
             .font(ThemeManager.roundedFont(.footnote))
             .foregroundStyle(.white.opacity(0.6))
             .fixedSize(horizontal: false, vertical: true)
@@ -236,9 +241,14 @@ struct WidgetsCollectionView: View {
 
     private func sectionView(_ section: CourtifyWidgetCatalog.Section) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(section.title)
-                .font(ThemeManager.roundedFont(.headline, weight: .bold))
-                .foregroundStyle(.white)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(section.title)
+                    .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                    .foregroundStyle(.white)
+                if let subtitle = section.subtitle {
+                    sectionSubtitle(subtitle)
+                }
+            }
 
             ForEach(chunkedRows(section.items), id: \.first!.id) { row in
                 if row.count == 2 {
@@ -262,6 +272,27 @@ struct WidgetsCollectionView: View {
                     .foregroundStyle(.white.opacity(0.5))
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    /// Renders trailing “Premium.” as the stylized PREMIUM wordmark (Box Box Ultra style).
+    @ViewBuilder
+    private func sectionSubtitle(_ subtitle: String) -> some View {
+        let premiumSuffix = "Premium."
+        if subtitle.hasSuffix(premiumSuffix) {
+            let lead = String(subtitle.dropLast(premiumSuffix.count)).trimmingCharacters(in: .whitespaces)
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text(lead)
+                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+                PremiumWordmark(size: 10)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text(subtitle)
+                .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                .foregroundStyle(.white.opacity(0.5))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -341,18 +372,6 @@ struct WidgetsCollectionView: View {
                 }
                 .courtifyButton(.card)
 
-                if locked {
-                    Text("Premium 🎾")
-                        .font(ThemeManager.roundedFont(.caption2, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.black.opacity(0.45))
-                        .clipShape(Capsule())
-                        .padding(10)
-                        .allowsHitTesting(false)
-                }
-
                 if canRecolor {
                     Button {
                         if isEntitled {
@@ -371,6 +390,26 @@ struct WidgetsCollectionView: View {
                     .courtifyButton(.icon)
                     .padding(10)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                } else if locked {
+                    if item.placement == .lockScreen {
+                        PremiumWordmark(size: 10)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(.black.opacity(0.5))
+                            .clipShape(Capsule())
+                            .padding(10)
+                            .allowsHitTesting(false)
+                    } else {
+                        Text("Premium 🎾")
+                            .font(ThemeManager.roundedFont(.caption2, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.black.opacity(0.45))
+                            .clipShape(Capsule())
+                            .padding(10)
+                            .allowsHitTesting(false)
+                    }
                 }
 
                 if !locked, item.id == "favorite" || item.id == "favorite-medium" {

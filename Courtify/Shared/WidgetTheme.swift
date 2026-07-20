@@ -281,7 +281,7 @@ struct WidgetAccentBar: View {
 
 @ViewBuilder
 func widgetSurfaceGradient(for event: TournamentEvent?) -> some View {
-    if let slam = grandSlam(for: event) {
+    if let slam = grandSlamMatching(event) {
         widgetSlamAtmosphere(slam)
     } else {
         WidgetAtmosphere(accent: WidgetTheme.surfaceAccent(for: event?.surface), texture: .aurora)
@@ -306,7 +306,7 @@ func widgetSlamAtmosphere(_ slam: GrandSlam) -> WidgetAtmosphere {
     )
 }
 
-private func grandSlam(for event: TournamentEvent?) -> GrandSlam? {
+func grandSlamMatching(_ event: TournamentEvent?) -> GrandSlam? {
     guard let event, event.tier == .grandSlam else { return nil }
     return GrandSlam.allCases.first {
         event.name.localizedCaseInsensitiveContains($0.rawValue)
@@ -314,6 +314,49 @@ private func grandSlam(for event: TournamentEvent?) -> GrandSlam? {
             || (event.shortName == "RG" && $0 == .frenchOpen)
             || (event.shortName == "WIM" && $0 == .wimbledon)
             || (event.shortName == "USO" && $0 == .usOpen)
+    }
+}
+
+/// Background for colorable widgets — Tournament theme keeps slam/surface atmosphere;
+/// otherwise uses the saved accent gradient + texture.
+struct WidgetStyledBackground: View {
+    let widgetID: String
+    var event: TournamentEvent? = nil
+    var forceSlam: GrandSlam? = nil
+    /// Season calendar’s bundled tournament look (deep green velvet) when on Tournament theme.
+    var usesCalendarTournamentLook = false
+    var startPoint: UnitPoint = .top
+    var endPoint: UnitPoint = .bottom
+    var fallbackAccent: Color = WidgetTheme.emeraldGreen
+
+    var body: some View {
+        let config = WidgetColorStyle.config(for: widgetID)
+        ZStack {
+            if config.isTournament {
+                if let forceSlam {
+                    widgetSlamAtmosphere(forceSlam)
+                } else if usesCalendarTournamentLook {
+                    WidgetAtmosphere(
+                        accent: Color(hex: 0x143D2B),
+                        glowOpacity: 0.35,
+                        texture: .velvet
+                    )
+                } else {
+                    widgetSurfaceGradient(for: event)
+                }
+            } else {
+                WidgetColorStyle.gradient(
+                    for: widgetID,
+                    fallbackAccent: fallbackAccent,
+                    startPoint: startPoint,
+                    endPoint: endPoint
+                )
+                WidgetTextureOverlay(
+                    texture: config.resolvedTexture,
+                    accent: config.resolvedAccent
+                )
+            }
+        }
     }
 }
 

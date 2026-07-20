@@ -2,9 +2,11 @@ import SwiftUI
 import UIKit
 
 /// Per-widget accent color + gradient strength (app-group, shared with WidgetKit).
-/// Tournament-branded gallery cards stay on surface/slam colors and ignore this store.
+/// Tournament widgets default to the live slam/surface “Tournament” theme; users can
+/// switch to a fixed accent preset (Premium).
 struct WidgetColorConfig: Codable, Equatable {
-    /// Preset id — see `WidgetColorPreset`. Use `"custom"` with `customAccentHex`.
+    /// Preset id — see `WidgetColorPreset`. Use `"custom"` with `customAccentHex`,
+    /// or `"tournament"` for dynamic slam/surface branding.
     var presetID: String
     /// 0 = nearly flat accent, 1 = strong fade into midnight green.
     var gradientLevel: Double
@@ -14,8 +16,16 @@ struct WidgetColorConfig: Codable, Equatable {
     var textureID: String
 
     static let customPresetID = "custom"
+    static let tournamentPresetID = "tournament"
     static let `default` = WidgetColorConfig(
         presetID: WidgetColorPreset.courtify.rawValue,
+        gradientLevel: 0.72,
+        customAccentHex: nil,
+        textureID: WidgetTexturePreset.aurora.rawValue
+    )
+    /// Default for tournament / countdown / calendar gallery cards.
+    static let tournamentDefault = WidgetColorConfig(
+        presetID: tournamentPresetID,
         gradientLevel: 0.72,
         customAccentHex: nil,
         textureID: WidgetTexturePreset.aurora.rawValue
@@ -29,7 +39,14 @@ struct WidgetColorConfig: Codable, Equatable {
         presetID == Self.customPresetID
     }
 
+    var isTournament: Bool {
+        presetID == Self.tournamentPresetID
+    }
+
     var resolvedAccent: Color {
+        if isTournament {
+            return WidgetColorStyle.tournamentThemeAccent()
+        }
         if isCustom, let hex = customAccentHex {
             return Color(hex: hex)
         }
@@ -138,24 +155,56 @@ enum WidgetColorPreset: String, CaseIterable, Identifiable {
 enum WidgetColorStyle {
     static let storeKey = AppGroupConstants.Keys.widgetColorStyles
 
-    /// Gallery / WidgetKit ids that keep tournament brand colors (not user-editable).
-    static let tournamentBrandedIDs: Set<String> = [
+    /// Gallery ids whose default theme is live slam/surface branding.
+    static let tournamentThemeDefaultIDs: Set<String> = [
         "next-small", "countdown", "next-large", "calendar",
     ]
 
+    /// Home-screen gallery ids that show the customize control (Premium).
     static let customizableIDs: Set<String> = [
         "favorite", "favorite-medium",
+        "next-small", "countdown", "next-large", "calendar",
         "atp-medium", "atp-large",
         "wta-medium", "wta-large",
         "live", "order",
+    ]
+
+    /// Size pairs that share one saved style.
+    private static let pairedIDs: [(String, String)] = [
+        ("favorite", "favorite-medium"),
+        ("next-small", "next-large"),
+        ("atp-medium", "atp-large"),
+        ("wta-medium", "wta-large"),
     ]
 
     static func isCustomizable(_ widgetID: String) -> Bool {
         customizableIDs.contains(widgetID)
     }
 
+    static func defaultsToTournamentTheme(_ widgetID: String) -> Bool {
+        tournamentThemeDefaultIDs.contains(widgetID)
+    }
+
+    static func defaultConfig(for widgetID: String) -> WidgetColorConfig {
+        defaultsToTournamentTheme(widgetID) ? .tournamentDefault : .default
+    }
+
     static func config(for widgetID: String) -> WidgetColorConfig {
-        loadMap()[widgetID] ?? .default
+        loadMap()[widgetID] ?? defaultConfig(for: widgetID)
+    }
+
+    static func usesTournamentTheme(_ widgetID: String) -> Bool {
+        config(for: widgetID).isTournament
+    }
+
+    /// Accent for Tournament theme previews (next major slam/surface for preferred tour).
+    static func tournamentThemeAccent(tour: TourPreference? = nil) -> Color {
+        let resolvedTour = tour ?? preferredTour()
+        let event = TournamentCalendar.nextMajor(for: resolvedTour)
+        if let slam = grandSlamMatching(event) {
+            return Color(hex: slam.accentColor)
+        }
+        return WidgetTheme.surfaceAccent(for: event?.surface)
     }
 
     static func set(_ config: WidgetColorConfig, for widgetID: String, reloadTimelines: Bool = true) {
@@ -168,25 +217,47 @@ enum WidgetColorStyle {
             textureID: config.resolvedTexture.rawValue
         )
         map[widgetID] = stored
-        // Keep small + medium favorite cards on the same accent.
-        if widgetID == "favorite" {
-            map["favorite-medium"] = stored
-        } else if widgetID == "favorite-medium" {
-            map["favorite"] = stored
+        for (a, b) in pairedIDs {
+            if widgetID == a {
+                map[b] = stored
+            } else if widgetID == b {
+                map[a] = stored
+            }
         }
         saveMap(map)
         if reloadTimelines {
             WidgetTimelineRefresher.reloadAll()
         }
         NotificationCenter.default.post(name: AppGroupConstants.widgetColorDidChange, object: widgetID)
+        for (a, b) in pairedIDs {
+            if widgetID == a {
+                NotificationCenter.default.post(name: AppGroupConstants.widgetColorDidChange, object: b)
+            } else if widgetID == b {
+                NotificationCenter.default.post(name: AppGroupConstants.widgetColorDidChange, object: a)
+            }
+        }
     }
 
     static func reset(_ widgetID: String) {
         var map = loadMap()
         map.removeValue(forKey: widgetID)
+        for (a, b) in pairedIDs {
+            if widgetID == a {
+                map.removeValue(forKey: b)
+            } else if widgetID == b {
+                map.removeValue(forKey: a)
+            }
+        }
         saveMap(map)
         WidgetTimelineRefresher.reloadAll()
         NotificationCenter.default.post(name: AppGroupConstants.widgetColorDidChange, object: widgetID)
+        for (a, b) in pairedIDs {
+            if widgetID == a {
+                NotificationCenter.default.post(name: AppGroupConstants.widgetColorDidChange, object: b)
+            } else if widgetID == b {
+                NotificationCenter.default.post(name: AppGroupConstants.widgetColorDidChange, object: a)
+            }
+        }
     }
 
     /// Accent → midnight gradient using an explicit accent (marquee / previews).
@@ -216,9 +287,14 @@ enum WidgetColorStyle {
         endPoint: UnitPoint = .bottom
     ) -> LinearGradient {
         let config = config(for: widgetID)
-        let top = config.isCustom
-            ? (config.customAccentHex.map { Color(hex: $0) } ?? fallbackAccent)
-            : (WidgetColorPreset(rawValue: config.presetID)?.accent ?? fallbackAccent)
+        let top: Color
+        if config.isTournament {
+            top = tournamentThemeAccent()
+        } else if config.isCustom {
+            top = config.customAccentHex.map { Color(hex: $0) } ?? fallbackAccent
+        } else {
+            top = WidgetColorPreset(rawValue: config.presetID)?.accent ?? fallbackAccent
+        }
         return gradient(
             accent: top,
             gradientLevel: config.clampedLevel,
@@ -229,6 +305,13 @@ enum WidgetColorStyle {
 
     static func texture(for widgetID: String) -> WidgetTexturePreset {
         config(for: widgetID).resolvedTexture
+    }
+
+    private static func preferredTour() -> TourPreference {
+        let raw = AppGroupConstants.userDefaults.string(forKey: AppGroupConstants.Keys.tourPreference)
+            ?? TourPreference.atp.rawValue
+        let tour = TourPreference(rawValue: raw) ?? .atp
+        return tour == .both ? .atp : tour
     }
 
     private static func loadMap() -> [String: WidgetColorConfig] {

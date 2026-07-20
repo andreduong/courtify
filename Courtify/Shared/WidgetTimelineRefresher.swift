@@ -9,7 +9,10 @@ enum WidgetTimelineRefresher {
     static let wtaStandingsKind = CourtifyWidgetCatalog.wtaStandingsKind
     static let liveScoresKind = CourtifyWidgetCatalog.liveScoresKind
     static let orderOfPlayKind = CourtifyWidgetCatalog.orderOfPlayKind
+    static let lockScreenBadgeKind = CourtifyWidgetCatalog.lockScreenBadgeKind
     static let lockScreenRankKind = CourtifyWidgetCatalog.lockScreenRankKind
+    static let lockScreenFavoriteKind = CourtifyWidgetCatalog.lockScreenFavoriteKind
+    static let lockScreenSeasonKind = CourtifyWidgetCatalog.lockScreenSeasonKind
     static let lockScreenCountdownKind = CourtifyWidgetCatalog.lockScreenCountdownKind
     static let lockScreenNextKind = CourtifyWidgetCatalog.lockScreenNextKind
     static let lockScreenLiveKind = CourtifyWidgetCatalog.lockScreenLiveKind

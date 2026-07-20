@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import WidgetKit
 
 // MARK: - Favorite player (free, bundled)
 
@@ -285,15 +286,18 @@ struct NextTournamentSmallView: View {
     let tour: TourPreference
     /// Paywall marquee — force a Grand Slam brand wash regardless of calendar.
     var forceSlam: GrandSlam? = nil
+    var widgetID: String = "next-small"
+    @State private var colorTick = 0
 
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
         ZStack(alignment: .topLeading) {
-            if let forceSlam {
-                widgetSlamAtmosphere(forceSlam)
-            } else {
-                widgetSurfaceGradient(for: event)
-            }
+            WidgetStyledBackground(
+                widgetID: widgetID,
+                event: event,
+                forceSlam: forceSlam
+            )
+            .id(colorTick)
 
             VStack(alignment: .leading, spacing: 4) {
                 if let event {
@@ -329,21 +333,28 @@ struct NextTournamentSmallView: View {
             .padding(WidgetTheme.contentInsets)
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
     }
 }
 
 struct TournamentCountdownView: View {
     let tour: TourPreference
     var forceSlam: GrandSlam? = nil
+    var widgetID: String = "countdown"
+    @State private var colorTick = 0
 
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
         ZStack {
-            if let forceSlam {
-                widgetSlamAtmosphere(forceSlam)
-            } else {
-                widgetSurfaceGradient(for: event)
-            }
+            WidgetStyledBackground(
+                widgetID: widgetID,
+                event: event,
+                forceSlam: forceSlam
+            )
+            .id(colorTick)
 
             // Soft tennis-ball watermark — not a muddy tournament logo
             Image(systemName: "tennisball.fill")
@@ -385,12 +396,18 @@ struct TournamentCountdownView: View {
             .padding(WidgetTheme.contentInsets)
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
     }
 }
 
 struct NextTournamentLargeView: View {
     let tour: TourPreference
     var forceSlam: GrandSlam? = nil
+    var widgetID: String = "next-large"
+    @State private var colorTick = 0
 
     private var upcoming: [TournamentEvent] {
         let today = Calendar.current.startOfDay(for: Date())
@@ -401,11 +418,12 @@ struct NextTournamentLargeView: View {
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
         ZStack(alignment: .topLeading) {
-            if let forceSlam {
-                widgetSlamAtmosphere(forceSlam)
-            } else {
-                widgetSurfaceGradient(for: event)
-            }
+            WidgetStyledBackground(
+                widgetID: widgetID,
+                event: event,
+                forceSlam: forceSlam
+            )
+            .id(colorTick)
 
             HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -476,12 +494,18 @@ struct NextTournamentLargeView: View {
             .padding(WidgetTheme.contentInsets)
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
     }
 }
 
 struct SeasonCalendarView: View {
     let tour: TourPreference
     var forceSlam: GrandSlam? = nil
+    var widgetID: String = "calendar"
+    @State private var colorTick = 0
 
     private var events: [TournamentEvent] {
         TournamentCalendar.events(for: tour)
@@ -489,11 +513,12 @@ struct SeasonCalendarView: View {
 
     var body: some View {
         ZStack {
-            if let forceSlam {
-                widgetSlamAtmosphere(forceSlam)
-            } else {
-                WidgetAtmosphere(accent: Color(hex: 0x143D2B), glowOpacity: 0.35, texture: .velvet)
-            }
+            WidgetStyledBackground(
+                widgetID: widgetID,
+                forceSlam: forceSlam,
+                usesCalendarTournamentLook: true
+            )
+            .id(colorTick)
 
             VStack(spacing: 10) {
                 Text("2026 \(tour.rawValue) CALENDAR")
@@ -510,6 +535,10 @@ struct SeasonCalendarView: View {
             .padding(WidgetTheme.contentInsets)
         }
         .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
     }
 
     private func widgetCalendarColumn(_ column: [TournamentEvent]) -> some View {
@@ -978,181 +1007,507 @@ struct OrderOfPlayListView: View {
     }
 }
 
-// MARK: - Lock screen previews (gallery)
+// MARK: - Lock Screen (accessory) views
 
-struct LockScreenCircularRankView: View {
-    let player: TennisPlayer?
+/// Stylized Premium wordmark — Box Box “ULTRA” energy, Courtify “PREMIUM”.
+struct PremiumWordmark: View {
+    var size: CGFloat = 14
+
+    var body: some View {
+        Text("PREMIUM")
+            .font(.system(size: size, weight: .black, design: .rounded))
+            .italic()
+            .tracking(1.6)
+            .foregroundStyle(.white)
+            .rotationEffect(.degrees(-3))
+            .shadow(color: .white.opacity(0.2), radius: 0, x: 0.6, y: 0)
+    }
+}
+
+/// Gallery-only frosted plate so Lock Screen previews match accessory chrome
+/// (`AccessoryWidgetBackground` is empty outside WidgetKit).
+struct LockScreenPreviewPlate: View {
+    enum ShapeStyle {
+        case circular
+        case rectangular
+    }
+
+    let style: ShapeStyle
+
+    var body: some View {
+        Group {
+            switch style {
+            case .circular:
+                Circle()
+                    .fill(Color.white.opacity(0.14))
+            case .rectangular:
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.14))
+            }
+        }
+    }
+}
+
+/// Centers accessory-sized Lock Screen content inside the gallery card.
+struct LockScreenGalleryFrame<Content: View>: View {
+    enum Kind {
+        case circular
+        case rectangular
+    }
+
+    let kind: Kind
+    @ViewBuilder let content: () -> Content
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(WidgetTheme.midnightGreen)
+            LinearGradient(
+                colors: [
+                    Color(red: 0.35, green: 0.22, blue: 0.40).opacity(0.55),
+                    Color(red: 0.12, green: 0.14, blue: 0.22).opacity(0.9),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
-            Circle()
-                .stroke(Color.white.opacity(0.22), lineWidth: 4)
-            Circle()
-                .trim(from: 0, to: gaugeProgress)
-                .stroke(
-                    Color.white.opacity(0.95),
-                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-
-            VStack(spacing: 1) {
-                Text(WidgetTheme.ordinalRank(player?.ranking))
-                    .font(WidgetTheme.displayFont(size: 16, weight: .heavy))
-                    .foregroundStyle(.white)
-                Text(shortName)
-                    .font(WidgetTheme.roundedFont(size: 8, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .lineLimit(1)
-            }
-        }
-        .padding(7)
-        .overlay {
-            Circle()
-                .strokeBorder(Color.white.opacity(0.78), lineWidth: 1.5)
+            content()
+                .frame(width: kind == .circular ? 72 : 158, height: kind == .circular ? 72 : 68)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(WidgetTheme.midnightGreen)
-        .courtifyWidgetCanvas(stamp: .none)
+    }
+}
+
+struct LockScreenCircularRankView: View {
+    let player: TennisPlayer?
+    var showsPreviewPlate: Bool = false
+
+    var body: some View {
+        ZStack {
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .circular)
+            }
+            Gauge(value: gaugeProgress) {
+                Image(systemName: "trophy.fill")
+            } currentValueLabel: {
+                VStack(spacing: 0) {
+                    Text(WidgetTheme.ordinalRank(player?.ranking))
+                        .font(WidgetTheme.displayFont(size: 16, weight: .heavy))
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
+                    Text(shortName)
+                        .font(WidgetTheme.roundedFont(size: 7, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            .gaugeStyle(.accessoryCircularCapacity)
+            .tint(.white)
+        }
     }
 
     private var shortName: String {
         guard let player else { return "—" }
-        return player.name.split(separator: " ").last.map(String.init)?.uppercased() ?? player.name
+        let last = player.name.split(separator: " ").last.map(String.init) ?? player.name
+        return String(last.prefix(6)).uppercased()
     }
 
-    private var gaugeProgress: CGFloat {
+    private var gaugeProgress: Double {
         guard let ranking = player?.ranking, ranking > 0 else { return 0.15 }
-        return max(0.12, min(1, 1.0 - CGFloat(ranking - 1) / 20.0))
+        // Keep under a full ring so #1 never reads as a hard white border.
+        return max(0.12, min(0.82, 1.0 - Double(ranking - 1) / 24.0))
     }
 }
 
 struct LockScreenCircularCountdownView: View {
     let tour: TourPreference
+    var showsPreviewPlate: Bool = false
 
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
         let days = event.map { TournamentCalendar.countdown(to: $0).days } ?? 0
+        let code = event?.shortName ?? "—"
 
         ZStack {
-            Circle()
-                .fill(WidgetTheme.midnightGreen)
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .circular)
+            }
+            Gauge(value: min(1, Double(days) / 90.0)) {
+                Image(systemName: "calendar")
+            } currentValueLabel: {
+                VStack(spacing: 0) {
+                    Text("\(days)")
+                        .font(WidgetTheme.displayFont(size: 18, weight: .heavy))
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
+                    Text(code)
+                        .font(WidgetTheme.roundedFont(size: 7, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .gaugeStyle(.accessoryCircularCapacity)
+            .tint(.white)
+        }
+    }
+}
 
-            Circle()
-                .stroke(Color.white.opacity(0.22), lineWidth: 4)
-            Circle()
-                .trim(from: 0, to: min(1, CGFloat(days) / 60.0))
-                .stroke(
-                    Color.white.opacity(0.95),
-                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
+struct LockScreenCircularBadgeView: View {
+    let slam: GrandSlam?
+    var showsPreviewPlate: Bool = false
 
-            VStack(spacing: 0) {
-                Text("\(days)")
-                    .font(WidgetTheme.displayFont(size: 20, weight: .heavy))
-                    .foregroundStyle(.white)
-                Text("DAYS")
-                    .font(WidgetTheme.roundedFont(size: 8, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.55))
+    var body: some View {
+        let code = slam?.shortCode ?? "GS"
+
+        ZStack {
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .circular)
+            }
+            VStack(spacing: 2) {
+                Image(systemName: "tennisball.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .widgetAccentable()
+                Text(code)
+                    .font(WidgetTheme.displayFont(size: 15, weight: .heavy))
+                    .textCase(.uppercase)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
-        .padding(7)
-        .overlay {
-            Circle()
-                .strokeBorder(Color.white.opacity(0.78), lineWidth: 1.5)
+    }
+}
+
+struct LockScreenCircularSeasonView: View {
+    let player: TennisPlayer?
+    let tour: TourPreference
+    var showsPreviewPlate: Bool = false
+
+    var body: some View {
+        ZStack {
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .circular)
+            }
+            Gauge(value: winRateProgress) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+            } currentValueLabel: {
+                VStack(spacing: 0) {
+                    Text(winRateLabel)
+                        .font(WidgetTheme.displayFont(size: 15, weight: .heavy))
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
+                    Text("WIN%")
+                        .font(WidgetTheme.roundedFont(size: 7, weight: .bold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .gaugeStyle(.accessoryCircularCapacity)
+            .tint(.white)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(WidgetTheme.midnightGreen)
-        .courtifyWidgetCanvas(stamp: .none)
+    }
+
+    private var winRateProgress: Double {
+        guard let record = player?.displaySeasonRecord else {
+            let progress = TournamentCalendar.seasonSlamProgress(for: tour)
+            return Double(progress.completed) / Double(progress.total)
+        }
+        let total = record.wins + record.losses
+        guard total > 0 else { return 0.15 }
+        return min(0.92, Double(record.wins) / Double(total))
+    }
+
+    private var winRateLabel: String {
+        guard let record = player?.displaySeasonRecord else { return "—" }
+        let total = record.wins + record.losses
+        guard total > 0 else { return "—" }
+        return "\(Int((Double(record.wins) / Double(total) * 100).rounded()))%"
     }
 }
 
 struct LockScreenRectangularNextView: View {
     let tour: TourPreference
+    var showsPreviewPlate: Bool = false
 
     var body: some View {
         let event = TournamentCalendar.nextMajor(for: tour)
-        HStack(spacing: 10) {
-            Image(systemName: "tennisball.fill")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(WidgetTheme.opticYellow)
-                .frame(width: 28)
 
-            VStack(alignment: .leading, spacing: 2) {
+        ZStack {
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .rectangular)
+            }
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
+                    if let event {
+                        Text(event.shortName)
+                            .font(WidgetTheme.roundedFont(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text(event.location)
+                            .font(WidgetTheme.roundedFont(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(1)
+                        Text(event.surface.uppercased())
+                            .font(WidgetTheme.roundedFont(size: 9, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.4))
+                            .lineLimit(1)
+                    } else {
+                        Text("Season done")
+                            .font(WidgetTheme.roundedFont(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                }
+
+                Spacer(minLength: 4)
+
                 if let event {
-                    Text("\(event.shortName) · \(event.location.uppercased())")
-                        .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .lineLimit(1)
                     let countdown = TournamentCalendar.countdown(to: event)
-                    Text("\(countdown.days)d \(countdown.hours)h")
-                        .font(WidgetTheme.displayFont(size: 18, weight: .heavy))
-                        .foregroundStyle(.white)
-                } else {
-                    Text("Season done")
-                        .font(WidgetTheme.roundedFont(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
+                    VStack(spacing: 1) {
+                        Text("\(countdown.days)")
+                            .font(WidgetTheme.displayFont(size: 20, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                        Text("days")
+                            .font(WidgetTheme.roundedFont(size: 8, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                    .frame(width: 44, height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.white.opacity(0.12))
+                    )
                 }
             }
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(WidgetTheme.midnightGreen)
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
-        }
-        .courtifyWidgetCanvas(stamp: .none)
     }
 }
 
 struct LockScreenRectangularLiveView: View {
     let match: WidgetLiveMatch?
+    var showsPreviewPlate: Bool = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(match == nil ? Color.white.opacity(0.3) : Color.red)
-                .frame(width: 7, height: 7)
-
-            VStack(alignment: .leading, spacing: 2) {
-                if let match {
-                    Text("\(shortName(match.player1.name)) vs \(shortName(match.player2.name))")
-                        .font(WidgetTheme.roundedFont(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                    Text(match.score ?? "LIVE")
-                        .font(WidgetTheme.displayFont(size: 14, weight: .heavy))
-                        .foregroundStyle(WidgetTheme.opticYellow)
-                        .lineLimit(1)
-                } else {
-                    Text("No live match")
-                        .font(WidgetTheme.roundedFont(.caption, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.65))
-                }
+        ZStack {
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .rectangular)
             }
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(match == nil ? Color.white.opacity(0.25) : Color.red)
+                    .frame(width: 6, height: 6)
 
-            Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 1) {
+                    if let match {
+                        Text("\(shortCode(match.player1.name)) · \(shortCode(match.player2.name))")
+                            .font(WidgetTheme.roundedFont(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                        Text(match.score ?? "LIVE")
+                            .font(WidgetTheme.displayFont(size: 14, weight: .heavy))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    } else {
+                        Text("No live match")
+                            .font(WidgetTheme.roundedFont(size: 11, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(WidgetTheme.midnightGreen)
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
-        }
-        .courtifyWidgetCanvas(stamp: .none)
     }
 
-    private func shortName(_ name: String) -> String {
-        name.split(separator: " ").last.map(String.init) ?? name
+    private func shortCode(_ name: String) -> String {
+        let last = name.split(separator: " ").last.map(String.init) ?? name
+        return String(last.prefix(4)).uppercased()
+    }
+}
+
+struct LockScreenRectangularBadgeView: View {
+    let slam: GrandSlam?
+    var showsPreviewPlate: Bool = false
+
+    var body: some View {
+        ZStack {
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .rectangular)
+            }
+            HStack(spacing: 10) {
+                Image(systemName: "tennisball.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.95))
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.white.opacity(0.12))
+                    )
+                    .widgetAccentable()
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(slam?.shortCode ?? "GS")
+                        .font(WidgetTheme.displayFont(size: 16, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text(slam.map { "\($0.cityShort) · \($0.surface)" } ?? "Grand Slam")
+                        .font(WidgetTheme.roundedFont(size: 10, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+        }
+    }
+}
+
+struct LockScreenRectangularFavoriteView: View {
+    let player: TennisPlayer?
+    var showsPreviewPlate: Bool = false
+
+    var body: some View {
+        ZStack {
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .rectangular)
+            }
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(shortName)
+                        .font(WidgetTheme.displayFont(size: 15, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+
+                    HStack(spacing: 8) {
+                        Label {
+                            Text(WidgetTheme.ordinalRank(player?.ranking))
+                                .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                        } icon: {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 8, weight: .semibold))
+                        }
+                        if let record = player?.displaySeasonRecord {
+                            Label {
+                                Text("\(record.wins)-\(record.losses)")
+                                    .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                            } icon: {
+                                Image(systemName: "chart.bar.fill")
+                                    .font(.system(size: 8, weight: .semibold))
+                            }
+                        }
+                    }
+                    .foregroundStyle(.white.opacity(0.55))
+                    .labelStyle(.titleAndIcon)
+                }
+
+                Spacer(minLength: 4)
+
+                Text(rankNumber)
+                    .font(WidgetTheme.displayFont(size: 28, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.white.opacity(0.12))
+                    )
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+        }
+    }
+
+    private var shortName: String {
+        guard let player else { return "PLAYER" }
+        let last = player.name.split(separator: " ").last.map(String.init) ?? player.name
+        return String(last.prefix(8)).uppercased()
+    }
+
+    private var rankNumber: String {
+        guard let ranking = player?.ranking, ranking > 0 else { return "—" }
+        return String(format: "%02d", min(ranking, 99))
+    }
+}
+
+struct LockScreenRectangularSeasonView: View {
+    let player: TennisPlayer?
+    let tour: TourPreference
+    var showsPreviewPlate: Bool = false
+
+    var body: some View {
+        let progress = TournamentCalendar.seasonSlamProgress(for: tour)
+        let record = player?.displaySeasonRecord
+
+        ZStack {
+            if showsPreviewPlate {
+                LockScreenPreviewPlate(style: .rectangular)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(winRateLabel(record))
+                        .font(WidgetTheme.displayFont(size: 20, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text("\(progress.completed)/\(progress.total) GS")
+                        .font(WidgetTheme.roundedFont(size: 10, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+
+                seasonTicks(completed: progress.completed, total: progress.total)
+
+                HStack(spacing: 10) {
+                    if let record {
+                        Label {
+                            Text("\(record.wins)W \(record.losses)L")
+                                .font(WidgetTheme.roundedFont(size: 9, weight: .bold))
+                        } icon: {
+                            Image(systemName: "tennisball.fill")
+                                .font(.system(size: 8, weight: .semibold))
+                        }
+                    }
+                    Label {
+                        Text("\(progress.completed) majors")
+                            .font(WidgetTheme.roundedFont(size: 9, weight: .bold))
+                    } icon: {
+                        Image(systemName: "flag.fill")
+                            .font(.system(size: 8, weight: .semibold))
+                    }
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(.white.opacity(0.55))
+                .labelStyle(.titleAndIcon)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+        }
+    }
+
+    private func winRateLabel(_ record: (wins: Int, losses: Int)?) -> String {
+        guard let record else { return "—" }
+        let total = record.wins + record.losses
+        guard total > 0 else { return "—" }
+        return "\(Int((Double(record.wins) / Double(total) * 100).rounded()))%"
+    }
+
+    private func seasonTicks(completed: Int, total: Int) -> some View {
+        HStack(spacing: 3) {
+            ForEach(0..<total, id: \.self) { index in
+                Capsule()
+                    .fill(Color.white.opacity(index < completed ? 0.95 : 0.2))
+                    .frame(height: 4)
+            }
+        }
     }
 }
 

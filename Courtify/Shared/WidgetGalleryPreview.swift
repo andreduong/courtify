@@ -8,6 +8,11 @@ struct WidgetGalleryPreview: View {
     let tour: TourPreference
     let payload: WidgetDataPayload?
 
+    private var favoriteSlam: GrandSlam? {
+        let raw = AppGroupConstants.userDefaults.string(forKey: AppGroupConstants.Keys.favoriteGrandSlam) ?? ""
+        return GrandSlam(rawValue: raw)
+    }
+
     var body: some View {
         switch item.id {
         case "favorite":
@@ -17,13 +22,13 @@ struct WidgetGalleryPreview: View {
             FavoritePlayerMediumWidgetView(player: favoritePlayer, widgetID: "favorite-medium")
                 .id(favoritePlayerID)
         case "next-small":
-            NextTournamentSmallView(tour: tour)
+            NextTournamentSmallView(tour: tour, widgetID: "next-small")
         case "countdown":
-            TournamentCountdownView(tour: tour)
+            TournamentCountdownView(tour: tour, widgetID: "countdown")
         case "next-large":
-            NextTournamentLargeView(tour: tour)
+            NextTournamentLargeView(tour: tour, widgetID: "next-large")
         case "calendar":
-            SeasonCalendarView(tour: tour)
+            SeasonCalendarView(tour: tour, widgetID: "calendar")
         case "atp-medium":
             RankingsWidgetView(
                 tour: .atp,
@@ -66,32 +71,42 @@ struct WidgetGalleryPreview: View {
                 showsRefreshHint: true,
                 widgetID: "order"
             )
+        case "lock-badge":
+            LockScreenGalleryFrame(kind: .circular) {
+                LockScreenCircularBadgeView(slam: favoriteSlam, showsPreviewPlate: true)
+            }
+        case "lock-badge-rect":
+            LockScreenGalleryFrame(kind: .rectangular) {
+                LockScreenRectangularBadgeView(slam: favoriteSlam, showsPreviewPlate: true)
+            }
         case "lock-rank":
-            LockScreenCircularRankView(player: favoritePlayer)
-                .clipShape(Circle())
-                .overlay {
-                    Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
-                }
+            LockScreenGalleryFrame(kind: .circular) {
+                LockScreenCircularRankView(player: favoritePlayer, showsPreviewPlate: true)
+            }
+        case "lock-player":
+            LockScreenGalleryFrame(kind: .rectangular) {
+                LockScreenRectangularFavoriteView(player: favoritePlayer, showsPreviewPlate: true)
+            }
+        case "lock-season":
+            LockScreenGalleryFrame(kind: .circular) {
+                LockScreenCircularSeasonView(player: favoritePlayer, tour: tour, showsPreviewPlate: true)
+            }
+        case "lock-season-rect":
+            LockScreenGalleryFrame(kind: .rectangular) {
+                LockScreenRectangularSeasonView(player: favoritePlayer, tour: tour, showsPreviewPlate: true)
+            }
         case "lock-countdown":
-            LockScreenCircularCountdownView(tour: tour)
-                .clipShape(Circle())
-                .overlay {
-                    Circle().strokeBorder(Color.white.opacity(0.72), lineWidth: 1.35)
-                }
+            LockScreenGalleryFrame(kind: .circular) {
+                LockScreenCircularCountdownView(tour: tour, showsPreviewPlate: true)
+            }
         case "lock-next":
-            LockScreenRectangularNextView(tour: tour)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
-                }
+            LockScreenGalleryFrame(kind: .rectangular) {
+                LockScreenRectangularNextView(tour: tour, showsPreviewPlate: true)
+            }
         case "lock-live":
-            LockScreenRectangularLiveView(match: payload?.liveMatches.first)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.62), lineWidth: 1.2)
-                }
+            LockScreenGalleryFrame(kind: .rectangular) {
+                LockScreenRectangularLiveView(match: payload?.liveMatches.first, showsPreviewPlate: true)
+            }
         default:
             EmptyView()
         }

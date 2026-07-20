@@ -19,9 +19,13 @@ struct CourtifyWidgetBundle: WidgetBundle {
 
 /// Nested bundle so we can exceed the 10-kind `WidgetBundleBuilder` limit.
 /// Use `.body` (not the bundle type itself) — nesting `WidgetBundle` as a `Widget` fails to type-check.
+/// Lock Screen order: badges → favorite → season → countdown → live (hardcore-fan priority).
 struct CourtifyLockScreenWidgetBundle: WidgetBundle {
     var body: some Widget {
+        LockScreenBadgeWidget()
         LockScreenRankWidget()
+        LockScreenFavoriteWidget()
+        LockScreenSeasonWidget()
         LockScreenCountdownWidget()
         LockScreenNextWidget()
         LockScreenLiveWidget()

@@ -76,7 +76,7 @@ struct TournamentCountdownWidget: Widget {
                 if entry.isLocked {
                     WidgetLockedView()
                 } else {
-                    TournamentCountdownView(tour: entry.tour)
+                    TournamentCountdownView(tour: entry.tour, widgetID: "countdown")
                 }
             }
         }
@@ -94,9 +94,9 @@ private struct NextTournamentWidgetContent: View {
     var body: some View {
         switch family {
         case .systemLarge:
-            NextTournamentLargeView(tour: tour)
+            NextTournamentLargeView(tour: tour, widgetID: "next-large")
         default:
-            NextTournamentSmallView(tour: tour)
+            NextTournamentSmallView(tour: tour, widgetID: "next-small")
         }
     }
 }
@@ -110,7 +110,7 @@ struct SeasonCalendarWidget: Widget {
                 if entry.isLocked {
                     WidgetLockedView()
                 } else {
-                    SeasonCalendarView(tour: entry.tour)
+                    SeasonCalendarView(tour: entry.tour, widgetID: "calendar")
                 }
             }
         }
