@@ -11,9 +11,9 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "Courtify" / "Assets.xcassets"
-MASTER = ASSETS / "AppIcon.appiconset" / "AppIcon-1024.png"
+ICON_MASTER = ASSETS / "AppIcon.appiconset" / "AppIcon-1024.png"
 
-PRESETS: dict[str, tuple[int, int, int]] = {
+ICON_PRESETS: dict[str, tuple[int, int, int]] = {
     "AppIcon": (0x35, 0xC7, 0x7F),  # courtify (primary)
     "AppIcon-Hardcourt": (0x4A, 0x90, 0xD9),
     "AppIcon-Clay": (0xE3, 0x52, 0x05),
@@ -23,6 +23,16 @@ PRESETS: dict[str, tuple[int, int, int]] = {
     "AppIcon-Optic": (0xCC, 0xFF, 0x00),
 }
 
+ICON_TO_LOGO: dict[str, str] = {
+    "AppIcon": "courtify-logo-courtify",
+    "AppIcon-Hardcourt": "courtify-logo-hardcourt",
+    "AppIcon-Clay": "courtify-logo-clay",
+    "AppIcon-Grass": "courtify-logo-grass",
+    "AppIcon-Berry": "courtify-logo-berry",
+    "AppIcon-White": "courtify-logo-white",
+    "AppIcon-Optic": "courtify-logo-optic",
+}
+
 CONTENTS_TEMPLATE = """{{
   "images" : [
     {{
@@ -30,6 +40,29 @@ CONTENTS_TEMPLATE = """{{
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
+    }}
+  ],
+  "info" : {{
+    "author" : "xcode",
+    "version" : 1
+  }}
+}}
+"""
+
+LOGO_CONTENTS_TEMPLATE = """{{
+  "images" : [
+    {{
+      "filename" : "{filename}",
+      "idiom" : "universal",
+      "scale" : "1x"
+    }},
+    {{
+      "idiom" : "universal",
+      "scale" : "2x"
+    }},
+    {{
+      "idiom" : "universal",
+      "scale" : "3x"
     }}
   ],
   "info" : {{
@@ -107,15 +140,27 @@ def write_icon_set(name: str, image: Image.Image) -> None:
     (folder / "Contents.json").write_text(CONTENTS_TEMPLATE.format(filename=filename))
 
 
-def main() -> None:
-    if not MASTER.exists():
-        raise SystemExit(f"Missing master icon: {MASTER}")
+def write_logo_imageset(name: str, image: Image.Image) -> None:
+    folder = ASSETS / f"{name}.imageset"
+    folder.mkdir(parents=True, exist_ok=True)
+    filename = f"{name}.png"
+    image.save(folder / filename)
+    (folder / "Contents.json").write_text(LOGO_CONTENTS_TEMPLATE.format(filename=filename))
 
-    source = Image.open(MASTER).convert("RGB")
-    for set_name, rgb in PRESETS.items():
-        icon = recolor(source, rgb)
+
+def main() -> None:
+    if not ICON_MASTER.exists():
+        raise SystemExit(f"Missing master icon: {ICON_MASTER}")
+
+    icon_source = Image.open(ICON_MASTER).convert("RGB")
+    for set_name, rgb in ICON_PRESETS.items():
+        icon = recolor(icon_source, rgb)
         write_icon_set(set_name, icon)
         print(f"wrote {set_name}")
+
+        logo_name = ICON_TO_LOGO[set_name]
+        write_logo_imageset(logo_name, icon)
+        print(f"wrote {logo_name}")
 
 
 if __name__ == "__main__":

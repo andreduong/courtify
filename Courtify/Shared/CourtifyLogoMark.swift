@@ -1,58 +1,33 @@
 import SwiftUI
 
-/// In-app Courtify mark — mirrors the home-screen icon (black tile + colored ball + seams).
+/// Bundled Courtify app logo — black tile + seams fixed; only the ball tint follows **Logo ball** in Settings.
 struct CourtifyLogoMark: View {
     var size: CGFloat = 120
+    /// When set, shows that preset instead of the live **Logo ball** setting (e.g. picker rows).
+    var preset: LogoBallPreset? = nil
     @ObservedObject private var appearance = AppAppearanceStore.shared
 
+    private var effectivePreset: LogoBallPreset { preset ?? appearance.logoBall }
     private var cornerRadius: CGFloat { size * 0.22 }
-    private var ballSize: CGFloat { size * 0.78 }
-    private var seamWidth: CGFloat { max(2, size * 0.055) }
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(.black)
-
-            Circle()
-                .fill(appearance.logoBallColor)
-                .frame(width: ballSize, height: ballSize)
-
-            TennisBallSeams()
-                .stroke(
-                    Color.black,
-                    style: StrokeStyle(lineWidth: seamWidth, lineCap: .round, lineJoin: .round)
-                )
-                .frame(width: ballSize, height: ballSize)
+        Group {
+            if let uiImage = CourtifyLogoRenderer.image(for: effectivePreset) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
+            } else {
+                Image("courtify-logo")
+                    .resizable()
+                    .interpolation(.high)
+            }
         }
+        .id(effectivePreset)
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-        .shadow(color: appearance.logoBallColor.opacity(0.45), radius: size * 0.22, y: size * 0.08)
-        .shadow(color: .black.opacity(0.35), radius: size * 0.06, y: size * 0.02)
-    }
-}
-
-private struct TennisBallSeams: Shape {
-    func path(in rect: CGRect) -> Path {
-        let w = rect.width
-        let h = rect.height
-        var path = Path()
-
-        path.move(to: CGPoint(x: w * 0.73, y: h * 0.07))
-        path.addCurve(
-            to: CGPoint(x: w * 0.73, y: h * 0.93),
-            control1: CGPoint(x: w * 1.08, y: h * 0.34),
-            control2: CGPoint(x: w * 1.08, y: h * 0.66)
-        )
-
-        path.move(to: CGPoint(x: w * 0.27, y: h * 0.07))
-        path.addCurve(
-            to: CGPoint(x: w * 0.27, y: h * 0.93),
-            control1: CGPoint(x: w * -0.08, y: h * 0.34),
-            control2: CGPoint(x: w * -0.08, y: h * 0.66)
-        )
-
-        return path
+        .shadow(color: effectivePreset.color.opacity(0.35), radius: size * 0.14, y: size * 0.06)
+        .shadow(color: .black.opacity(0.3), radius: size * 0.05, y: size * 0.02)
     }
 }
 

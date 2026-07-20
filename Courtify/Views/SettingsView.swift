@@ -163,7 +163,7 @@ struct SettingsView: View {
             HStack(spacing: 14) {
                 FavoriteCard(
                     title: favoritePlayer?.name.uppercased() ?? "PICK A PLAYER",
-                    subtitle: "Fav player",
+                    subtitle: favoritePlayer == nil ? "Fav player" : nil,
                     action: { showPlayerPicker = true }
                 ) {
                     if let player = favoritePlayer {
@@ -176,7 +176,7 @@ struct SettingsView: View {
 
                 FavoriteCard(
                     title: favoriteSlam?.rawValue.uppercased() ?? "PICK A SLAM",
-                    subtitle: "Fav Grand Slam",
+                    subtitle: favoriteSlam == nil ? "Fav Grand Slam" : nil,
                     action: { showSlamPicker = true }
                 ) {
                     if let slam = favoriteSlam {
@@ -398,7 +398,7 @@ private struct FavoriteSlamLogoBadge: View {
 
 private struct FavoriteCard<Artwork: View>: View {
     let title: String
-    let subtitle: String
+    let subtitle: String?
     let action: () -> Void
     @ViewBuilder var artwork: () -> Artwork
     @ObservedObject private var appearance = AppAppearanceStore.shared
@@ -426,10 +426,12 @@ private struct FavoriteCard<Artwork: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.trailing, 40)
 
-                Text(subtitle)
-                    .font(ThemeManager.roundedFont(.caption, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .padding(.trailing, 48)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .padding(.trailing, 48)
+                }
 
                 Spacer(minLength: 0)
 
@@ -636,12 +638,7 @@ private struct LogoBallPickerSheet: View {
                     dismiss()
                 } label: {
                     HStack(spacing: 14) {
-                        Image(systemName: "tennisball.fill")
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundStyle(preset.color)
-                            .frame(width: 44, height: 44)
-                            .background(.white.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        CourtifyLogoMark(size: 44, preset: preset)
 
                         Text(preset.displayName)
                             .font(ThemeManager.roundedFont(.headline, weight: .semibold))

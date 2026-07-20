@@ -37,6 +37,35 @@ struct HomeDashboardView: View {
         TournamentCalendar.nextGrandSlam(for: selectedTour)
     }
 
+    private var nextSlam: GrandSlam? {
+        grandSlamMatching(nextGrandSlam)
+    }
+
+    private var slamHighlight: Color {
+        guard let slam = nextSlam else { return ThemeManager.opticYellow }
+        return Color(hex: slam.highlightColor)
+    }
+
+    private var slamBase: Color {
+        guard let slam = nextSlam else { return appearance.canvasColor }
+        switch slam {
+        case .australianOpen: return Color(hex: 0x08263D)
+        case .frenchOpen: return Color(hex: 0x3B1404)
+        case .wimbledon: return Color(hex: 0x140B22)
+        case .usOpen: return Color(hex: 0x07111F)
+        }
+    }
+
+    private var slamLift: Color {
+        guard let slam = nextSlam else { return appearance.liftColor.opacity(0.35) }
+        switch slam {
+        case .australianOpen: return Color(hex: 0x0E4A72)
+        case .frenchOpen: return Color(hex: 0x8A2E05)
+        case .wimbledon: return Color(hex: 0x2A1848)
+        case .usOpen: return Color(hex: 0x0C2340)
+        }
+    }
+
     private var liveRank: Int? {
         FavoritePlayerCatalog.displayRank(for: favoritePlayerID, payload: dataStore.payload)
     }
@@ -55,8 +84,8 @@ struct HomeDashboardView: View {
             }
             .frame(width: size.width, height: size.height, alignment: .top)
         }
-        // Solid app-theme chrome on Home so canvas fills behind + below the tab bar.
-        .toolbarBackground(appearance.canvasColor, for: .tabBar)
+        // Slam chrome under the countdown panel + tab bar; hero above stays on app theme.
+        .toolbarBackground(slamBase, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
         .onAppear {
@@ -270,8 +299,8 @@ struct HomeDashboardView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            appearance.accentColor.opacity(0.9),
-                            appearance.accentColor.opacity(0.3),
+                            slamHighlight.opacity(0.9),
+                            slamHighlight.opacity(0.3),
                             .white.opacity(0.06),
                         ],
                         startPoint: .leading,
@@ -284,11 +313,11 @@ struct HomeDashboardView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
                         Capsule()
-                            .fill(appearance.accentColor)
+                            .fill(slamHighlight)
                             .frame(width: 18, height: 3)
                         Text("NEXT GRAND SLAM")
                             .font(ThemeManager.roundedFont(size: 11, weight: .bold))
-                            .foregroundStyle(appearance.accentColor.opacity(0.95))
+                            .foregroundStyle(slamHighlight.opacity(0.95))
                             .tracking(1.5)
                     }
 
@@ -329,13 +358,13 @@ struct HomeDashboardView: View {
     private var grandSlamBackground: some View {
         ZStack(alignment: .leading) {
             LinearGradient(
-                colors: [appearance.liftColor.opacity(0.55), appearance.canvasColor],
+                colors: [slamLift, slamBase],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
             Rectangle()
-                .fill(appearance.accentColor)
+                .fill(slamHighlight)
                 .frame(width: 3)
                 .opacity(0.9)
 
@@ -352,7 +381,7 @@ struct HomeDashboardView: View {
                 .monospacedDigit()
             Text(label)
                 .font(ThemeManager.roundedFont(size: 10, weight: .bold))
-                .foregroundStyle(appearance.accentColor.opacity(0.8))
+                .foregroundStyle(slamHighlight.opacity(0.8))
                 .tracking(1.3)
         }
     }

@@ -21,11 +21,7 @@ struct SplashScreenView: View {
                 Spacer()
 
                 VStack(spacing: 12) {
-                    Image(systemName: "tennisball.fill")
-                        .font(.system(size: 56, weight: .bold, design: .rounded))
-                        .foregroundStyle(appearance.logoBallColor)
-                        .shadow(color: ThemeManager.emeraldGreen.opacity(0.6), radius: 20)
-                        .shadow(color: .black.opacity(0.55), radius: 10, y: 2)
+                    CourtifyLogoMark(size: 72)
 
                     Text("Courtify")
                         .font(ThemeManager.roundedFont(.largeTitle, weight: .bold))
