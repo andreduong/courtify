@@ -356,13 +356,7 @@ struct TournamentCountdownView: View {
             )
             .id(colorTick)
 
-            // Soft tennis-ball watermark — not a muddy tournament logo
-            Image(systemName: "tennisball.fill")
-                .font(.system(size: 120, weight: .bold))
-                .foregroundStyle(.white.opacity(0.06))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                .offset(x: 28, y: 10)
-                .allowsHitTesting(false)
+            CourtifyTennisBallWatermark()
 
             VStack(spacing: 8) {
                 if let event {

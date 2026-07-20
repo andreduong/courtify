@@ -72,6 +72,25 @@ enum WidgetTheme {
     }
 }
 
+// MARK: - Tennis ball watermark (widgets + Home)
+
+/// Soft translucent Courtify tennis-ball mark — avoids muddy tournament logos in backgrounds.
+struct CourtifyTennisBallWatermark: View {
+    var size: CGFloat = 120
+    var opacity: Double = 0.06
+    var alignment: Alignment = .trailing
+    var offset: CGSize = CGSize(width: 28, height: 10)
+
+    var body: some View {
+        Image(systemName: "tennisball.fill")
+            .font(.system(size: size, weight: .bold))
+            .foregroundStyle(.white.opacity(opacity))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
+            .offset(offset)
+            .allowsHitTesting(false)
+    }
+}
+
 // MARK: - Atmospheric backgrounds (gradients + texture, no logos)
 
 struct WidgetAtmosphere: View {

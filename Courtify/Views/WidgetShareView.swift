@@ -12,9 +12,6 @@ struct WidgetShareView: View {
     let payload: WidgetDataPayload?
     var onClose: () -> Void
 
-    @State private var activityItems: [Any] = []
-    @State private var showActivitySheet = false
-
     private var previewWidth: CGFloat {
         item.size == .small ? item.size.previewHeight * 1.35 : UIScreen.main.bounds.width - 56
     }
@@ -56,9 +53,6 @@ struct WidgetShareView: View {
                     .padding(.horizontal, 28)
                     .padding(.bottom, 28)
             }
-        }
-        .sheet(isPresented: $showActivitySheet) {
-            ActivityShareSheet(items: activityItems)
         }
     }
 
@@ -122,8 +116,14 @@ struct WidgetShareView: View {
             tour: tour,
             payload: payload
         ) else { return }
-        activityItems = [image, CourtifyDeepLinks.appStoreURL]
-        showActivitySheet = true
+        // File URL (not raw UIImage + App Store URL): nesting the activity VC in a
+        // SwiftUI `.sheet` over `fullScreenCover` yields a blank sheet on device,
+        // and pairing UIImage with a URL makes iOS advertise URL-only activities.
+        guard let fileURL = WidgetShareExporter.writeTemporaryPNG(
+            image,
+            suggestedName: item.title
+        ) else { return }
+        CourtifySharePresenter.present(items: [fileURL])
     }
 }
 
@@ -170,6 +170,23 @@ enum WidgetShareExporter {
         renderer.scale = 3
         renderer.isOpaque = true
         return renderer.uiImage
+    }
+
+    /// Writes a PNG the system share sheet can hand to Messages / Photos / etc.
+    static func writeTemporaryPNG(_ image: UIImage, suggestedName: String) -> URL? {
+        guard let data = image.pngData() else { return nil }
+        let safe = suggestedName
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ":", with: "-")
+        let base = safe.isEmpty ? "Courtify-widget" : "Courtify-\(safe)"
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(base).png")
+        do {
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
     }
 }
 
@@ -241,14 +258,46 @@ private struct WidgetShareCanvas: View {
     }
 }
 
-// MARK: - UIKit share sheet
+// MARK: - UIKit share presenter
 
-struct ActivityShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
+/// Presents `UIActivityViewController` from the topmost VC.
+/// Required because nesting the activity controller inside a SwiftUI `.sheet`
+/// (especially over `fullScreenCover`) shows an empty dark sheet on device.
+enum CourtifySharePresenter {
+    @MainActor
+    static func present(items: [Any]) {
+        let activity = UIActivityViewController(
+            activityItems: items,
+            applicationActivities: nil
+        )
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
+        guard let presenter = topViewController() else { return }
+
+        if let popover = activity.popoverPresentationController {
+            popover.sourceView = presenter.view
+            popover.sourceRect = CGRect(
+                x: presenter.view.bounds.midX,
+                y: presenter.view.bounds.maxY - 48,
+                width: 0,
+                height: 0
+            )
+            popover.permittedArrowDirections = []
+        }
+
+        presenter.present(activity, animated: true)
     }
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    @MainActor
+    private static func topViewController() -> UIViewController? {
+        let scenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first
+        let root = scene?.windows.first(where: \.isKeyWindow)?.rootViewController
+            ?? scene?.windows.first?.rootViewController
+        guard var top = root else { return nil }
+        while let presented = top.presentedViewController {
+            top = presented
+        }
+        return top
+    }
 }

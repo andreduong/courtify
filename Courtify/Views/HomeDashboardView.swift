@@ -321,15 +321,7 @@ struct HomeDashboardView: View {
                 .frame(width: 3)
                 .opacity(0.9)
 
-            if let slam = nextSlam {
-                AssetCatalogImage(name: slam.logoImageName, contentMode: .fit)
-                    .frame(width: 140, height: 140)
-                    .opacity(0.08)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .padding(.trailing, -12)
-                    .padding(.bottom, -16)
-                    .allowsHitTesting(false)
-            }
+            CourtifyTennisBallWatermark()
         }
         .clipped()
     }
