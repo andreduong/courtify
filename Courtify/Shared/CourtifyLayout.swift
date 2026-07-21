@@ -120,7 +120,13 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
                 }
             }
         }
-        .background(ThemeManager.oledBlack.ignoresSafeArea())
+        .background {
+            ZStack {
+                ThemeManager.oledBlack
+                CourtifyListAmbientBloom()
+            }
+            .ignoresSafeArea()
+        }
     }
 }
 
@@ -200,7 +206,7 @@ struct TourPillToggle: View {
         .background(.ultraThinMaterial, in: Capsule())
         .overlay {
             Capsule()
-                .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
         }
         .courtifySelectionFeedback(selectedTour)
     }

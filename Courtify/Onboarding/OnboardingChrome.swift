@@ -86,17 +86,12 @@ private struct OnboardingProgressBar: View {
                     .fill(.white.opacity(0.12))
 
                 Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [ThemeManager.opticYellow, ThemeManager.emeraldGreen],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: max(geo.size.width * progress, progress > 0 ? 6 : 0))
+                    .fill(ThemeManager.brandYellow)
+                    .frame(width: max(geo.size.width * progress, progress > 0 ? 8 : 0))
+                    .shadow(color: ThemeManager.brandYellow.opacity(0.6), radius: 6)
             }
         }
-        .frame(height: 2)
+        .frame(height: 3)
         .padding(.horizontal, 0)
     }
 }

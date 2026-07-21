@@ -38,7 +38,7 @@ This repo has two parts:
 | Settings / favorites | `SettingsView` + `AppGroupConstants` | Write prefs outside app group (widgets won't see them) |
 | Simulator screenshots | `UITestLaunchArgs` + `simctl launch` flags | Install tap/scroll automation (none available) |
 
-**UI language:** OLED black canvas + ambient brand glow (`CourtifyAmbientGlow`), frosted glass cards (`.courtifyGlassSurface`), floating capsule tab bar with neon `#ccff00` active tint + glow dot. White rounded type, `opticYellow` highlights, `courtGreen` tile subtitles. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)` — root `.courtifyInteractiveChrome()` gives every `Button` soft press-down `sensoryFeedback` + scale, **and** a universal surface press (subtle scale + dim + soft haptic) on any non-button tap so Home / Schedule / Rankings feel responsive without per-screen wiring. Override buttons with `.courtifyButton(.primary/.card/.icon/.row/…)`. Selection (tabs, tour, toggles) uses `.courtifySelectionFeedback`.
+**UI language:** OLED black canvas + ambient brand glow (`CourtifyAmbientGlow` / `CourtifyListAmbientBloom` on list screens), frosted glass cards (`.courtifyGlassSurface` / `.glassCard` — pure `.ultraThinMaterial` + white @ 15% hairline), floating capsule tab bar with neon `#ccff00` active tint + glow dot. White rounded type, `opticYellow` highlights, `courtGreen` tile subtitles. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)` — root `.courtifyInteractiveChrome()` gives every `Button` soft press-down `sensoryFeedback` + scale, **and** a universal surface press (subtle scale + dim + soft haptic) on any non-button tap so Home / Schedule / Rankings feel responsive without per-screen wiring. Override buttons with `.courtifyButton(.primary/.card/.icon/.row/…)`. Selection (tabs, tour, toggles) uses `.courtifySelectionFeedback`; onboarding grids/lists use `.courtifySelectableCard`.
 
 **API cost rule:** RapidAPI Matchstat **Pro ($29/mo)** is required — Basic 50/day is insufficient. Worker data refreshes on **user pull-to-refresh** (Home, Rankings, Widgets) or the **one-time onboarding exception**. Custom lookup / photo / season-record only on favorite **pick**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
 
@@ -454,6 +454,7 @@ All hooks are parsed from `ProcessInfo.processInfo.arguments` via
 |------|--------|
 | `-UITestHome` | Skip onboarding → main `TabView` |
 | `-UITestPaywall` | Reset onboarding prefs → onboarding / paywall flow |
+| `-UITestOnboarding tour\|players\|slam\|notifications` | Jump to that onboarding step (DEBUG) |
 | `-UITestTab schedule\|rankings\|widgets` | Open that tab (omit for Home) |
 | `-UITestSettings` | Auto-present Settings sheet (Home tab) |
 | `-UITestWidgetFilter free\|small\|medium\|large` | Preselect Widgets gallery filter |
@@ -673,6 +674,26 @@ after TestFlight install.
 - **WidgetKit catalog:** `CourtifyWidgetCatalog` is the single source of truth for gallery cards and WidgetKit kinds. Exceed the 10-kind builder limit with `OtherBundle().body` (not `OtherBundle()` as a `Widget`). Lock Screen kinds live in `LockScreenWidgets.swift`.
 - **Rectangular slam logos in Settings:** wrap with `FavoriteSlamLogoBadge` — `scaledToFill` + `clipShape(Circle())` so AO / RG / Wimbledon / US Open all read as round badges (wide US Open wordmark fills then clips).
 - **Quota UX:** when custom favorite photos fail (RapidAPI 429), show silhouette + helper copy / one-shot alert — don’t leave blank heroes or look “broken.”
+- **Glass inside cards:** never clip `CourtifyAmbientGlow` inside a glass card — it fills OLED black and kills `.ultraThinMaterial`. Use transparent `RadialGradient` washes only.
+- **Disabled primary CTAs:** use `.courtifyDormantButtonLabel()` (glass + white @ 30% text), not dimmed `brandYellow` or `midnightGreen`.
+- **Splash marquee:** `CourtifyMarqueeBackground` needs `.drawingGroup` before `.blur(16)` + `Color.black.opacity(0.65)` scrim — blur alone stays too sharp.
+
+### Luxury glass system (onboarding + lists)
+
+| Surface | Pattern |
+|---------|---------|
+| Glass rows/cards | `.courtifyGlassSurface()` or `.background(.ultraThinMaterial)` + `ThemeManager.glassEdge` (white 15%, 0.5pt). List rows: ~18pt vertical padding. |
+| List/grid ambient | `CourtifyListAmbientBloom` — via `.courtifyBackground()`, `CourtifyHeroScrollScreen`, Settings scroll. Gives material light to refract. |
+| Selected grid/list item | `.courtifySelectableCard(isSelected:cornerRadius:scale:)` — scale **1.03** (posters/tour), **1.02** (slam list rows); 1.5pt `brandYellow` border; `brandYellow` glow shadow. Includes `.sensoryFeedback(.selection)`. |
+| Primary CTA | `.courtifyPrimaryButtonLabel()` — Capsule, `brandYellow`, glow shadow. Subscribe / Continue / Join Courtify. |
+| Dormant CTA | `.courtifyDormantButtonLabel()` — e.g. “Choose a Slam” before pick. Glass pill, white @ 30%. |
+| Skip secondary | `.courtifySecondaryButtonLabel()` — glass pill (“Skip for now”). |
+| Tertiary dismiss | Plain ghost text `.foregroundStyle(.white.opacity(0.6))` — “Not now”; no pill. |
+| Onboarding player pick | Horizontal **3:4 poster** cards: `PlayerTorsoPhotoView` bottom-anchored, `.courtifyHeroFadeMask(fadePortion: 0.40)`, name + rank overlaid bottom-leading. |
+| Onboarding slam pick | Vertical **glass list rows** (logo + title + meta), not poster grid. |
+| Notification benefits | Glass list rows; icons in `brandYellow.opacity(0.15)` **circle**, glyph `brandYellow` + `shadow(color: .brandYellow, radius: 4)`. Enable → `.sensoryFeedback(.success)`. |
+| Onboarding progress | `OnboardingProgressBar` — height **3**, track `brandYellow` + glow shadow (no green gradient). |
+| Splash copy | Title `.system(size: 48, weight: .black, design: .rounded)`; subtitle `.title3` @ white 80%. |
 
 ### UI/UX building blocks
 
@@ -682,7 +703,9 @@ after TestFlight install.
   `FavoritePlayerCatalog`, `FavoritePlayerPickerSheet`, `FavoritePlayerEnricher`,
   `PlayerTorsoPhotoView`, `PlayerSilhouetteView`, `PlayerSeasonRecordCache`, `FavoriteSlamLogoBadge`,
   `WidgetColorStyle`, `WidgetColorPickerSheet`, `WidgetAtmosphere`, `WidgetTheme.displayFont`,
-  `CourtifyMarqueeBackground` (live cards), `AssetCatalogImage`.
+  `CourtifyMarqueeBackground` (live cards), `AssetCatalogImage`, `courtifySelectableCard`,
+  `courtifyPrimaryButtonLabel`, `courtifyDormantButtonLabel`, `courtifySecondaryButtonLabel`,
+  `CourtifyListAmbientBloom`.
 - **Home-screen + Lock Screen widgets** (`CourtifyWidget/`): favorite (S+M), tournaments, standings,
   live, order of play, plus accessory circular/rectangular kinds in `LockScreenWidgets.swift`.
   Reload via `WidgetTimelineRefresher` (includes lock-screen kinds).
@@ -697,8 +720,7 @@ after TestFlight install.
   Previews via `WidgetGalleryPreview` (shared with share screen).
 - **Widget color prefs:** app-group key `widgetColorStyles` via `WidgetColorStyle`;
   Tournament theme + preset accents + gradient/texture; free users tapping color → paywall.
-- **Onboarding player cards:** horizontal scroll, star on primary pick, bundled search sheet
-  for out-of-top-10 names.
+- **Onboarding player cards:** horizontal **3:4 poster** scroll (`PlayerPosterCard`); star on #1; “More” poster + search sheet for out-of-top-10 names. QA: `-UITestOnboarding players`.
 
 ### API / backend
 

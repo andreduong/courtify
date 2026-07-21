@@ -43,9 +43,9 @@ struct FavoritePlayersView: View {
             .padding(.horizontal, 24)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 20) {
+                HStack(spacing: 14) {
                     ForEach(featuredPlayers) { player in
-                        PlayerAvatarCard(
+                        PlayerPosterCard(
                             player: player,
                             isSelected: selectedPlayerIDs.contains(player.id),
                             isPrimary: favoritePlayerID == player.id
@@ -54,7 +54,7 @@ struct FavoritePlayersView: View {
                         }
                     }
 
-                    MorePlayerCard(
+                    MorePlayerPosterCard(
                         isSelected: isCustomSelectionActive,
                         isPrimary: isCustomSelectionActive && favoritePlayerID.hasPrefix("custom:")
                     ) {
@@ -62,7 +62,7 @@ struct FavoritePlayersView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.vertical, 8)
+                .padding(.vertical, 16)
             }
 
             if !favoritePlayerID.isEmpty,
@@ -79,19 +79,29 @@ struct FavoritePlayersView: View {
 
             Spacer()
 
-            Button {
-                // Ensure #1 is set if the user selected stars but never triggered primary assignment.
-                if favoritePlayerID.isEmpty, let first = selectedPlayerIDs.first {
-                    favoritePlayerID = first
+            if selectedPlayerIDs.isEmpty {
+                Button(action: onContinue) {
+                    Text("Skip for now")
+                        .courtifySecondaryButtonLabel()
                 }
-                onContinue()
-            } label: {
-                Text(selectedPlayerIDs.isEmpty ? "Skip for now" : "Continue")
-                    .courtifyPrimaryButtonLabel(fillOpacity: selectedPlayerIDs.isEmpty ? 0.5 : 1)
+                .courtifyButton(.secondary)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+            } else {
+                Button {
+                    // Ensure #1 is set if the user selected stars but never triggered primary assignment.
+                    if favoritePlayerID.isEmpty, let first = selectedPlayerIDs.first {
+                        favoritePlayerID = first
+                    }
+                    onContinue()
+                } label: {
+                    Text("Continue")
+                        .courtifyPrimaryButtonLabel()
+                }
+                .courtifyButton(.primary)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
             }
-            .courtifyButton(.primary, enabled: true)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
         }
         .onAppear {
             BundledImageCache.warmOnboardingAssets()
@@ -150,116 +160,122 @@ struct FavoritePlayersView: View {
     }
 }
 
-private struct MorePlayerCard: View {
+private struct OnboardingPosterMetrics {
+    static let width: CGFloat = 148
+    static let cornerRadius: CGFloat = 18
+    static let aspect: CGFloat = 3.0 / 4.0
+}
+
+private struct MorePlayerPosterCard: View {
     let isSelected: Bool
     let isPrimary: Bool
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 12) {
-                ZStack(alignment: .topTrailing) {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [ThemeManager.emeraldGreen.opacity(0.5), ThemeManager.midnightGreen],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 88, height: 88)
-                        .overlay {
-                            Image(systemName: "plus")
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundStyle(ThemeManager.opticYellow)
-                        }
-                        .overlay {
-                            Circle()
-                                .strokeBorder(
-                                    isSelected ? ThemeManager.opticYellow : Color.white.opacity(0.15),
-                                    lineWidth: isSelected ? 3 : 1
-                                )
-                        }
+            ZStack(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: OnboardingPosterMetrics.cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
 
-                    if isPrimary {
-                        Image(systemName: "star.fill")
-                            .font(.caption2)
-                            .foregroundStyle(ThemeManager.midnightGreen)
-                            .padding(5)
-                            .background(ThemeManager.opticYellow)
-                            .clipShape(Circle())
-                            .offset(x: 4, y: -4)
-                    }
+                Image(systemName: "plus")
+                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .foregroundStyle(ThemeManager.brandYellow)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if isPrimary {
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(.black)
+                        .padding(6)
+                        .background(ThemeManager.brandYellow, in: Circle())
+                        .padding(10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
 
-                VStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("More")
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
+                        .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
                         .foregroundStyle(.white)
-
                     Text("Search name")
-                        .font(ThemeManager.roundedFont(.caption2))
-                        .foregroundStyle(ThemeManager.emeraldGreen)
+                        .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.65))
                 }
+                .padding(12)
             }
-            .frame(width: 100)
-            .glassCard(cornerRadius: 16, padding: 12)
-            .courtifySelection(isSelected, scale: 1.04)
+            .frame(width: OnboardingPosterMetrics.width)
+            .aspectRatio(OnboardingPosterMetrics.aspect, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: OnboardingPosterMetrics.cornerRadius, style: .continuous))
+            .courtifySelectableCard(
+                isSelected: isSelected,
+                cornerRadius: OnboardingPosterMetrics.cornerRadius
+            )
         }
         .courtifyButton(.card)
     }
 }
 
-private struct PlayerAvatarCard: View {
+private struct PlayerPosterCard: View {
     let player: TennisPlayer
     let isSelected: Bool
     let isPrimary: Bool
     let onTap: () -> Void
 
+    private var lastName: String {
+        player.name.components(separatedBy: " ").last ?? player.name
+    }
+
+    private var rankLabel: String {
+        if player.ranking > 0 {
+            return "#\(player.ranking) \(player.tour.rawValue)"
+        }
+        return player.tour.rawValue
+    }
+
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 12) {
-                ZStack(alignment: .topTrailing) {
-                    TennisPlayerPhotoView(player: player, style: .headshot, size: 88)
-                        .overlay {
-                            Circle()
-                                .strokeBorder(
-                                    isSelected ? ThemeManager.opticYellow : Color.white.opacity(0.15),
-                                    lineWidth: isSelected ? 3 : 1
-                                )
-                        }
+            ZStack(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: OnboardingPosterMetrics.cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
 
-                    if isPrimary {
-                        Image(systemName: "star.fill")
-                            .font(.caption2)
-                            .foregroundStyle(ThemeManager.midnightGreen)
-                            .padding(5)
-                            .background(ThemeManager.opticYellow)
-                            .clipShape(Circle())
-                            .offset(x: 4, y: -4)
-                    }
+                PlayerTorsoPhotoView(
+                    player: player,
+                    contentMode: .fit,
+                    fadePortion: 0.40
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 4)
+                .scaleEffect(1.10, anchor: .bottom)
+
+                if isPrimary {
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(.black)
+                        .padding(6)
+                        .background(ThemeManager.brandYellow, in: Circle())
+                        .padding(10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
 
-                VStack(spacing: 4) {
-                    Text(player.name.components(separatedBy: " ").last ?? player.name)
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(lastName)
+                        .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
 
-                    if player.ranking > 0 {
-                        Text("#\(player.ranking) \(player.tour.rawValue)")
-                            .font(ThemeManager.roundedFont(.caption2))
-                            .foregroundStyle(ThemeManager.emeraldGreen)
-                    } else {
-                        Text(player.tour.rawValue)
-                            .font(ThemeManager.roundedFont(.caption2))
-                            .foregroundStyle(ThemeManager.emeraldGreen)
-                    }
+                    Text(rankLabel)
+                        .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
+                        .foregroundStyle(ThemeManager.brandYellow.opacity(0.9))
                 }
+                .padding(12)
             }
-            .frame(width: 100)
-            .glassCard(cornerRadius: 16, padding: 12)
-            .courtifySelection(isSelected, scale: 1.04)
+            .frame(width: OnboardingPosterMetrics.width)
+            .aspectRatio(OnboardingPosterMetrics.aspect, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: OnboardingPosterMetrics.cornerRadius, style: .continuous))
+            .courtifySelectableCard(
+                isSelected: isSelected,
+                cornerRadius: OnboardingPosterMetrics.cornerRadius
+            )
         }
         .courtifyButton(.card)
     }
@@ -304,8 +320,11 @@ private struct CustomPlayerSearchSheet: View {
                     .disabled(isSaving)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
-                    .background(.white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                    }
 
                 if !suggestions.isEmpty {
                     VStack(spacing: 0) {

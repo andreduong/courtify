@@ -93,7 +93,13 @@ struct SettingsView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 32)
             }
-            .background(ThemeManager.oledBlack.ignoresSafeArea())
+            .background {
+                ZStack {
+                    ThemeManager.oledBlack
+                    CourtifyListAmbientBloom()
+                }
+                .ignoresSafeArea()
+            }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -109,7 +115,7 @@ struct SettingsView: View {
                             .clipShape(Circle())
                             .overlay {
                                 Circle()
-                                    .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                                    .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
                             }
                     }
                     .courtifyButton(.icon)
@@ -413,14 +419,20 @@ private struct FavoriteCard<Artwork: View>: View {
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(.ultraThinMaterial)
 
-                CourtifyAmbientGlow(
-                    primary: appearance.liftColor,
-                    secondary: appearance.accentColor,
-                    intensity: 0.55,
-                    anchor: .topTrailing
+                // Transparent bloom only — CourtifyAmbientGlow paints OLED black and kills glass.
+                RadialGradient(
+                    colors: [
+                        appearance.accentColor.opacity(0.18),
+                        appearance.liftColor.opacity(0.10),
+                        .clear,
+                    ],
+                    center: .topTrailing,
+                    startRadius: 4,
+                    endRadius: 160
                 )
+                .blur(radius: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .opacity(0.7)
+                .allowsHitTesting(false)
             }
 
             artwork()
@@ -453,8 +465,9 @@ private struct FavoriteCard<Artwork: View>: View {
                         .foregroundStyle(.black)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(ThemeManager.opticYellow)
+                        .background(ThemeManager.brandYellow)
                         .clipShape(Capsule())
+                        .shadow(color: ThemeManager.brandYellow.opacity(0.4), radius: 12, y: 4)
                 }
                 .courtifyButton(.ghost)
             }
@@ -467,7 +480,7 @@ private struct FavoriteCard<Artwork: View>: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
         }
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }

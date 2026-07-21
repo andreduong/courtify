@@ -39,13 +39,12 @@ struct ReferralCodeView: View {
                 .onSubmit(submitCode)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
-                .background(.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(
-                            showInvalidHint ? Color.red.opacity(0.7) : Color.white.opacity(0.12),
-                            lineWidth: showInvalidHint ? 1.5 : 1
+                        .stroke(
+                            showInvalidHint ? Color.red.opacity(0.7) : ThemeManager.glassEdge,
+                            lineWidth: showInvalidHint ? 1.5 : ThemeManager.glassEdgeWidth
                         )
                 }
                 .offset(x: showInvalidHint ? -6 : 0)

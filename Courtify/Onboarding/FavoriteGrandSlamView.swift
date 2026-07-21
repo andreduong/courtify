@@ -19,9 +19,9 @@ struct FavoriteGrandSlamView: View {
             }
             .padding(.top, 8)
 
-            VStack(spacing: 14) {
+            VStack(spacing: 12) {
                 ForEach(GrandSlam.allCases) { slam in
-                    GrandSlamRow(
+                    GrandSlamListRow(
                         slam: slam,
                         isSelected: selectedSlam == slam
                     ) {
@@ -33,13 +33,18 @@ struct FavoriteGrandSlamView: View {
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            Button(action: onContinue) {
-                Text(selectedSlam == nil ? "Choose a Slam" : "Continue")
-                    .courtifyPrimaryButtonLabel(fillOpacity: selectedSlam == nil ? 0.4 : 1)
+            if selectedSlam == nil {
+                Text("Choose a Slam")
+                    .courtifyDormantButtonLabel()
+            } else {
+                Button(action: onContinue) {
+                    Text("Continue")
+                        .courtifyPrimaryButtonLabel()
+                }
+                .courtifyButton(.primary)
             }
-            .courtifyButton(.primary, enabled: selectedSlam != nil)
         }
         .padding(24)
         .onAppear {
@@ -50,21 +55,24 @@ struct FavoriteGrandSlamView: View {
     }
 }
 
-private struct GrandSlamRow: View {
+private struct GrandSlamListRow: View {
     let slam: GrandSlam
     let isSelected: Bool
     let onTap: () -> Void
+
+    private let cornerRadius: CGFloat = 18
 
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 16) {
                 AssetCatalogImage(name: slam.logoImageName, contentMode: .fit)
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+                    .frame(width: 52, height: 52)
+                    .padding(6)
+                    .background {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color(hex: slam.accentColor).opacity(0.28))
                     }
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(slam.rawValue)
@@ -76,23 +84,19 @@ private struct GrandSlamRow: View {
                         .foregroundStyle(.white.opacity(0.55))
                 }
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.title3)
-                        .foregroundStyle(ThemeManager.opticYellow)
+                        .foregroundStyle(ThemeManager.brandYellow)
+                        .shadow(color: ThemeManager.brandYellow.opacity(0.55), radius: 6)
                 }
             }
-            .glassCard(cornerRadius: 16, padding: 16)
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(
-                        isSelected ? ThemeManager.opticYellow : Color.clear,
-                        lineWidth: 2
-                    )
-            }
-            .courtifySelection(isSelected)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 18)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .courtifySelectableCard(isSelected: isSelected, cornerRadius: cornerRadius, scale: 1.02)
         }
         .courtifyButton(.card)
     }

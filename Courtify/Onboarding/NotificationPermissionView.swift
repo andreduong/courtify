@@ -7,6 +7,7 @@ struct NotificationPermissionView: View {
     let onContinue: () -> Void
 
     @State private var isRequesting = false
+    @State private var enableSuccessPulse = false
 
     private var playerName: String {
         TennisPlayer.displayName(for: favoritePlayerID) ?? "your favorite player"
@@ -29,7 +30,7 @@ struct NotificationPermissionView: View {
             }
             .padding(.top, 8)
 
-            VStack(spacing: 14) {
+            VStack(spacing: 12) {
                 NotificationBenefitRow(
                     icon: "bell.badge.fill",
                     title: "Live match alerts",
@@ -50,25 +51,30 @@ struct NotificationPermissionView: View {
             Spacer()
 
             Button {
+                enableSuccessPulse.toggle()
                 Task { await enableNotifications() }
             } label: {
                 Group {
                     if isRequesting {
                         ProgressView()
-                            .tint(ThemeManager.midnightGreen)
+                            .tint(.black)
                     } else {
                         Text("Enable Notifications")
                     }
                 }
-                .courtifyPrimaryButtonLabel(cornerRadius: 16, verticalPadding: 18)
+                .courtifyPrimaryButtonLabel(verticalPadding: 18)
             }
             .courtifyButton(.primary, enabled: !isRequesting)
+            .sensoryFeedback(.success, trigger: enableSuccessPulse)
 
             Button(action: onContinue) {
                 Text("Not now")
-                    .courtifySecondaryButtonLabel(cornerRadius: 16)
+                    .font(ThemeManager.roundedFont(.headline, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
             }
-            .courtifyButton(.secondary)
+            .courtifyButton(.ghost)
             .disabled(isRequesting)
         }
         .padding(24)
@@ -88,16 +94,18 @@ private struct NotificationBenefitRow: View {
     let title: String
     let subtitle: String
 
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
-                .foregroundStyle(ThemeManager.opticYellow)
-                .frame(width: 40, height: 40)
-                .background(ThemeManager.opticYellow.opacity(0.14))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    private let cornerRadius: CGFloat = 18
 
-            VStack(alignment: .leading, spacing: 4) {
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(ThemeManager.brandYellow)
+                .shadow(color: ThemeManager.brandYellow, radius: 4)
+                .frame(width: 44, height: 44)
+                .background(ThemeManager.brandYellow.opacity(0.15), in: Circle())
+
+            VStack(alignment: .leading, spacing: 5) {
                 Text(title)
                     .font(ThemeManager.roundedFont(.headline, weight: .semibold))
                     .foregroundStyle(.white)
@@ -105,11 +113,18 @@ private struct NotificationBenefitRow: View {
                 Text(subtitle)
                     .font(ThemeManager.roundedFont(.caption))
                     .foregroundStyle(.white.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer()
+            Spacer(minLength: 0)
         }
-        .glassCard(cornerRadius: 16, padding: 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 18)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        }
     }
 }
 

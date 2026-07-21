@@ -89,6 +89,7 @@ struct OnboardingFlowView: View {
             openPaywallIfNeeded()
             #if DEBUG
             openPaywallForUITestIfNeeded()
+            openOnboardingStepForUITestIfNeeded()
             #endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .courtifyOpenSpecialOfferPaywall)) { _ in
@@ -310,6 +311,27 @@ struct OnboardingFlowView: View {
         draftFavoritePlayerID = "sinner"
         draftFavoriteGrandSlam = "Wimbledon"
         path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications, .referralCode, .allSet, .paywall]
+    }
+
+    private func openOnboardingStepForUITestIfNeeded() {
+        guard let step = UITestLaunchArgs.onboardingStep else { return }
+        draftTourPreferenceRaw = TourPreference.both.rawValue
+        draftFavoritePlayerID = "sinner"
+        draftFavoriteGrandSlam = GrandSlam.wimbledon.rawValue
+        switch step {
+        case "tour":
+            path = [.tourPreference]
+        case "players", "player", "stars":
+            path = [.tourPreference, .favoritePlayers]
+        case "slam", "slams":
+            // Leave slam unselected so we can QA the dormant "Choose a Slam" CTA.
+            draftFavoriteGrandSlam = ""
+            path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam]
+        case "notifications", "notify", "alerts":
+            path = [.tourPreference, .favoritePlayers, .favoriteGrandSlam, .notifications]
+        default:
+            break
+        }
     }
     #endif
 }

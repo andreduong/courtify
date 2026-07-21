@@ -389,19 +389,21 @@ struct HomeDashboardView: View {
         .background {
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.white.opacity(0.04))
-
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(.ultraThinMaterial)
 
-                CourtifyAmbientGlow(
-                    primary: slamGlow,
-                    secondary: slamHighlight,
-                    intensity: 0.55,
-                    anchor: .leading
+                // Transparent wash only — CourtifyAmbientGlow fills OLED black and kills glass.
+                RadialGradient(
+                    colors: [
+                        slamHighlight.opacity(0.22),
+                        slamGlow.opacity(0.12),
+                        .clear,
+                    ],
+                    center: .leading,
+                    startRadius: 4,
+                    endRadius: 220
                 )
+                .blur(radius: 36)
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .opacity(0.65)
                 .allowsHitTesting(false)
 
                 Capsule()
@@ -416,7 +418,7 @@ struct HomeDashboardView: View {
         }
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
         }
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }

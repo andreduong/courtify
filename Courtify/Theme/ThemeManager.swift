@@ -12,12 +12,16 @@ enum ThemeManager {
     /// Alias for paywall / tab chrome (“brand yellow”).
     static let brandYellow = opticYellow
     static let emeraldGreen = Color(hex: 0x00703C)
+    /// Alias for ambient blooms / glass refraction washes.
+    static let brandGreen = emeraldGreen
     /// Brighter green for accent text on dark tiles (subtitles, highlights).
     static let courtGreen = Color(hex: 0x35C77F)
 
     /// Hairline edge on frosted glass surfaces (physical light-catch).
-    static let glassEdge = Color.white.opacity(0.10)
+    static let glassEdge = Color.white.opacity(0.15)
     static let glassEdgeWidth: CGFloat = 0.5
+    /// Secondary glass-pill stroke (Skip / Not now).
+    static let glassPillEdge = Color.white.opacity(0.20)
 
     // MARK: - Typography
 
@@ -328,6 +332,38 @@ struct CourtifyThemeBackdrop: View {
     }
 }
 
+/// Massive soft radial bloom behind list/grid glass cards — light for material to refract.
+struct CourtifyListAmbientBloom: View {
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            ZStack {
+                // Large soft discs retain luminosity after heavy blur better than thin gradients.
+                Circle()
+                    .fill(ThemeManager.brandYellow.opacity(0.10))
+                    .frame(width: w * 1.35, height: w * 1.35)
+                    .position(x: w * 0.88, y: h * 0.12)
+                    .blur(radius: 120)
+
+                Circle()
+                    .fill(ThemeManager.brandGreen.opacity(0.10))
+                    .frame(width: w * 1.25, height: w * 1.25)
+                    .position(x: w * 0.08, y: h * 0.72)
+                    .blur(radius: 120)
+
+                Circle()
+                    .fill(ThemeManager.brandYellow.opacity(0.08))
+                    .frame(width: w * 0.9, height: w * 0.9)
+                    .position(x: w * 0.55, y: h * 0.45)
+                    .blur(radius: 120)
+            }
+            .frame(width: w, height: h)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 struct CourtifyThemedNavigationBar: ViewModifier {
     func body(content: Content) -> some View {
         content.toolbarBackground(ThemeManager.oledBlack, for: .navigationBar)
@@ -338,6 +374,8 @@ struct CourtifyBackground: ViewModifier {
     func body(content: Content) -> some View {
         ZStack {
             ThemeManager.oledBlack.ignoresSafeArea()
+            CourtifyListAmbientBloom()
+                .ignoresSafeArea()
             content
         }
         .preferredColorScheme(.dark)
@@ -352,16 +390,12 @@ struct GlassCardModifier: ViewModifier {
         content
             .padding(padding)
             .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(Color.white.opacity(0.04))
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                }
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                    .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
             }
     }
 }
@@ -373,19 +407,41 @@ struct CourtifyGlassSurfaceModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background {
-                ZStack {
-                    // Give material something to refract on OLED black.
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(Color.white.opacity(0.04))
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                }
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                    .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
             }
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+}
+
+/// Active grid-card chrome: slight scale, brand-yellow rim, soft yellow glow.
+struct CourtifySelectableCardModifier: ViewModifier {
+    var isSelected: Bool
+    var cornerRadius: CGFloat = 18
+    var scale: CGFloat = CourtifyMotion.selectedScale
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(
+                        isSelected ? ThemeManager.brandYellow : ThemeManager.glassEdge,
+                        lineWidth: isSelected ? 1.5 : ThemeManager.glassEdgeWidth
+                    )
+            }
+            .scaleEffect(isSelected ? scale : 1)
+            .shadow(
+                color: isSelected ? ThemeManager.brandYellow.opacity(0.3) : .clear,
+                radius: isSelected ? 15 : 0
+            )
+            .animation(CourtifyMotion.selection, value: isSelected)
+            .sensoryFeedback(.selection, trigger: isSelected) { _, selected in
+                selected
+            }
     }
 }
 
@@ -404,5 +460,20 @@ extension View {
 
     func courtifyGlassSurface(cornerRadius: CGFloat = 16) -> some View {
         modifier(CourtifyGlassSurfaceModifier(cornerRadius: cornerRadius))
+    }
+
+    /// Selection chrome for onboarding / grid cards: scale, brand-yellow edge, soft glow.
+    func courtifySelectableCard(
+        isSelected: Bool,
+        cornerRadius: CGFloat = 18,
+        scale: CGFloat = CourtifyMotion.selectedScale
+    ) -> some View {
+        modifier(
+            CourtifySelectableCardModifier(
+                isSelected: isSelected,
+                cornerRadius: cornerRadius,
+                scale: scale
+            )
+        )
     }
 }

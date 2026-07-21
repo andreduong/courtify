@@ -47,12 +47,14 @@ private struct TourPreferenceCard: View {
     let isSelected: Bool
     let onTap: () -> Void
 
+    private let cornerRadius: CGFloat = 20
+
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 Image(systemName: preference.icon)
-                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    .foregroundStyle(isSelected ? ThemeManager.opticYellow : .white.opacity(0.7))
+                    .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    .foregroundStyle(isSelected ? ThemeManager.brandYellow : .white.opacity(0.7))
 
                 Text(preference.rawValue)
                     .font(ThemeManager.roundedFont(.title3, weight: .bold))
@@ -65,15 +67,13 @@ private struct TourPreferenceCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .glassCard(cornerRadius: 18, padding: 18)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(
-                        isSelected ? ThemeManager.opticYellow : Color.clear,
-                        lineWidth: 2
-                    )
+            .padding(22)
+            .background {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
             }
-            .courtifySelection(isSelected)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .courtifySelectableCard(isSelected: isSelected, cornerRadius: cornerRadius)
         }
         .courtifyButton(.card)
         .gridCellColumns(preference == .both ? 2 : 1)

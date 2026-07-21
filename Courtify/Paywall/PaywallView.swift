@@ -108,18 +108,9 @@ struct PaywallView: View {
                                 } else {
                                     Text("Subscribe")
                                         .font(ThemeManager.roundedFont(.headline, weight: .black))
-                                        .foregroundStyle(.black)
                                 }
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 18)
-                            .background(ThemeManager.brandYellow)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(
-                                color: ThemeManager.brandYellow.opacity(0.3),
-                                radius: 20,
-                                y: 8
-                            )
+                            .courtifyPrimaryButtonLabel(verticalPadding: 18)
                         }
                         .courtifyButton(.primary, enabled: !revenueCat.isLoading)
 
@@ -293,8 +284,11 @@ private struct SpecialOfferPopup: View {
                             .font(.system(size: 13, weight: .bold, design: .rounded))
                             .foregroundStyle(.white.opacity(0.7))
                             .padding(8)
-                            .background(.white.opacity(0.12))
-                            .clipShape(Circle())
+                            .background(.ultraThinMaterial, in: Circle())
+                            .overlay {
+                                Circle()
+                                    .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                            }
                     }
                     .courtifyButton(.icon)
                 }
@@ -320,12 +314,12 @@ private struct SpecialOfferPopup: View {
                     Group {
                         if isLoading {
                             ProgressView()
-                                .tint(ThemeManager.midnightGreen)
+                                .tint(.black)
                         } else {
                             Text("Claim Offer")
                         }
                     }
-                    .courtifyPrimaryButtonLabel(cornerRadius: 14)
+                    .courtifyPrimaryButtonLabel()
                 }
                 .courtifyButton(.primary, enabled: !isLoading)
 
@@ -337,12 +331,13 @@ private struct SpecialOfferPopup: View {
             .padding(24)
             .background {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(ThemeManager.midnightGreen)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .strokeBorder(ThemeManager.opticYellow.opacity(0.35), lineWidth: 1)
-                    }
+                    .fill(.ultraThinMaterial)
             }
+            .overlay {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(ThemeManager.brandYellow.opacity(0.35), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .padding(.horizontal, 28)
         }
     }
@@ -410,11 +405,11 @@ private struct PlanOptionRow: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(
+                    .stroke(
                         isYearlyVIP
                             ? ThemeManager.brandYellow
-                            : (isSelected ? ThemeManager.brandYellow.opacity(0.55) : Color.white.opacity(0.1)),
-                        lineWidth: isYearlyVIP ? 1 : (isSelected ? 1.5 : 0.5)
+                            : (isSelected ? ThemeManager.brandYellow.opacity(0.55) : ThemeManager.glassEdge),
+                        lineWidth: isYearlyVIP ? 1 : (isSelected ? 1.5 : ThemeManager.glassEdgeWidth)
                     )
             }
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))

@@ -13,6 +13,12 @@ enum UITestLaunchArgs {
         ProcessInfo.processInfo.arguments.contains("-UITestPaywall")
     }
 
+    /// Opens a specific onboarding step (skips splash). Values: `tour`, `players`, `slam`.
+    /// Example: `-UITestOnboarding players`
+    static var onboardingStep: String? {
+        value(after: "-UITestOnboarding")?.lowercased()
+    }
+
     static var showsSettings: Bool {
         ProcessInfo.processInfo.arguments.contains("-UITestSettings")
     }

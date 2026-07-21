@@ -159,8 +159,11 @@ struct FavoritePlayerPickerSheet: View {
                 .focused($isSearchFocused)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
-                .background(.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                }
                 .padding(.horizontal, 20)
 
             if !searchSuggestions.isEmpty {

@@ -27,7 +27,7 @@ enum CourtifyMotion {
     static let pressedScaleRow: CGFloat = 0.978
     /// Whole-surface press (non-button taps) — subtle so scrollable screens stay calm.
     static let pressedScaleSurface: CGFloat = 0.991
-    static let selectedScale: CGFloat = 1.02
+    static let selectedScale: CGFloat = 1.03
 
     /// Soft impact on touch-down — matches system control feel (iOS 17+).
     static func pressFeedback(for style: CourtifyPressStyle) -> SensoryFeedback {
@@ -427,26 +427,60 @@ private final class CourtifyWindowSurfacePress: NSObject {
 }
 
 private struct CourtifyPrimaryButtonLabelModifier: ViewModifier {
-    var cornerRadius: CGFloat = 14
     var verticalPadding: CGFloat = 16
-    var isFilled: Bool = true
     var fillOpacity: Double = 1
-    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     func body(content: Content) -> some View {
         content
             .font(ThemeManager.roundedFont(.headline, weight: .semibold))
-            .foregroundStyle(isFilled ? appearance.canvasColor : .white)
+            .foregroundStyle(.black)
             .frame(maxWidth: .infinity)
             .padding(.vertical, verticalPadding)
-            .background {
-                if isFilled {
-                    appearance.accentColor.opacity(fillOpacity)
-                } else {
-                    Color.white.opacity(0.12)
-                }
+            .background(ThemeManager.brandYellow.opacity(fillOpacity), in: Capsule())
+            // Shadow must sit outside any clip; `in: Capsule()` keeps the fill shaped
+            // without clipping the glow the way `.clipShape` + parent ScrollViews can.
+            .compositingGroup()
+            .shadow(
+                color: ThemeManager.brandYellow.opacity(0.4 * fillOpacity),
+                radius: 20,
+                y: 8
+            )
+    }
+}
+
+/// Glass secondary pill — Skip / Not now (no murky green fill).
+private struct CourtifySecondaryButtonLabelModifier: ViewModifier {
+    var verticalPadding: CGFloat = 14
+
+    func body(content: Content) -> some View {
+        content
+            .font(ThemeManager.roundedFont(.headline, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, verticalPadding)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(ThemeManager.glassPillEdge, lineWidth: 1)
             }
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    }
+}
+
+/// Inactive primary placeholder — dormant glass, not muddy yellow.
+private struct CourtifyDormantButtonLabelModifier: ViewModifier {
+    var verticalPadding: CGFloat = 16
+
+    func body(content: Content) -> some View {
+        content
+            .font(ThemeManager.roundedFont(.headline, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.3))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, verticalPadding)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+            }
     }
 }
 
@@ -476,25 +510,24 @@ extension View {
         verticalPadding: CGFloat = 16,
         fillOpacity: Double = 1
     ) -> some View {
-        modifier(
+        // `cornerRadius` retained for call-site compatibility; primary CTAs are always Capsule.
+        _ = cornerRadius
+        return modifier(
             CourtifyPrimaryButtonLabelModifier(
-                cornerRadius: cornerRadius,
                 verticalPadding: verticalPadding,
-                isFilled: true,
                 fillOpacity: fillOpacity
             )
         )
     }
 
     func courtifySecondaryButtonLabel(cornerRadius: CGFloat = 12) -> some View {
-        modifier(
-            CourtifyPrimaryButtonLabelModifier(
-                cornerRadius: cornerRadius,
-                verticalPadding: 14,
-                isFilled: false,
-                fillOpacity: 1
-            )
-        )
+        _ = cornerRadius
+        return modifier(CourtifySecondaryButtonLabelModifier())
+    }
+
+    /// Disabled / pre-selection CTA — glass with quiet white text (no muddy yellow fill).
+    func courtifyDormantButtonLabel(verticalPadding: CGFloat = 16) -> some View {
+        modifier(CourtifyDormantButtonLabelModifier(verticalPadding: verticalPadding))
     }
 
     func courtifyScreenContent() -> some View {
