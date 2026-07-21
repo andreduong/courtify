@@ -3,7 +3,6 @@ import SwiftUI
 struct FavoritePlayerPickerSheet: View {
     @Binding var favoritePlayerID: String
     @ObservedObject private var dataStore = WidgetDataStore.shared
-    @ObservedObject private var appearance = AppAppearanceStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var searchQuery = ""
     @State private var isSaving = false
@@ -42,8 +41,9 @@ struct FavoritePlayerPickerSheet: View {
                     }
                 }
                 .padding(.top, 8)
+                .padding(.bottom, 24)
             }
-            .background(ThemeManager.oledBlack.ignoresSafeArea())
+            .courtifyBackground()
             .navigationTitle("Favorite player")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -101,18 +101,21 @@ struct FavoritePlayerPickerSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
             .padding(.top, 14)
-            .padding(.bottom, 6)
+            .padding(.bottom, 8)
     }
 
     private func playerRows(_ players: [TennisPlayer]) -> some View {
-        ForEach(players) { player in
-            playerRow(player)
-            CourtifyTileDivider()
+        VStack(spacing: 10) {
+            ForEach(players) { player in
+                playerRow(player)
+            }
         }
+        .padding(.horizontal, 20)
     }
 
     private func playerRow(_ player: TennisPlayer) -> some View {
-        Button {
+        let isSelected = favoritePlayerID == player.id
+        return Button {
             Task { await select(player) }
         } label: {
             HStack(spacing: 14) {
@@ -121,23 +124,23 @@ struct FavoritePlayerPickerSheet: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(player.name)
-                        .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                        .font(.headline)
+                        .fontWeight(.bold)
                         .foregroundStyle(.white)
                     Text(rankSubtitle(for: player))
-                        .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .kerning(1.2)
                         .foregroundStyle(ThemeManager.courtGreen)
                 }
 
-                Spacer()
-
-                if favoritePlayerID == player.id {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(ThemeManager.opticYellow)
-                }
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .courtifyGlassSurface(cornerRadius: 16)
+            .courtifySelectableCard(isSelected: isSelected, cornerRadius: 16, scale: 1.02)
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .courtifyButton(.card)
         .disabled(isSaving)
@@ -159,46 +162,45 @@ struct FavoritePlayerPickerSheet: View {
                 .focused($isSearchFocused)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
-                }
+                .courtifyGlassSurface(cornerRadius: 16)
                 .padding(.horizontal, 20)
 
             if !searchSuggestions.isEmpty {
-                VStack(spacing: 0) {
+                VStack(spacing: 10) {
                     ForEach(searchSuggestions) { player in
+                        let isSelected = favoritePlayerID == player.id
                         Button {
                             Task { await select(player) }
                         } label: {
                             HStack(spacing: 12) {
-                                TennisPlayerPhotoView(player: player, style: .headshot, size: 36)
+                                TennisPlayerPhotoView(player: player, style: .headshot, size: 40)
                                     .id("\(player.id)-\(photoRefreshToken)")
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(player.name)
-                                        .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                                        .font(.headline)
+                                        .fontWeight(.bold)
                                         .foregroundStyle(.white)
                                     Text(rankSubtitle(for: player))
-                                        .font(ThemeManager.roundedFont(.caption))
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        .font(.subheadline)
+                                        .fontWeight(.bold)
+                                        .kerning(1.2)
+                                        .foregroundStyle(ThemeManager.courtGreen)
                                 }
 
-                                Spacer()
+                                Spacer(minLength: 0)
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .contentShape(Rectangle())
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                            .courtifyGlassSurface(cornerRadius: 16)
+                            .courtifySelectableCard(isSelected: isSelected, cornerRadius: 16, scale: 1.02)
+                            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
-                        .courtifyButton(.ghost)
+                        .courtifyButton(.card)
                         .disabled(isSaving)
-
-                        if player.id != searchSuggestions.last?.id {
-                            CourtifyTileDivider()
-                        }
                     }
                 }
+                .padding(.horizontal, 20)
             } else if !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
                 Button {
@@ -210,21 +212,24 @@ struct FavoritePlayerPickerSheet: View {
                         TennisPlayerPhotoView(
                             player: FavoritePlayerCatalog.playerForManualName(trimmed, payload: dataStore.payload),
                             style: .headshot,
-                            size: 36
+                            size: 40
                         )
                         Text("Add \"\(trimmed)\"")
-                            .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                            .font(.headline)
+                            .fontWeight(.bold)
                             .foregroundStyle(ThemeManager.opticYellow)
-                        Spacer()
+                        Spacer(minLength: 0)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .courtifyGlassSurface(cornerRadius: 16)
                 }
-                .courtifyButton(.ghost)
+                .courtifyButton(.card)
                 .disabled(isSaving)
+                .padding(.horizontal, 20)
             }
         }
-        .padding(.bottom, 24)
+        .padding(.bottom, 16)
     }
 
     private func rankSubtitle(for player: TennisPlayer) -> String {

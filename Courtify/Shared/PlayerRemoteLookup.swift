@@ -3,62 +3,91 @@ import Foundation
 /// On-demand player metadata for favorites outside the cached top-20 rankings.
 /// One Worker call per uncached name (Worker KV caches for 30 days).
 enum PlayerRemoteLookup {
-    struct Meta {
+    struct Meta: Equatable {
         let id: Int
         let rank: Int
         let name: String
     }
 
+    enum Status: Equatable {
+        case found(Meta)
+        /// Outside rankings top-100 / inactive — not a quota problem.
+        case notFound
+        case quota
+        case failed
+        /// Already have cache or payload match; no network needed.
+        case skipped
+    }
+
     /// Fetches rank + API id when the player is not in the local top-20 cache.
     static func fetch(for player: TennisPlayer, payload: WidgetDataPayload?) async -> Meta? {
+        switch await fetchStatus(for: player, payload: payload) {
+        case .found(let meta): return meta
+        default: return nil
+        }
+    }
+
+    static func fetchStatus(for player: TennisPlayer, payload: WidgetDataPayload?) async -> Status {
         if player.imageName != nil {
-            return nil
+            return .skipped
         }
 
         if let cached = PlayerRankCache.entry(for: player.id),
            let apiId = cached.apiId, apiId > 0 {
-            return Meta(id: apiId, rank: cached.rank, name: cached.name ?? player.name)
+            return .found(Meta(id: apiId, rank: cached.rank, name: cached.name ?? player.name))
         }
 
         if rankingEntry(matching: player.name, tour: player.tour, payload: payload) != nil {
-            return nil
+            return .skipped
         }
 
-        if let remote = await fetchFromWorker(for: player) {
+        let remote = await fetchFromWorkerStatus(for: player)
+        switch remote {
+        case .found, .quota, .failed, .notFound:
             return remote
+        case .skipped:
+            break
         }
 
         if let bundledId = PlayerSearchCatalog.bundledApiId(for: player.name, tour: player.tour), bundledId > 0 {
-            return Meta(id: bundledId, rank: 0, name: player.name)
+            return .found(Meta(id: bundledId, rank: 0, name: player.name))
         }
 
-        return nil
+        return .notFound
     }
 
-    private static func fetchFromWorker(for player: TennisPlayer) async -> Meta? {
+    private static func fetchFromWorkerStatus(for player: TennisPlayer) async -> Status {
         var components = URLComponents(string: WidgetAPIService.playerLookupURL.absoluteString)
         components?.queryItems = [
             URLQueryItem(name: "tour", value: player.tour == .wta ? "wta" : "atp"),
             URLQueryItem(name: "name", value: player.name),
         ]
-        guard let url = components?.url else { return nil }
+        guard let url = components?.url else { return .failed }
 
         do {
             var request = URLRequest(url: url)
             request.timeoutInterval = 20
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200 ... 299).contains(http.statusCode) else {
-                return nil
+            guard let http = response as? HTTPURLResponse else { return .failed }
+
+            switch http.statusCode {
+            case 200 ... 299:
+                let decoded = try JSONDecoder().decode(LookupResponse.self, from: data)
+                guard decoded.id > 0 else { return .notFound }
+                return .found(Meta(
+                    id: decoded.id,
+                    rank: decoded.rank ?? 0,
+                    name: decoded.name ?? player.name
+                ))
+            case 404, 400:
+                return .notFound
+            case 429, 503:
+                return .quota
+            default:
+                return .failed
             }
-            let decoded = try JSONDecoder().decode(LookupResponse.self, from: data)
-            guard decoded.id > 0 else { return nil }
-            return Meta(
-                id: decoded.id,
-                rank: decoded.rank ?? 0,
-                name: decoded.name ?? player.name
-            )
         } catch {
-            return nil
+            return .failed
         }
     }
 

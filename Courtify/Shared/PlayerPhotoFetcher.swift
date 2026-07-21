@@ -152,10 +152,12 @@ enum PlayerPhotoFetcher {
 
             switch http.statusCode {
             case 200 ... 299:
-                guard !data.isEmpty, isImageData(data) else { return .upstream }
+                // Empty / non-image bodies mean no usable photo — not a quota miss.
+                guard !data.isEmpty, isImageData(data) else { return .notFound }
                 try data.write(to: destination, options: .atomic)
                 return .success
-            case 404, 400:
+            case 404, 400, 403:
+                // 403: ATP CDN / inactive plates; Worker normally normalizes to 404.
                 return .notFound
             case 429, 503:
                 return .quota

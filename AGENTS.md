@@ -133,7 +133,7 @@ Worker sums `courtWins` / `courtLosses` across all surfaces for the current UTC 
 **Quota rules (learned the hard way):**
 
 - Do **not** expand `/api/widget-data` refresh to `pageSize=100` — keep top 20 for the shared payload.
-- Do **not** fetch season W/L inside the shared widget-data refresh (would be N players × refresh).
+- Do **not** fetch season W/L inside the shared widget-data refresh (would be N players × refresh). Exception: `WidgetDataStore.refresh()` may heal **one** missing season record for the active `custom:` favorite.
 - `lookupPlayerMeta` uses a **single** `/ranking/singles?pageSize=100` call; no search/fixtures/ms-api chains.
 - Lookup / season-record fetches pass `noRetryOn429: true` — do not burn retries when quota is exhausted.
 - Worker tracks `x-ratelimit-requests-remaining` (and limit); when remaining is below a reserve (**5** on Basic-sized limits, **100** on Pro+), skip RapidAPI and serve stale KV / return 429 on photo/season.
@@ -375,7 +375,7 @@ auto-refresh timers or on-appear `refresh()` without an explicit product request
 | Rankings tab (20 rows/tour) | Cached Worker payload | Pull-to-refresh only |
 | Widgets gallery — rankings / live / order of play | Same cache | Pull-to-refresh only |
 | Widgets gallery — tournaments | `TournamentCalendar` (bundled 2026) | Never |
-| Widgets gallery — favorite player | Bundled season record **or** `PlayerSeasonRecordCache` + optional verified rank/photo cache | Picker select only (lookup + photo + season-record) |
+| Widgets gallery — favorite player | Bundled season record **or** `PlayerSeasonRecordCache` + optional verified rank/photo cache | Picker select (lookup + photo + season-record in parallel); missing custom W/L also heals on pull-to-refresh |
 
 ### Custom favorite players (outside top 20)
 
@@ -386,12 +386,12 @@ auto-refresh timers or on-appear `refresh()` without an explicit product request
 | `PlayerRemoteLookup` | One `/api/player-lookup` on pick when not in top-20 payload |
 | `PlayerRankCache` | App-group `playerRankCache` — rank + apiId; `photosVerified` gate |
 | `PlayerPhotoFetcher` / `PlayerPhotoStore` | Download + cache head/hero JPEGs under `player-images/` |
-| `PlayerSeasonRecordFetcher` / `PlayerSeasonRecordCache` | One `/api/player-season-record` on pick; app-group W/L for widgets + Home |
+| `PlayerSeasonRecordFetcher` / `PlayerSeasonRecordCache` | One `/api/player-season-record` on pick (always, even if photo fails); optional one-player heal on `WidgetDataStore.refresh()` when cache nil |
 | `PlayerTorsoPhotoView` | Home hero; bundled `-hero` or verified cache or silhouette |
 | `PlayerSilhouetteView` | ATP `figure.tennis` / WTA `figure.dress.line.vertical.figure` fallback |
 | `TennisPlayerPhotoView` | Circular headshots in lists |
 
-**Pick flow:** clear stale photos / rank / season cache → lookup → store rank (unverified) → fetch photos → `markPhotosVerified` on success → fetch season W/L into `PlayerSeasonRecordCache`; on photo failure remove unverified rank display path / show silhouette.
+**Pick flow:** clear stale photos / rank / season cache → lookup → store rank (unverified) → fetch photos **and** season W/L concurrently (season is never gated on photo success). Lookup HTTP 404 / empty photo → `mediaFailureReason = .notFound` (silent silhouette). True photo 429/503 → `.quota` helper only. On photo failure show silhouette; season still stores when `apiId` is known.
 
 **Display:** `TennisPlayer.displaySeasonRecord` prefers bundled featured W/L, else `PlayerSeasonRecordCache`.
 

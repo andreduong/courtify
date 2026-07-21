@@ -49,15 +49,35 @@ final class WidgetDataStore: ObservableObject {
                 if let apiError = error as? WidgetAPIError, apiError.isQuotaExceeded {
                     quotaExceededOnLastRefresh = true
                     loadCachedPayload()
-                    return
+                } else {
+                    lastError = userFacingMessage(for: error)
+                    loadCachedPayload()
                 }
-                lastError = userFacingMessage(for: error)
-                loadCachedPayload()
             }
+
+            // Targeted heal only — never mass-fetch season W/L inside widget-data.
+            // If the custom favorite is missing a season record (e.g. photo failed first
+            // on pick), recover it on pull-to-refresh without expanding shared refresh.
+            scheduleFavoriteSeasonRecordHeal()
         }
 
         refreshTask = task
         await task.value
+    }
+
+    /// Fires a single-player season W/L fetch when the active favorite is `custom:` and
+    /// `PlayerSeasonRecordCache` has nothing stored. Does not touch shared widget-data cost.
+    private func scheduleFavoriteSeasonRecordHeal() {
+        let playerID = AppGroupConstants.userDefaults.string(forKey: AppGroupConstants.Keys.favoritePlayerID) ?? ""
+        guard playerID.hasPrefix("custom:") else { return }
+        guard PlayerSeasonRecordCache.record(for: playerID) == nil else { return }
+        let snapshot = payload
+        Task { @MainActor in
+            _ = await FavoritePlayerEnricher.healSeasonRecordIfNeeded(
+                playerID: playerID,
+                payload: snapshot
+            )
+        }
     }
 
     /// Loads cached rankings when present; otherwise fetches once from the Worker.

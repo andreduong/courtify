@@ -47,8 +47,8 @@ extension View {
 }
 
 /// Full-torso cutout for Home, widgets gallery, and settings favorite cards.
-/// Bundled `-hero` assets for featured players; app-group **hero** cache only when it is a
-/// real bodyshot. RapidAPI studio JPEGs are headshots — shown as circles, never as cutouts.
+/// Bundled `-hero` assets for featured players only. RapidAPI studio JPEGs are
+/// opaque plates — always circular headshots, never rectangular “cutouts”.
 /// Never falls back to letter placeholders (`placeholder-male` / `placeholder-female`).
 struct PlayerTorsoPhotoView: View {
   let player: TennisPlayer
@@ -61,6 +61,8 @@ struct PlayerTorsoPhotoView: View {
   var prefersCircularHeadshotFallback: Bool = true
   /// Diameter for the circular fallback (Home / posters use a larger default than Settings).
   var circularHeadshotSize: CGFloat = 140
+  /// Where the circular API headshot sits when there is no bundled cutout.
+  var circularHeadshotAlignment: Alignment = .bottomTrailing
 
   var body: some View {
     photoContent
@@ -70,29 +72,32 @@ struct PlayerTorsoPhotoView: View {
   @ViewBuilder
   private var photoContent: some View {
     if let bundled = bundledHeroName {
+      // Only bundled transparent PNGs get full-bleed rectangular torso layout.
       Image(bundled)
         .resizable()
         .aspectRatio(contentMode: contentMode)
-    } else if let uiImage = trustedCachedUIImage(variant: .hero) {
-      Image(uiImage: uiImage)
-        .resizable()
-        .aspectRatio(contentMode: contentMode)
-    } else if prefersCircularHeadshotFallback, let uiImage = trustedCachedUIImage(variant: .head) {
+    } else if prefersCircularHeadshotFallback, let uiImage = studioHeadshotImage {
       StudioHeadshotCircle(uiImage: uiImage, size: circularHeadshotSize)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: circularHeadshotAlignment)
     } else {
       PlayerSilhouetteView(tour: player.tour, style: .torso)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
   }
 
+  /// Fade only applies to real transparent cutouts — never to circular studio plates.
   private var showsCutoutFade: Bool {
-    bundledHeroName != nil || trustedCachedUIImage(variant: .hero) != nil
+    bundledHeroName != nil
   }
 
   private var bundledHeroName: String? {
     guard let imageName = player.imageName else { return nil }
     return "\(imageName)-hero"
+  }
+
+  /// Any cached API JPEG is a studio plate (head preferred; leftover `-hero.jpg` is the same bytes).
+  private var studioHeadshotImage: UIImage? {
+    trustedCachedUIImage(variant: .head) ?? trustedCachedUIImage(variant: .hero)
   }
 
   private func trustedCachedUIImage(variant: PlayerPhotoVariant) -> UIImage? {
@@ -138,6 +143,8 @@ private struct OptionalHeroFade: ViewModifier {
   }
 }
 
+/// Circular list / search headshot. Bundled avatar or cached API JPEG only —
+/// never a grey rectangle. Silhouette fallback is monochrome SF Symbol (no fill).
 struct TennisPlayerPhotoView: View {
   let player: TennisPlayer
   var style: TennisPlayerPhotoStyle = .headshot
@@ -149,64 +156,50 @@ struct TennisPlayerPhotoView: View {
         Image(bundledName)
           .resizable()
           .scaledToFill()
-      } else if let path = preferredCachedPath,
-                let uiImage = UIImage(contentsOfFile: path) {
+          .frame(width: size, height: size)
+          .clipShape(Circle())
+      } else if let uiImage = cachedStudioImage {
         Image(uiImage: uiImage)
           .resizable()
           .scaledToFill()
+          .frame(width: size, height: size)
+          .clipShape(Circle())
       } else {
         PlayerSilhouetteView(tour: player.tour, style: .headshot, size: size)
       }
     }
-    .frame(width: size, height: style == .hero ? nil : size)
-    .frame(maxWidth: style == .hero ? .infinity : size, maxHeight: style == .hero ? .infinity : size)
-    .background(Color.black.opacity(0.2))
-    .clipShape(style == .headshot ? AnyShape(Circle()) : AnyShape(Rectangle()))
     .overlay {
-      if style == .headshot {
-        Circle()
-          .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
-      }
+      Circle()
+        .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+        .frame(width: size, height: size)
     }
   }
 
+  /// Bundled avatar for headshot; bundled `-hero` only when style is `.hero` (cutout elsewhere).
   private var bundledAssetName: String? {
     guard player.imageName != nil else { return nil }
     switch style {
     case .headshot:
       return player.resolvedImageName
     case .hero:
-      return player.heroImageName.hasSuffix("-hero") ? player.heroImageName : nil
+      // This view is circular-only — torso cutouts go through PlayerTorsoPhotoView.
+      // Prefer the bundled circular avatar when available.
+      return player.resolvedImageName
     }
   }
 
-  private var preferredCachedPath: String? {
-    switch style {
-    case .headshot:
-      if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
-         let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head) {
-        return path
-      }
-      if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
-         let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero) {
-        return path
-      }
-      return nil
-    case .hero:
-      guard PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero) else { return nil }
-      return PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero)
+  /// Head preferred; leftover `-hero.jpg` studio plates are the same RapidAPI bytes.
+  private var cachedStudioImage: UIImage? {
+    if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
+       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head),
+       let image = UIImage(contentsOfFile: path) {
+      return image
     }
-  }
-}
-
-private struct AnyShape: Shape {
-  private let builder: (CGRect) -> Path
-
-  init<S: Shape>(_ shape: S) {
-    builder = { rect in shape.path(in: rect) }
-  }
-
-  func path(in rect: CGRect) -> Path {
-    builder(rect)
+    if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
+       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
+       let image = UIImage(contentsOfFile: path) {
+      return image
+    }
+    return nil
   }
 }

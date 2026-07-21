@@ -218,6 +218,7 @@ struct FavoritePlayerMediumWidgetView: View {
 }
 
 /// Tight torso for the medium favorite hero column (no 88pt gallery padding).
+/// Bundled `-hero` cutouts only; API studio JPEGs render as circles — never rectangles.
 private struct MediumFavoriteHeroCutout: View {
     let player: TennisPlayer
 
@@ -228,16 +229,7 @@ private struct MediumFavoriteHeroCutout: View {
                     .resizable()
                     .scaledToFit()
                     .courtifyHeroFadeMask()
-            } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
-                      let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
-                      let uiImage = UIImage(contentsOfFile: path) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .courtifyHeroFadeMask()
-            } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
-                      let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head),
-                      let uiImage = UIImage(contentsOfFile: path) {
+            } else if let uiImage = studioHeadshotImage(for: player) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
@@ -250,12 +242,7 @@ private struct MediumFavoriteHeroCutout: View {
                     .padding(.trailing, 8)
                     .padding(.bottom, 16)
             } else {
-                Image(systemName: player.tour == .wta
-                      ? "figure.dress.line.vertical.figure"
-                      : "figure.tennis")
-                    .font(.system(size: 64, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.22))
-                    .symbolRenderingMode(.monochrome)
+                PlayerSilhouetteView(tour: player.tour, style: .torso, size: 64)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -280,21 +267,7 @@ struct FavoritePlayerHeroImage: View {
                         alignment: edge == .leading ? .bottomLeading : .bottomTrailing
                     )
                     .courtifyHeroFadeMask()
-            } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
-                      let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
-                      let uiImage = UIImage(contentsOfFile: path) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(
-                        maxWidth: .infinity,
-                        maxHeight: .infinity,
-                        alignment: edge == .leading ? .bottomLeading : .bottomTrailing
-                    )
-                    .courtifyHeroFadeMask()
-            } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
-                      let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head),
-                      let uiImage = UIImage(contentsOfFile: path) {
+            } else if let uiImage = studioHeadshotImage(for: player) {
                 // Studio plates are not cutouts — circular badge, not a grey rectangle.
                 Image(uiImage: uiImage)
                     .resizable()
@@ -313,17 +286,12 @@ struct FavoritePlayerHeroImage: View {
                     .padding(edge == .leading ? .leading : .trailing, 10)
                     .padding(.bottom, 18)
             } else {
-                Image(systemName: player.tour == .wta
-                      ? "figure.dress.line.vertical.figure"
-                      : "figure.tennis")
-                    .font(.system(size: 78, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.22))
-                    .symbolRenderingMode(.monochrome)
-                    .frame(
-                        maxWidth: .infinity,
-                        maxHeight: .infinity,
-                        alignment: edge == .leading ? .bottomLeading : .bottomTrailing
-                    )
+                PlayerSilhouetteView(
+                    tour: player.tour,
+                    style: .torso,
+                    size: 78,
+                    alignment: edge == .leading ? .bottomLeading : .bottomTrailing
+                )
             }
         }
         .frame(
@@ -336,6 +304,21 @@ struct FavoritePlayerHeroImage: View {
         .opacity(0.97)
         .allowsHitTesting(false)
     }
+}
+
+/// Any cached API JPEG is a studio plate — head preferred; leftover `-hero.jpg` is the same bytes.
+private func studioHeadshotImage(for player: TennisPlayer) -> UIImage? {
+    if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
+       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head),
+       let image = UIImage(contentsOfFile: path) {
+        return image
+    }
+    if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
+       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
+       let image = UIImage(contentsOfFile: path) {
+        return image
+    }
+    return nil
 }
 
 // MARK: - Tournament widgets (bundled calendar)

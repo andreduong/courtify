@@ -180,8 +180,7 @@ struct SettingsView: View {
                         PlayerTorsoPhotoView(
                             player: player,
                             contentMode: .fit,
-                            fadesIntoBackground: player.imageName != nil
-                                || PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
+                            fadesIntoBackground: player.imageName != nil,
                             circularHeadshotSize: 72
                         )
                         .frame(width: 92, height: 108)
@@ -423,25 +422,19 @@ private struct FavoriteCard<Artwork: View>: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.ultraThinMaterial)
-
-                // Transparent bloom only — CourtifyAmbientGlow paints OLED black and kills glass.
-                RadialGradient(
-                    colors: [
-                        appearance.accentColor.opacity(0.18),
-                        appearance.liftColor.opacity(0.10),
-                        .clear,
-                    ],
-                    center: .topTrailing,
-                    startRadius: 4,
-                    endRadius: 160
-                )
-                .blur(radius: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .allowsHitTesting(false)
-            }
+            // Transparent bloom only — CourtifyAmbientGlow paints OLED black and kills glass.
+            RadialGradient(
+                colors: [
+                    appearance.accentColor.opacity(0.18),
+                    appearance.liftColor.opacity(0.10),
+                    .clear,
+                ],
+                center: .topTrailing,
+                startRadius: 4,
+                endRadius: 160
+            )
+            .blur(radius: 40)
+            .allowsHitTesting(false)
 
             artwork()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -485,11 +478,7 @@ private struct FavoriteCard<Artwork: View>: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity)
         .frame(height: FavoriteCardMetrics.height)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
-        }
+        .courtifyGlassSurface(cornerRadius: 20)
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }

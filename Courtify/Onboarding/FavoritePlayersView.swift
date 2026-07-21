@@ -64,8 +64,10 @@ struct FavoritePlayersView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.vertical, 16)
+                .padding(.vertical, 12)
             }
+            // Lock row height so posters stay true 3:4 (ScrollView otherwise proposes full flex height).
+            .frame(height: OnboardingPosterMetrics.height + 28)
 
             if !favoritePlayerID.isEmpty,
                let primaryName = TennisPlayer.displayName(for: favoritePlayerID) {
@@ -166,10 +168,11 @@ struct FavoritePlayersView: View {
     }
 }
 
-private struct OnboardingPosterMetrics {
+private enum OnboardingPosterMetrics {
     static let width: CGFloat = 148
     static let cornerRadius: CGFloat = 18
     static let aspect: CGFloat = 3.0 / 4.0
+    static var height: CGFloat { width / aspect }
 }
 
 private struct MorePlayerPosterCard: View {
@@ -180,9 +183,6 @@ private struct MorePlayerPosterCard: View {
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: OnboardingPosterMetrics.cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-
                 Image(systemName: "plus")
                     .font(.system(size: 36, weight: .bold, design: .rounded))
                     .foregroundStyle(ThemeManager.brandYellow)
@@ -208,9 +208,8 @@ private struct MorePlayerPosterCard: View {
                 }
                 .padding(12)
             }
-            .frame(width: OnboardingPosterMetrics.width)
-            .aspectRatio(OnboardingPosterMetrics.aspect, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: OnboardingPosterMetrics.cornerRadius, style: .continuous))
+            .frame(width: OnboardingPosterMetrics.width, height: OnboardingPosterMetrics.height)
+            .courtifyGlassSurface(cornerRadius: OnboardingPosterMetrics.cornerRadius)
             .courtifySelectableCard(
                 isSelected: isSelected,
                 cornerRadius: OnboardingPosterMetrics.cornerRadius
@@ -240,17 +239,23 @@ private struct PlayerPosterCard: View {
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: OnboardingPosterMetrics.cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
-
                 PlayerTorsoPhotoView(
                     player: player,
-                    contentMode: .fit,
-                    fadePortion: 0.40
+                    contentMode: .fill,
+                    fadePortion: 0.40,
+                    circularHeadshotSize: 110,
+                    circularHeadshotAlignment: .bottom
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .padding(.bottom, 4)
-                .scaleEffect(1.10, anchor: .bottom)
+                .clipped()
+                .allowsHitTesting(false)
+
+                LinearGradient(
+                    colors: [.clear, Color.black.opacity(0.45)],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
 
                 if isPrimary {
                     Image(systemName: "star.fill")
@@ -275,9 +280,8 @@ private struct PlayerPosterCard: View {
                 }
                 .padding(12)
             }
-            .frame(width: OnboardingPosterMetrics.width)
-            .aspectRatio(OnboardingPosterMetrics.aspect, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: OnboardingPosterMetrics.cornerRadius, style: .continuous))
+            .frame(width: OnboardingPosterMetrics.width, height: OnboardingPosterMetrics.height)
+            .courtifyGlassSurface(cornerRadius: OnboardingPosterMetrics.cornerRadius)
             .courtifySelectableCard(
                 isSelected: isSelected,
                 cornerRadius: OnboardingPosterMetrics.cornerRadius
@@ -326,50 +330,48 @@ private struct CustomPlayerSearchSheet: View {
                     .disabled(isSaving)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
-                    }
+                    .courtifyGlassSurface(cornerRadius: 16)
 
                 if !suggestions.isEmpty {
-                    VStack(spacing: 0) {
+                    VStack(spacing: 10) {
                         ForEach(suggestions) { entry in
+                            let player = FavoritePlayerCatalog.player(from: entry)
                             Button {
-                                Task { await select(FavoritePlayerCatalog.player(from: entry)) }
+                                Task { await select(player) }
                             } label: {
                                 HStack(spacing: 12) {
                                     TennisPlayerPhotoView(
-                                        player: FavoritePlayerCatalog.player(from: entry),
+                                        player: player,
                                         style: .headshot,
-                                        size: 36
+                                        size: 40
                                     )
 
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(entry.name)
-                                            .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                                            .font(.headline)
+                                            .fontWeight(.bold)
                                             .foregroundStyle(.white)
                                         Text(entry.tour.rawValue)
-                                            .font(ThemeManager.roundedFont(.caption))
-                                            .foregroundStyle(.white.opacity(0.5))
+                                            .font(.subheadline)
+                                            .fontWeight(.bold)
+                                            .kerning(1.2)
+                                            .foregroundStyle(ThemeManager.courtGreen)
                                     }
 
-                                    Spacer()
+                                    Spacer(minLength: 0)
                                 }
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 4)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 14)
+                                .courtifyGlassSurface(cornerRadius: 16)
+                                .courtifySelectableCard(isSelected: false, cornerRadius: 16, scale: 1.02)
                             }
-                            .courtifyButton(.ghost)
+                            .courtifyButton(.card)
                             .disabled(isSaving)
-
-                            if entry.id != suggestions.last?.id {
-                                Divider().overlay(Color.white.opacity(0.1))
-                            }
                         }
                     }
                 } else if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
                     Button {
-                        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
                         Task {
                             await select(
                                 FavoritePlayerCatalog.player(
@@ -382,23 +384,26 @@ private struct CustomPlayerSearchSheet: View {
                             TennisPlayerPhotoView(
                                 player: FavoritePlayerCatalog.player(
                                     from: PlayerSearchCatalog.Entry(
-                                        name: query.trimmingCharacters(in: .whitespacesAndNewlines),
+                                        name: trimmed,
                                         tour: resolvedManualTour
                                     )
                                 ),
                                 style: .headshot,
-                                size: 36
+                                size: 40
                             )
 
-                            Text("Add \"\(query.trimmingCharacters(in: .whitespacesAndNewlines))\"")
-                                .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                            Text("Add \"\(trimmed)\"")
+                                .font(.headline)
+                                .fontWeight(.bold)
                                 .foregroundStyle(ThemeManager.opticYellow)
 
-                            Spacer()
+                            Spacer(minLength: 0)
                         }
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 14)
+                        .courtifyGlassSurface(cornerRadius: 16)
                     }
-                    .courtifyButton(.ghost)
+                    .courtifyButton(.card)
                     .disabled(isSaving)
                 }
 

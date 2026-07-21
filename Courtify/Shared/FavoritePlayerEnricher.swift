@@ -132,6 +132,7 @@ enum FavoritePlayerEnricher {
 
         let cachedEntry = PlayerRankCache.entry(for: player.id)
         var apiId = cachedEntry?.apiId
+        var lookupWasNotFound = false
 
         if apiId == nil || (cachedEntry?.rank ?? 0) <= 0 {
             seedFromPayloadIfNeeded(player, payload: payload)
@@ -143,7 +144,8 @@ enum FavoritePlayerEnricher {
             || ((refreshedEntry?.rank ?? 0) <= 0 && FavoritePlayerCatalog.payloadRankingEntry(for: player, payload: payload) == nil)
 
         if needsRemoteLookup {
-            if let meta = await PlayerRemoteLookup.fetch(for: player, payload: payload) {
+            switch await PlayerRemoteLookup.fetchStatus(for: player, payload: payload) {
+            case .found(let meta):
                 PlayerRankCache.store(
                     rank: meta.rank,
                     apiId: meta.id,
@@ -152,56 +154,126 @@ enum FavoritePlayerEnricher {
                     for: player.id
                 )
                 apiId = meta.id
+            case .notFound:
+                lookupWasNotFound = true
+            case .quota, .failed, .skipped:
+                break
             }
         }
 
         let resolvedApiId = apiId ?? PlayerRankCache.apiId(for: player.id)
 
-        if !PlayerPhotoStore.hasCachedPhotos(playerID: player.id) {
+        // Photo + season W/L run concurrently — never gate season on photo success/failure.
+        async let seasonStored = ensureSeasonRecord(
+            playerID: player.id,
+            tour: player.tour,
+            apiId: resolvedApiId
+        )
+
+        if PlayerPhotoStore.hasCachedPhotos(playerID: player.id) {
+            mediaUnavailable = false
+            mediaFailureReason = .none
+        } else {
             let status = await PlayerPhotoFetcher.ensurePhotosStatus(
                 for: player,
                 payload: payload,
                 apiId: resolvedApiId
             )
-            switch status {
-            case .success, .skippedBundled:
-                PlayerRankCache.markPhotosVerified(for: player.id)
-                mediaUnavailable = false
-                mediaFailureReason = .none
-                WidgetTimelineRefresher.reloadAll()
-                NotificationCenter.default.post(name: AppGroupConstants.favoritePlayerDidChange, object: nil)
-            case .quota:
-                mediaUnavailable = true
-                mediaFailureReason = .quota
-            case .notFound:
-                mediaUnavailable = true
-                mediaFailureReason = .notFound
-            case .upstream:
-                mediaUnavailable = true
-                mediaFailureReason = .upstream
-            case .failed:
-                mediaUnavailable = true
-                mediaFailureReason = .failed
-            }
-        } else {
-            mediaUnavailable = false
-            mediaFailureReason = .none
+            applyPhotoStatus(status, lookupWasNotFound: lookupWasNotFound, playerID: player.id)
         }
 
-        await ensureSeasonRecord(playerID: player.id, tour: player.tour, apiId: resolvedApiId)
+        _ = await seasonStored
+    }
+
+    /// Sparse on-demand W/L heal — used by pull-to-refresh when cache is missing.
+    @MainActor
+    @discardableResult
+    static func healSeasonRecordIfNeeded(playerID: String, payload: WidgetDataPayload?) async -> Bool {
+        guard playerID.hasPrefix("custom:") else { return false }
+        guard PlayerSeasonRecordCache.record(for: playerID) == nil else { return false }
+        guard let player = FavoritePlayerCatalog.resolvedPlayer(id: playerID, payload: payload),
+              player.imageName == nil else { return false }
+
+        var apiId = PlayerRankCache.apiId(for: playerID)
+        if apiId == nil || (apiId ?? 0) <= 0 {
+            seedFromPayloadIfNeeded(player, payload: payload)
+            apiId = PlayerRankCache.apiId(for: playerID)
+        }
+        if apiId == nil || (apiId ?? 0) <= 0 {
+            if let meta = await PlayerRemoteLookup.fetch(for: player, payload: payload) {
+                PlayerRankCache.store(
+                    rank: meta.rank,
+                    apiId: meta.id,
+                    name: meta.name,
+                    photosVerified: PlayerRankCache.entry(for: playerID)?.photosVerified ?? false,
+                    for: playerID
+                )
+                apiId = meta.id
+            }
+        }
+
+        let stored = await ensureSeasonRecord(playerID: playerID, tour: player.tour, apiId: apiId)
+        guard stored else { return false }
+        WidgetTimelineRefresher.reloadAll()
+        NotificationCenter.default.post(name: AppGroupConstants.favoritePlayerDidChange, object: nil)
+        return true
+    }
+
+    @MainActor
+    private static func applyPhotoStatus(
+        _ status: PlayerPhotoFetchStatus,
+        lookupWasNotFound: Bool,
+        playerID: String
+    ) {
+        // Inactive/unranked (lookup 404): never surface "daily API limit" even if the
+        // photo proxy returns 429 (stale quota gate + CDN 403 normalized poorly).
+        let effective: PlayerPhotoFetchStatus = {
+            if lookupWasNotFound {
+                switch status {
+                case .success, .skippedBundled:
+                    return status
+                default:
+                    return .notFound
+                }
+            }
+            return status
+        }()
+
+        switch effective {
+        case .success, .skippedBundled:
+            PlayerRankCache.markPhotosVerified(for: playerID)
+            mediaUnavailable = false
+            mediaFailureReason = .none
+            WidgetTimelineRefresher.reloadAll()
+            NotificationCenter.default.post(name: AppGroupConstants.favoritePlayerDidChange, object: nil)
+        case .quota:
+            mediaUnavailable = true
+            mediaFailureReason = .quota
+        case .notFound:
+            mediaUnavailable = true
+            mediaFailureReason = .notFound
+        case .upstream:
+            mediaUnavailable = true
+            mediaFailureReason = .upstream
+        case .failed:
+            mediaUnavailable = true
+            mediaFailureReason = .failed
+        }
     }
 
     /// Sparse on-demand W/L — never part of shared widget-data refresh.
-    private static func ensureSeasonRecord(playerID: String, tour: TourPreference, apiId: Int?) async {
-        if PlayerSeasonRecordCache.isFresh(for: playerID) { return }
-        guard let apiId, apiId > 0 else { return }
-        guard let record = await PlayerSeasonRecordFetcher.fetch(tour: tour, apiId: apiId) else { return }
+    @discardableResult
+    private static func ensureSeasonRecord(playerID: String, tour: TourPreference, apiId: Int?) async -> Bool {
+        if PlayerSeasonRecordCache.isFresh(for: playerID) { return false }
+        guard let apiId, apiId > 0 else { return false }
+        guard let record = await PlayerSeasonRecordFetcher.fetch(tour: tour, apiId: apiId) else { return false }
         PlayerSeasonRecordCache.store(
             wins: record.wins,
             losses: record.losses,
             season: record.season,
             for: playerID
         )
+        return true
     }
 
     private static func seedFromPayloadIfNeeded(

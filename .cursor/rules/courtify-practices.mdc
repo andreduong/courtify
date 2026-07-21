@@ -38,7 +38,7 @@ Full context lives in `AGENTS.md` (start with **Agent quick start**). Do not re-
 |------|--------|-----------------|
 | Favorite player hero (bundled) | `player-*-hero` assets | Never at runtime |
 | Custom favorite rank/photo | `/api/player-lookup` + `/api/player-photo` | **On pick only**; Worker KV 30d + edge photo 30d (head+hero = one edge entry) |
-| Custom favorite season W/L | `/api/player-season-record` → `PlayerSeasonRecordCache` | **On pick only**; Worker KV 24h |
+| Custom favorite season W/L | `/api/player-season-record` → `PlayerSeasonRecordCache` | **On pick** (always, even if photo 404/429); **heal on pull-to-refresh** only when cache nil for the active `custom:` favorite. Worker KV 24h |
 | Tournament schedule | `TournamentCalendar` | Never |
 | Rankings / live / order of play / Home favorite rank | Worker via `WidgetDataStore` | Pull-to-refresh only (Home, Rankings, Widgets) |
 | Onboarding top-10 player row | Worker | **Once ever** via `refreshOnceForOnboarding()` |
@@ -47,7 +47,7 @@ On appear: `loadCachedPayload()` only (always reload from app-group disk). No `r
 
 **Onboarding picks:** Tour / favorite player / Grand Slam write to app-group keys as the user continues each step. Home is gated on `hasCompletedOnboarding` only — never skip onboarding solely because RevenueCat Pro or referral bypass flipped mid-flow (drops unsaved favorites).
 
-**Quota:** Do not expand widget-data to top 100. Do not fetch season W/L inside shared refresh. Lookup = one rankings call per uncached name, no 429 retries. Photos go through Worker edge cache (**one** RapidAPI image per player; head+hero share edge key). On 429/503 **widget-data** refresh, show alert and keep cached rankings. Custom photo: true quota → short helper; inactive/not-found → **silent** silhouette. Never treat RapidAPI studio JPEGs as torso cutouts (circular headshot or silhouette). Worker skips RapidAPI when remaining &lt; reserve (5 Basic-sized / 100 Pro+). After Basic→Pro upgrade, delete stale KV `rapidapi-quota` if photos still 429.
+**Quota:** Do not expand widget-data to top 100. Do not mass-fetch season W/L inside shared refresh (one-player heal when active custom favorite cache is nil is OK). Lookup = one rankings call per uncached name, no 429 retries. Photos go through Worker edge cache (**one** RapidAPI image per player; head+hero share edge key). On 429/503 **widget-data** refresh, show alert and keep cached rankings. Custom photo: true quota → short helper; HTTP 404/empty/inactive → **silent** silhouette (`.notFound`, never blame “daily API limit”). Never treat RapidAPI studio JPEGs as torso cutouts (circular headshot or silhouette). Worker skips RapidAPI when remaining &lt; reserve (5 Basic-sized / 100 Pro+). After Basic→Pro upgrade, delete stale KV `rapidapi-quota` if photos still 429.
 
 **Do not:** UGC player photo upload; typographic initials fallback; WidgetKit network calls; per-match live polling; monthly rankings refresh (use 6 h on-demand + pull-to-refresh).
 
