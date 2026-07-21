@@ -322,7 +322,7 @@ struct WidgetsCollectionView: View {
             }
 
             if section.id == "favorite", showsFavoriteMediaHint {
-                Text("Photo & season record unavailable right now (daily API limit). Rank still updates from cache.")
+                Text("Photo unavailable right now (API limit). Rank still updates from cache.")
                     .font(ThemeManager.roundedFont(.caption, weight: .medium))
                     .foregroundStyle(.white.opacity(0.5))
                     .fixedSize(horizontal: false, vertical: true)
@@ -332,9 +332,8 @@ struct WidgetsCollectionView: View {
 
     private var showsFavoriteMediaHint: Bool {
         guard let player = favoritePlayer, player.isCustom else { return false }
-        if FavoritePlayerEnricher.mediaUnavailable { return true }
-        return player.displaySeasonRecord == nil
-            && !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
+        guard FavoritePlayerEnricher.mediaFailureReason == .quota else { return false }
+        return !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
     private func chunkedRows(_ items: [CourtifyWidgetCatalog.Item]) -> [[CourtifyWidgetCatalog.Item]] {

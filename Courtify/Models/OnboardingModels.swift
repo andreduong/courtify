@@ -171,8 +171,16 @@ enum PlayerSearchCatalog {
         "Sebastian Korda": "kb05",
         "Alex de Minaur": "dh58",
         "Felix Auger-Aliassime": "ag37",
+        "Felix Auger Aliassime": "ag37",
         "Lorenzo Musetti": "m0ej",
         "Matteo Berrettini": "bh60",
+        // Inactive / unranked fan favorites — Worker tries name-slug photo + CDN.
+        "Nick Kyrgios": "ke17",
+        "Rafael Nadal": "n409",
+        "Roger Federer": "f324",
+        "Andy Murray": "mc10",
+        "Stan Wawrinka": "w367",
+        "Gael Monfils": "mc65",
     ]
 
     /// RapidAPI numeric ids for bundled search-catalog players (dev-time lookup).
@@ -247,6 +255,10 @@ enum PlayerSearchCatalog {
         Entry(name: "Felix Auger-Aliassime", tour: .atp),
         Entry(name: "Lorenzo Musetti", tour: .atp),
         Entry(name: "Matteo Berrettini", tour: .atp),
+        Entry(name: "Nick Kyrgios", tour: .atp),
+        Entry(name: "Rafael Nadal", tour: .atp),
+        Entry(name: "Roger Federer", tour: .atp),
+        Entry(name: "Andy Murray", tour: .atp),
         // WTA
         Entry(name: "Iga Świątek", tour: .wta),
         Entry(name: "Aryna Sabalenka", tour: .wta),

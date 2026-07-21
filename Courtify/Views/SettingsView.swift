@@ -177,9 +177,15 @@ struct SettingsView: View {
                     action: { showPlayerPicker = true }
                 ) {
                     if let player = favoritePlayer {
-                        PlayerTorsoPhotoView(player: player, contentMode: .fit)
-                            .frame(width: 92, height: 108)
-                            .opacity(0.55)
+                        PlayerTorsoPhotoView(
+                            player: player,
+                            contentMode: .fit,
+                            fadesIntoBackground: player.imageName != nil
+                                || PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
+                            circularHeadshotSize: 72
+                        )
+                        .frame(width: 92, height: 108)
+                        .opacity(0.9)
                     }
                 }
                 .frame(minWidth: 0, maxWidth: .infinity)
@@ -207,7 +213,9 @@ struct SettingsView: View {
 
     private var showsFavoriteMediaHint: Bool {
         guard let player = favoritePlayer, player.isCustom else { return false }
-        return !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
+        guard !PlayerPhotoStore.hasCachedPhotos(playerID: player.id) else { return false }
+        // Only surface quota — inactive/unranked fails silently with silhouette.
+        return FavoritePlayerEnricher.mediaFailureReason == .quota
     }
 
     // MARK: Personal

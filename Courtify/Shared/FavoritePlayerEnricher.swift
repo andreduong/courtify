@@ -2,9 +2,18 @@ import Foundation
 
 /// One-time rank + photo fetch for favorites without bundled hero assets (main app only).
 enum FavoritePlayerEnricher {
-    /// Set when a custom favorite’s photo fetch fails (quota / upstream). Cleared on success.
+    /// Set when a custom favorite’s photo fetch fails. Cleared on success.
     static let mediaUnavailableKey = "favoritePlayerMediaUnavailable"
+    static let mediaFailureReasonKey = "favoritePlayerMediaFailureReason"
     private static let mediaAlertPresentedKey = "favoritePlayerMediaAlertPresentedID"
+
+    enum MediaFailureReason: String {
+        case none
+        case quota
+        case notFound
+        case upstream
+        case failed
+    }
 
     @MainActor
     static var mediaUnavailable: Bool {
@@ -13,8 +22,25 @@ enum FavoritePlayerEnricher {
     }
 
     @MainActor
+    static var mediaFailureReason: MediaFailureReason {
+        get {
+            let raw = AppGroupConstants.userDefaults.string(forKey: mediaFailureReasonKey) ?? ""
+            return MediaFailureReason(rawValue: raw) ?? .none
+        }
+        set {
+            if newValue == .none {
+                AppGroupConstants.userDefaults.removeObject(forKey: mediaFailureReasonKey)
+            } else {
+                AppGroupConstants.userDefaults.set(newValue.rawValue, forKey: mediaFailureReasonKey)
+            }
+        }
+    }
+
+    @MainActor
     static func shouldPresentMediaUnavailableAlert(for playerID: String) -> Bool {
         guard !playerID.isEmpty else { return false }
+        // Only alert for true quota — inactive/not-found fails silently with silhouette.
+        guard mediaFailureReason == .quota else { return false }
         let shown = AppGroupConstants.userDefaults.string(forKey: mediaAlertPresentedKey)
         return shown != playerID
     }
@@ -30,11 +56,15 @@ enum FavoritePlayerEnricher {
     }
 
     /// Headshots for picker top-5 rows — apiIds from cached rankings, no lookup calls.
+    /// Keeps bundled avatars for featured catalog names (preferLivePhotos: false).
     @MainActor
     static func prefetchPickerHeadshots(payload: WidgetDataPayload?) async {
         guard let payload else { return }
-        let players = FavoritePlayerCatalog.topRankedPlayers(payload: payload, preferLivePhotos: true)
+        let players = FavoritePlayerCatalog.topRankedPlayers(payload: payload, preferLivePhotos: false)
         for player in players {
+            // Featured bundled players already have avatars — skip network.
+            if player.imageName != nil { continue }
+
             guard let entry = FavoritePlayerCatalog.payloadRankingEntry(for: player, payload: payload),
                   let apiId = entry.player.id, apiId > 0 else { continue }
 
@@ -60,6 +90,7 @@ enum FavoritePlayerEnricher {
         guard let player = FavoritePlayerCatalog.resolvedPlayer(id: playerID, payload: payload),
               player.imageName == nil else {
             mediaUnavailable = false
+            mediaFailureReason = .none
             return
         }
 
@@ -88,6 +119,7 @@ enum FavoritePlayerEnricher {
     ) async {
         guard player.imageName == nil else {
             mediaUnavailable = false
+            mediaFailureReason = .none
             return
         }
 
@@ -126,19 +158,34 @@ enum FavoritePlayerEnricher {
         let resolvedApiId = apiId ?? PlayerRankCache.apiId(for: player.id)
 
         if !PlayerPhotoStore.hasCachedPhotos(playerID: player.id) {
-            let photosSaved = await PlayerPhotoFetcher.ensurePhotos(
+            let status = await PlayerPhotoFetcher.ensurePhotosStatus(
                 for: player,
                 payload: payload,
                 apiId: resolvedApiId
             )
-            if photosSaved {
+            switch status {
+            case .success, .skippedBundled:
                 PlayerRankCache.markPhotosVerified(for: player.id)
                 mediaUnavailable = false
-            } else {
+                mediaFailureReason = .none
+                WidgetTimelineRefresher.reloadAll()
+                NotificationCenter.default.post(name: AppGroupConstants.favoritePlayerDidChange, object: nil)
+            case .quota:
                 mediaUnavailable = true
+                mediaFailureReason = .quota
+            case .notFound:
+                mediaUnavailable = true
+                mediaFailureReason = .notFound
+            case .upstream:
+                mediaUnavailable = true
+                mediaFailureReason = .upstream
+            case .failed:
+                mediaUnavailable = true
+                mediaFailureReason = .failed
             }
         } else {
             mediaUnavailable = false
+            mediaFailureReason = .none
         }
 
         await ensureSeasonRecord(playerID: player.id, tour: player.tour, apiId: resolvedApiId)

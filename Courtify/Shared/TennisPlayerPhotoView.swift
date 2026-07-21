@@ -47,8 +47,9 @@ extension View {
 }
 
 /// Full-torso cutout for Home, widgets gallery, and settings favorite cards.
-/// Bundled `-hero` assets for featured players; app-group cache for custom picks.
-/// Never falls back to the letter placeholders (`placeholder-male` / `placeholder-female`).
+/// Bundled `-hero` assets for featured players; app-group **hero** cache only when it is a
+/// real bodyshot. RapidAPI studio JPEGs are headshots — shown as circles, never as cutouts.
+/// Never falls back to letter placeholders (`placeholder-male` / `placeholder-female`).
 struct PlayerTorsoPhotoView: View {
   let player: TennisPlayer
   var contentMode: ContentMode = .fit
@@ -56,10 +57,14 @@ struct PlayerTorsoPhotoView: View {
   var fadesIntoBackground: Bool = true
   /// Bottom fraction that dissolves (default 25% per product spec).
   var fadePortion: CGFloat = 0.25
+  /// When no transparent cutout exists, show a circular studio headshot instead of only silhouette.
+  var prefersCircularHeadshotFallback: Bool = true
+  /// Diameter for the circular fallback (Home / posters use a larger default than Settings).
+  var circularHeadshotSize: CGFloat = 140
 
   var body: some View {
     photoContent
-      .modifier(OptionalHeroFade(enabled: fadesIntoBackground && showsPhotoCutout, fadePortion: fadePortion))
+      .modifier(OptionalHeroFade(enabled: fadesIntoBackground && showsCutoutFade, fadePortion: fadePortion))
   }
 
   @ViewBuilder
@@ -72,20 +77,17 @@ struct PlayerTorsoPhotoView: View {
       Image(uiImage: uiImage)
         .resizable()
         .aspectRatio(contentMode: contentMode)
-    } else if let uiImage = trustedCachedUIImage(variant: .head) {
-      Image(uiImage: uiImage)
-        .resizable()
-        .aspectRatio(contentMode: contentMode)
+    } else if prefersCircularHeadshotFallback, let uiImage = trustedCachedUIImage(variant: .head) {
+      StudioHeadshotCircle(uiImage: uiImage, size: circularHeadshotSize)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
     } else {
       PlayerSilhouetteView(tour: player.tour, style: .torso)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
   }
 
-  private var showsPhotoCutout: Bool {
-    bundledHeroName != nil
-      || trustedCachedUIImage(variant: .hero) != nil
-      || trustedCachedUIImage(variant: .head) != nil
+  private var showsCutoutFade: Bool {
+    bundledHeroName != nil || trustedCachedUIImage(variant: .hero) != nil
   }
 
   private var bundledHeroName: String? {
@@ -100,6 +102,25 @@ struct PlayerTorsoPhotoView: View {
       return nil
     }
     return UIImage(contentsOfFile: path)
+  }
+}
+
+/// Soft circular framing for opaque RapidAPI studio plates (hides hard JPEG corners).
+private struct StudioHeadshotCircle: View {
+  let uiImage: UIImage
+  let size: CGFloat
+
+  var body: some View {
+    Image(uiImage: uiImage)
+      .resizable()
+      .scaledToFill()
+      .frame(width: size, height: size)
+      .clipShape(Circle())
+      .overlay {
+        Circle()
+          .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+      }
+      .shadow(color: .black.opacity(0.35), radius: 16, y: 6)
   }
 }
 
@@ -128,8 +149,7 @@ struct TennisPlayerPhotoView: View {
         Image(bundledName)
           .resizable()
           .scaledToFill()
-      } else if let path = cachedPath,
-                PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: style == .headshot ? .head : .hero),
+      } else if let path = preferredCachedPath,
                 let uiImage = UIImage(contentsOfFile: path) {
         Image(uiImage: uiImage)
           .resizable()
@@ -160,9 +180,22 @@ struct TennisPlayerPhotoView: View {
     }
   }
 
-  private var cachedPath: String? {
-    let variant: PlayerPhotoVariant = style == .headshot ? .head : .hero
-    return PlayerPhotoStore.cachedPath(playerID: player.id, variant: variant)
+  private var preferredCachedPath: String? {
+    switch style {
+    case .headshot:
+      if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
+         let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head) {
+        return path
+      }
+      if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
+         let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero) {
+        return path
+      }
+      return nil
+    case .hero:
+      guard PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero) else { return nil }
+      return PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero)
+    }
   }
 }
 

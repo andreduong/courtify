@@ -171,12 +171,15 @@ enum AppGroupConstants {
     /// Clears stale player photo/rank caches from earlier builds or failed API lookups.
     static func migratePlayerCachesIfNeeded() {
         let versionKey = "playerCacheSchemaVersion"
-        let currentVersion = 2
+        // v4: never treat RapidAPI studio plates as hero cutouts (clear poisoned -hero.jpg).
+        let currentVersion = 4
         guard userDefaults.integer(forKey: versionKey) < currentVersion else { return }
 
         PlayerRankCache.clearAll()
         PlayerSeasonRecordCache.clearAll()
         PlayerPhotoStore.clearAllCachedPhotos()
+        userDefaults.removeObject(forKey: "favoritePlayerMediaUnavailable")
+        userDefaults.removeObject(forKey: "favoritePlayerMediaFailureReason")
         userDefaults.set(currentVersion, forKey: versionKey)
     }
 

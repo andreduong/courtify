@@ -227,12 +227,28 @@ private struct MediumFavoriteHeroCutout: View {
                 Image("\(bundled)-hero")
                     .resizable()
                     .scaledToFit()
+                    .courtifyHeroFadeMask()
             } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
                       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
                       let uiImage = UIImage(contentsOfFile: path) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
+                    .courtifyHeroFadeMask()
+            } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
+                      let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head),
+                      let uiImage = UIImage(contentsOfFile: path) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 92, height: 92)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                    }
+                    .padding(.trailing, 8)
+                    .padding(.bottom, 16)
             } else {
                 Image(systemName: player.tour == .wta
                       ? "figure.dress.line.vertical.figure"
@@ -243,7 +259,6 @@ private struct MediumFavoriteHeroCutout: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-        .courtifyHeroFadeMask()
         .offset(x: 10, y: 10)
         .allowsHitTesting(false)
     }
@@ -259,18 +274,44 @@ struct FavoritePlayerHeroImage: View {
                 Image("\(bundled)-hero")
                     .resizable()
                     .scaledToFit()
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity,
+                        alignment: edge == .leading ? .bottomLeading : .bottomTrailing
+                    )
+                    .courtifyHeroFadeMask()
             } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .hero),
                       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .hero),
                       let uiImage = UIImage(contentsOfFile: path) {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity,
+                        alignment: edge == .leading ? .bottomLeading : .bottomTrailing
+                    )
+                    .courtifyHeroFadeMask()
             } else if PlayerPhotoStore.isValidImageFile(playerID: player.id, variant: .head),
                       let path = PlayerPhotoStore.cachedPath(playerID: player.id, variant: .head),
                       let uiImage = UIImage(contentsOfFile: path) {
+                // Studio plates are not cutouts — circular badge, not a grey rectangle.
                 Image(uiImage: uiImage)
                     .resizable()
-                    .scaledToFit()
+                    .scaledToFill()
+                    .frame(width: 86, height: 86)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle()
+                            .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                    }
+                    .frame(
+                        maxWidth: .infinity,
+                        maxHeight: .infinity,
+                        alignment: edge == .leading ? .bottomLeading : .bottomTrailing
+                    )
+                    .padding(edge == .leading ? .leading : .trailing, 10)
+                    .padding(.bottom, 18)
             } else {
                 Image(systemName: player.tour == .wta
                       ? "figure.dress.line.vertical.figure"
@@ -290,7 +331,6 @@ struct FavoritePlayerHeroImage: View {
             maxHeight: .infinity,
             alignment: edge == .leading ? .bottomLeading : .bottomTrailing
         )
-        .courtifyHeroFadeMask()
         .padding(edge == .leading ? .trailing : .leading, 88)
         .offset(x: edge == .leading ? -8 : 8, y: 8)
         .opacity(0.97)

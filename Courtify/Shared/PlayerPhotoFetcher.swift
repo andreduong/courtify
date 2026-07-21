@@ -1,5 +1,14 @@
 import Foundation
 
+enum PlayerPhotoFetchStatus: Equatable {
+    case success
+    case skippedBundled
+    case notFound
+    case quota
+    case upstream
+    case failed
+}
+
 enum PlayerPhotoFetcher {
     struct APIPlayerRef {
         let id: Int
@@ -14,50 +23,70 @@ enum PlayerPhotoFetcher {
         payload: WidgetDataPayload?,
         apiId: Int? = nil
     ) async -> Bool {
+        let status = await ensureHeadPhotoStatus(for: player, payload: payload, apiId: apiId)
+        return status == .success || status == .skippedBundled
+    }
+
+    static func ensureHeadPhotoStatus(
+        for player: TennisPlayer,
+        payload: WidgetDataPayload?,
+        apiId: Int? = nil
+    ) async -> PlayerPhotoFetchStatus {
         if player.imageName != nil {
-            return true
+            return .skippedBundled
         }
 
         let resolvedPayload = payload ?? WidgetPayloadReader.loadCached()
         guard let ref = apiPlayer(for: player, payload: resolvedPayload, overrideApiId: apiId) else {
-            return false
+            return .notFound
         }
 
         do {
             try PlayerPhotoStore.ensureDirectory()
         } catch {
-            return false
+            return .failed
         }
 
-        return await download(playerID: player.id, ref: ref, variant: .head)
+        return await downloadStatus(playerID: player.id, ref: ref, variant: .head)
     }
 
+    /// Downloads the studio headshot once. RapidAPI serves the same JPEG for head+hero,
+    /// so we never burn a second upstream call or store a fake "hero cutout".
     @discardableResult
     static func ensurePhotos(
         for player: TennisPlayer,
         payload: WidgetDataPayload?,
         apiId: Int? = nil
     ) async -> Bool {
+        let status = await ensurePhotosStatus(for: player, payload: payload, apiId: apiId)
+        return status == .success || status == .skippedBundled
+    }
+
+    static func ensurePhotosStatus(
+        for player: TennisPlayer,
+        payload: WidgetDataPayload?,
+        apiId: Int? = nil
+    ) async -> PlayerPhotoFetchStatus {
         if player.imageName != nil {
-            return true
+            return .skippedBundled
         }
 
         let resolvedPayload = payload ?? WidgetPayloadReader.loadCached()
-        var ref = apiPlayer(for: player, payload: resolvedPayload, overrideApiId: apiId)
-        guard let ref else {
-            return false
+        guard let ref = apiPlayer(for: player, payload: resolvedPayload, overrideApiId: apiId) else {
+            return .notFound
         }
 
         do {
             try PlayerPhotoStore.ensureDirectory()
         } catch {
-            return false
+            return .failed
         }
 
-        async let head = download(playerID: player.id, ref: ref, variant: .head)
-        async let hero = download(playerID: player.id, ref: ref, variant: .hero)
-        let results = await [head, hero]
-        return results.contains(true)
+        // RapidAPI Photo/{id}.jpg is a small opaque studio plate — never store it as
+        // a "hero cutout" (that produced grey rectangles on Home / Settings / widgets).
+        // ATP CDN bodyshots are currently Cloudflare-blocked; if they return later,
+        // we can reintroduce a CDN-only hero write behind an explicit cutout header.
+        return await downloadStatus(playerID: player.id, ref: ref, variant: .head)
     }
 
     static func apiPlayer(
@@ -88,41 +117,53 @@ enum PlayerPhotoFetcher {
             return APIPlayerRef(id: bundledId, tourKey: tourKey, name: player.name, atpTourCode: code)
         }
 
+        // Name-only / code-only — Worker may still resolve via name-slug photo or ATP CDN.
         return APIPlayerRef(id: 0, tourKey: tourKey, name: player.name, atpTourCode: code)
     }
 
-    private static func download(
+    private static func downloadStatus(
         playerID: String,
         ref: APIPlayerRef,
         variant: PlayerPhotoVariant
-    ) async -> Bool {
+    ) async -> PlayerPhotoFetchStatus {
         guard let destination = PlayerPhotoStore.fileURL(playerID: playerID, variant: variant) else {
-            return false
+            return .failed
         }
 
-        if FileManager.default.fileExists(atPath: destination.path) {
-            return true
+        if FileManager.default.fileExists(atPath: destination.path),
+           PlayerPhotoStore.isValidImageFile(at: destination.path) {
+            return .success
         }
 
         guard let remoteURL = photoURL(ref: ref, variant: variant) else {
-            return false
+            return .notFound
         }
-        guard ref.id > 0 || (ref.tourKey == "atp" && ref.atpTourCode != nil) else {
-            return false
+        guard ref.id > 0 || ref.atpTourCode != nil || !ref.name.isEmpty else {
+            return .notFound
         }
 
         do {
             var request = URLRequest(url: remoteURL)
             request.timeoutInterval = 20
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200 ... 299).contains(http.statusCode),
-                  !data.isEmpty, isImageData(data) else {
-                return false
+            guard let http = response as? HTTPURLResponse else {
+                return .failed
             }
-            try data.write(to: destination, options: .atomic)
-            return true
+
+            switch http.statusCode {
+            case 200 ... 299:
+                guard !data.isEmpty, isImageData(data) else { return .upstream }
+                try data.write(to: destination, options: .atomic)
+                return .success
+            case 404, 400:
+                return .notFound
+            case 429, 503:
+                return .quota
+            default:
+                return .upstream
+            }
         } catch {
-            return false
+            return .failed
         }
     }
 

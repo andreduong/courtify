@@ -25,7 +25,9 @@ enum FavoritePlayerCatalog {
         payload: WidgetDataPayload?,
         perTourLimit: Int = defaultPerTourLimit
     ) -> [TennisPlayer] {
-        let cached = topRankedPlayers(payload: payload, perTourLimit: perTourLimit, preferLivePhotos: true)
+        // Keep bundled avatars for featured catalog matches — RapidAPI studio plates
+        // look worse in circular rows than the curated cutouts.
+        let cached = topRankedPlayers(payload: payload, perTourLimit: perTourLimit, preferLivePhotos: false)
         if !cached.isEmpty { return cached }
         return TennisPlayer.topPlayers
     }

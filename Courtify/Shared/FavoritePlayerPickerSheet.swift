@@ -239,15 +239,23 @@ struct FavoritePlayerPickerSheet: View {
         guard !isSaving else { return }
         isSaving = true
         dataStore.loadCachedPayload()
-        await FavoritePlayerEnricher.enrich(
-            player,
-            payload: dataStore.payload,
-            clearExisting: true
-        )
 
+        let previousID = favoritePlayerID
+        // Persist immediately so Home/Settings update without waiting on network.
         AppGroupConstants.updateFavoritePlayer(player.id)
         favoritePlayerID = player.id
+
+        let payload = dataStore.payload
         isSaving = false
         dismiss()
+
+        // Background enrich — progressive photo load via favoritePlayerDidChange.
+        Task { @MainActor in
+            await FavoritePlayerEnricher.enrich(
+                player,
+                payload: payload,
+                clearExisting: previousID != player.id
+            )
+        }
     }
 }

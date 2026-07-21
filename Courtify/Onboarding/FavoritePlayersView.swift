@@ -6,6 +6,7 @@ struct FavoritePlayersView: View {
     @ObservedObject private var dataStore = WidgetDataStore.shared
     @State private var selectedPlayerIDs: Set<String> = []
     @State private var showCustomPlayerSheet = false
+    @State private var photoRefreshToken = 0
 
     let onContinue: () -> Void
 
@@ -52,6 +53,7 @@ struct FavoritePlayersView: View {
                         ) {
                             togglePlayer(player)
                         }
+                        .id("\(player.id)-\(photoRefreshToken)")
                     }
 
                     MorePlayerPosterCard(
@@ -109,6 +111,9 @@ struct FavoritePlayersView: View {
                 selectedPlayerIDs.insert(favoritePlayerID)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.favoritePlayerDidChange)) { _ in
+            photoRefreshToken += 1
+        }
         .sheet(isPresented: $showCustomPlayerSheet) {
             CustomPlayerSearchSheet(
                 tourPreference: tourPreference,
@@ -155,6 +160,7 @@ struct FavoritePlayersView: View {
                     payload: dataStore.payload,
                     clearExisting: false
                 )
+                photoRefreshToken += 1
             }
         }
     }

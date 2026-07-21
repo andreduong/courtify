@@ -290,6 +290,24 @@ async function isQuotaTooLow(env) {
     // Pro+ monthly allotments report large limits (e.g. 150000).
     const reserve =
       limit == null || limit <= 100 ? QUOTA_RESERVE_BASIC : QUOTA_RESERVE_PRO;
+
+    // After upgrading Basic → Pro, KV can still hold {remaining:4, limit:50} and
+    // permanently gate photos. Allow a probe once the Basic snapshot is stale so
+    // recordQuotaFromResponse can rewrite Pro limits.
+    const ageMs =
+      typeof meta.updatedAt === "number" ? Date.now() - meta.updatedAt : Infinity;
+    if (
+      meta.remaining < reserve &&
+      limit != null &&
+      limit <= 100 &&
+      ageMs > 60_000
+    ) {
+      console.warn(
+        `[quota] Ignoring stale Basic snapshot (remaining=${meta.remaining}, limit=${limit}, ageMs=${ageMs}) — probing Pro`,
+      );
+      return false;
+    }
+
     return meta.remaining < reserve;
   } catch {
     return false;
@@ -392,6 +410,29 @@ function playerImageUrl(tour, playerId) {
   return `${API_BASE}/tennis/v2/ms-api/uploads/Photo/${tour.toLowerCase()}/${paddedId}.jpg`;
 }
 
+/** Name-slug photo (works for inactive players outside rankings top-100). */
+function playerNameImageUrl(tour, name) {
+  if (!name) return null;
+  const slug = foldPlayerName(name).replace(/\s+/g, "_");
+  if (!slug) return null;
+  return `${API_BASE}/tennis/v2/ms-api/uploads/Photo/${tour.toLowerCase()}_name/${slug}.jpg`;
+}
+
+/**
+ * Sparse offline meta for fan-favorite inactive / unranked players.
+ * Only include verified Matchstat/RapidAPI numeric ids — never guess.
+ * Photos still go through /api/player-photo (edge-cached); never expands widget-data.
+ * Inactive names without an id still resolve via playerNameImageUrl in servePlayerPhoto.
+ */
+const PLAYER_META_OVERRIDES = {
+  // Example once verified: "atp:nick kyrgios": { id: "#####", name: "Nick Kyrgios", rank: null },
+};
+
+function playerMetaOverride(tour, name) {
+  const key = `${String(tour).toLowerCase()}:${foldPlayerName(name)}`;
+  return PLAYER_META_OVERRIDES[key] ?? null;
+}
+
 function foldPlayerName(name) {
   return String(name)
     .normalize("NFD")
@@ -406,7 +447,7 @@ function lastNameOf(name) {
 }
 
 async function lookupPlayerMeta(env, tour, name) {
-  if (!env.RAPID_API_KEY || !name) return null;
+  if (!name) return null;
 
   const cacheKey = `player-meta:${tour}:${foldPlayerName(name)}`;
   const cached = await env.TENNIS_DATA?.get?.(cacheKey);
@@ -418,6 +459,18 @@ async function lookupPlayerMeta(env, tour, name) {
     }
   }
 
+  const override = playerMetaOverride(tour, name);
+  if (override?.id) {
+    const meta = {
+      id: String(override.id),
+      rank: override.rank ?? null,
+      name: override.name ?? name,
+      source: "override",
+    };
+    await cachePlayerMeta(env, cacheKey, meta);
+    return meta;
+  }
+
   // Legacy cache from earlier builds.
   const legacyId = await env.TENNIS_DATA?.get?.(`player-id:${tour}:${foldPlayerName(name)}`);
   if (legacyId) {
@@ -425,6 +478,8 @@ async function lookupPlayerMeta(env, tour, name) {
     await cachePlayerMeta(env, cacheKey, meta);
     return meta;
   }
+
+  if (!env.RAPID_API_KEY) return null;
 
   let meta = await fetchPlayerMetaFromRankings(env, tour, name);
   if (!meta) return null;
@@ -506,12 +561,9 @@ async function servePlayerLookup(url, env) {
   const name = url.searchParams.get("name");
   if (!name) return jsonResponse({ error: "Missing name" }, 400);
 
-  if (!env.RAPID_API_KEY) {
-    return jsonResponse({ error: "Service unavailable" }, 503);
-  }
-
   const meta = await lookupPlayerMeta(env, tour, name);
   if (!meta?.id) {
+    // Name-only photo path may still succeed — surface 404 for rank/id callers.
     return jsonResponse({ error: "Player not found" }, 404);
   }
 
@@ -519,7 +571,7 @@ async function servePlayerLookup(url, env) {
     id: Number(meta.id),
     rank: meta.rank ?? null,
     name: meta.name ?? name,
-    source: meta.rank != null ? "rankings-top-100" : "kv",
+    source: meta.source ?? (meta.rank != null ? "rankings-top-100" : "kv"),
   });
 }
 
@@ -630,86 +682,139 @@ async function servePlayerPhoto(url, env, ctx) {
   const apiId = url.searchParams.get("apiId");
   const name = url.searchParams.get("name");
   const code = url.searchParams.get("code");
+  // RapidAPI Photo/{id}.jpg is identical for head+hero — share one edge entry.
   const variant = url.searchParams.get("variant") || "head";
 
-  // Cache key ignores optional name/code once apiId is known — stable edge cache.
+  let resolvedId = apiId || null;
+  if (!resolvedId && name) {
+    const meta = await lookupPlayerMeta(env, tour, name);
+    resolvedId = meta?.id ?? null;
+  }
+
+  // Stable edge key MUST include apiId or code or name-slug — never bare tour+variant
+  // (that collided across players and cached 403s for everyone).
   const cacheUrl = new URL(url.toString());
   cacheUrl.searchParams.delete("name");
   cacheUrl.searchParams.delete("code");
-  if (apiId) {
-    cacheUrl.searchParams.set("apiId", apiId);
-  }
+  cacheUrl.searchParams.delete("variant");
   cacheUrl.searchParams.set("tour", tour);
-  cacheUrl.searchParams.set("variant", variant);
-  const cacheRequest = new Request(cacheUrl.toString(), { method: "GET" });
+  if (resolvedId) {
+    cacheUrl.searchParams.set("apiId", String(resolvedId));
+    cacheUrl.searchParams.set("src", "rapid");
+  } else if (name) {
+    cacheUrl.searchParams.set("slug", foldPlayerName(name).replace(/\s+/g, "_"));
+    cacheUrl.searchParams.set("src", "name");
+  } else if (code && tour === "atp") {
+    cacheUrl.searchParams.set("code", code);
+    cacheUrl.searchParams.set("variant", variant);
+    cacheUrl.searchParams.set("src", "cdn");
+  } else {
+    return jsonResponse({ error: "Missing apiId, name, or code" }, 400);
+  }
 
+  const cacheRequest = new Request(cacheUrl.toString(), { method: "GET" });
   const cache = caches.default;
   const cached = await cache.match(cacheRequest);
-  if (cached) {
+  if (cached && cached.ok) {
     const headers = new Headers(cached.headers);
     headers.set("X-Courtify-Cache", "edge");
     return new Response(cached.body, { status: cached.status, headers });
   }
 
-  let upstream = null;
-  let useRapidHeaders = false;
-  let resolvedId = apiId;
+  const cdnHeaders = {
+    Accept: "image/*",
+    Referer: "https://www.atptour.com/",
+    Origin: "https://www.atptour.com",
+    "User-Agent":
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  };
 
-  if (!resolvedId && name) {
-    const meta = await lookupPlayerMeta(env, tour, name);
-    resolvedId = meta?.id ?? null;
-    if (resolvedId) {
-      cacheUrl.searchParams.set("apiId", String(resolvedId));
+  /** @type {{ url: string, headers: Record<string, string>, rapid: boolean }[]} */
+  const candidates = [];
+  let rapidBlockedByQuota = false;
+
+  // Prefer name-slug RapidAPI when available (sometimes higher-res than Photo/{id}.jpg),
+  // then numeric id, then ATP CDN (often Cloudflare-blocked).
+  if (resolvedId || name) {
+    if (!env.RAPID_API_KEY) {
+      // Fall through to CDN-only below.
+    } else if (await isQuotaTooLow(env)) {
+      rapidBlockedByQuota = true;
+    } else {
+      const rapidHeaders = buildHeaders(env.RAPID_API_KEY);
+      if (name) {
+        const named = playerNameImageUrl(tour, name);
+        if (named) {
+          candidates.push({ url: named, headers: rapidHeaders, rapid: true });
+        }
+      }
+      if (resolvedId) {
+        candidates.push({
+          url: playerImageUrl(tour, resolvedId),
+          headers: rapidHeaders,
+          rapid: true,
+        });
+      }
     }
   }
 
-  if (resolvedId) {
-    upstream = playerImageUrl(tour, resolvedId);
-    useRapidHeaders = true;
-  } else if (code && tour === "atp") {
+  if (code && tour === "atp") {
     const alias =
       variant === "hero"
         ? `player-bodyshot/${code}`
         : `player-gladiator-headshot/${code}`;
-    upstream = `https://www.atptour.com/-/media/alias/${alias}`;
-  }
-
-  if (!upstream) {
-    return jsonResponse({ error: "Missing apiId, name, or code" }, 400);
-  }
-
-  if (!env.RAPID_API_KEY && useRapidHeaders) {
-    return jsonResponse({ error: "Photo proxy unavailable" }, 503);
-  }
-
-  if (useRapidHeaders && (await isQuotaTooLow(env))) {
-    return jsonResponse({ error: "Photo proxy quota exhausted" }, 429, {
-      "Retry-After": "3600",
+    candidates.push({
+      url: `https://www.atptour.com/-/media/alias/${alias}`,
+      headers: cdnHeaders,
+      rapid: false,
     });
   }
 
-  const headers = useRapidHeaders
-    ? buildHeaders(env.RAPID_API_KEY)
-    : {
-        Accept: "image/*",
-        Referer: "https://www.atptour.com/",
-        Origin: "https://www.atptour.com",
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      };
-
-  const upstreamResponse = await fetch(upstream, { headers });
-  if (useRapidHeaders) {
-    await recordQuotaFromResponse(env, upstreamResponse);
-  }
-  if (!upstreamResponse.ok) {
-    return jsonResponse({ error: "Upstream photo unavailable" }, upstreamResponse.status);
+  if (!candidates.length) {
+    if (rapidBlockedByQuota) {
+      return jsonResponse({ error: "Photo proxy quota exhausted" }, 429, {
+        "Retry-After": "3600",
+      });
+    }
+    return jsonResponse({ error: "Missing apiId, name, or code" }, 400);
   }
 
-  const contentType = upstreamResponse.headers.get("Content-Type") || "image/jpeg";
-  const buffer = await upstreamResponse.arrayBuffer();
-  if (!isImageBuffer(buffer)) {
-    return jsonResponse({ error: "Upstream photo unavailable" }, 502);
+  let buffer = null;
+  let contentType = "image/jpeg";
+  let lastStatus = 404;
+
+  for (const candidate of candidates) {
+    if (!candidate.url) continue;
+    const upstreamResponse = await fetch(candidate.url, { headers: candidate.headers });
+    if (candidate.rapid) {
+      await recordQuotaFromResponse(env, upstreamResponse);
+    }
+    if (!upstreamResponse.ok) {
+      lastStatus = upstreamResponse.status;
+      continue;
+    }
+    const nextBuffer = await upstreamResponse.arrayBuffer();
+    if (!isImageBuffer(nextBuffer)) {
+      lastStatus = 502;
+      continue;
+    }
+    buffer = nextBuffer;
+    contentType = upstreamResponse.headers.get("Content-Type") || "image/jpeg";
+    break;
+  }
+
+  if (!buffer) {
+    // If RapidAPI was the real path but quota blocked it, don't misreport CDN 403 as "not found".
+    if (rapidBlockedByQuota) {
+      return jsonResponse({ error: "Photo proxy quota exhausted" }, 429, {
+        "Retry-After": "3600",
+      });
+    }
+    // Normalize "no usable photo" to 404 — ATP CDN often 403s via Cloudflare, which
+    // should not surface as a hard upstream failure for inactive/unranked players.
+    const status =
+      lastStatus === 429 || lastStatus === 503 ? lastStatus : 404;
+    return jsonResponse({ error: "Upstream photo unavailable" }, status);
   }
 
   const responseHeaders = {
@@ -724,7 +829,6 @@ async function servePlayerPhoto(url, env, ctx) {
     headers: responseHeaders,
   });
 
-  // Store under the apiId-normalized key so later requests hit edge cache.
   const storeRequest = new Request(cacheUrl.toString(), { method: "GET" });
   if (ctx?.waitUntil) {
     ctx.waitUntil(cache.put(storeRequest, response.clone()));

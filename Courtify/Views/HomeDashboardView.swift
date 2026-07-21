@@ -173,7 +173,7 @@ struct HomeDashboardView: View {
 
                 if hasFavoritePlayer {
                     if showsFavoriteMediaHint {
-                        Text("Photo & season record unavailable (API limit). Rank still updates from cache.")
+                        Text("Photo unavailable (API limit). Rank still updates from cache.")
                             .font(ThemeManager.roundedFont(.caption, weight: .medium))
                             .foregroundStyle(.white.opacity(0.5))
                             .padding(.horizontal, 20)
@@ -244,13 +244,18 @@ struct HomeDashboardView: View {
             )
 
             if let player = favoritePlayer {
-                PlayerTorsoPhotoView(player: player, contentMode: .fit, fadePortion: 0.25)
+                PlayerTorsoPhotoView(
+                    player: player,
+                    contentMode: .fit,
+                    fadePortion: 0.25,
+                    circularHeadshotSize: 156
+                )
                     .id("\(favoritePlayerID)-\(photoRefreshToken)")
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(.top, safeTop + 28)
                     .padding(.leading, 96)
-                    .padding(.trailing, -24)
-                    .padding(.bottom, 4)
+                    .padding(.trailing, 12)
+                    .padding(.bottom, 48)
             }
         }
         .overlay(alignment: .bottom) {
@@ -267,9 +272,8 @@ struct HomeDashboardView: View {
 
     private var showsFavoriteMediaHint: Bool {
         guard let player = favoritePlayer, player.isCustom else { return false }
-        if FavoritePlayerEnricher.mediaUnavailable { return true }
-        return player.displaySeasonRecord == nil
-            && !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
+        guard FavoritePlayerEnricher.mediaFailureReason == .quota else { return false }
+        return !PlayerPhotoStore.hasCachedPhotos(playerID: player.id)
     }
 
     private var favoritePlayerEmptyState: some View {

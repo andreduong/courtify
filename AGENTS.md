@@ -119,7 +119,7 @@ Additional endpoints for **custom favorites** outside the bundled top-10 catalog
 | Endpoint | Purpose | RapidAPI cost |
 |----------|---------|---------------|
 | `GET /api/player-lookup?tour=atp\|wta&name=…` | Rank + API id from top-100 rankings | **One** rankings call per uncached name; KV `player-meta:{tour}:{name}` TTL 30 days |
-| `GET /api/player-photo?tour=…&apiId=…&variant=head\|hero` | Proxy player JPEG from RapidAPI | One image fetch per variant **on miss**; Cloudflare `caches.default` + `Cache-Control: max-age=30d` |
+| `GET /api/player-photo?tour=…&apiId=…&variant=head\|hero` | Proxy player JPEG from RapidAPI (+ optional name-slug / ATP CDN) | **One** upstream image per player on miss — head+hero share one edge key (same RapidAPI bytes); Cloudflare `caches.default` + `Cache-Control: max-age=30d` |
 | `GET /api/player-season-record?tour=atp\|wta&apiId=…` | Current-season wins/losses | **One** `surface-summary` call per uncached player; KV `player-season:{tour}:{apiId}` TTL **24h** |
 
 **Season record response:**
@@ -137,11 +137,31 @@ Worker sums `courtWins` / `courtLosses` across all surfaces for the current UTC 
 - `lookupPlayerMeta` uses a **single** `/ranking/singles?pageSize=100` call; no search/fixtures/ms-api chains.
 - Lookup / season-record fetches pass `noRetryOn429: true` — do not burn retries when quota is exhausted.
 - Worker tracks `x-ratelimit-requests-remaining` (and limit); when remaining is below a reserve (**5** on Basic-sized limits, **100** on Pro+), skip RapidAPI and serve stale KV / return 429 on photo/season.
-- Photos: always via Worker proxy (never put `x-rapidapi-key` in iOS). Edge cache means thousands of clients = one RapidAPI hit per image/month.
-- **Deploy Worker only when quota allows**; test lookup/photo/season paths sparingly on Basic; prefer Pro.
+- **After upgrading Basic → Pro:** delete stale KV key `rapidapi-quota` if photos still 429 (`npx wrangler kv key delete rapidapi-quota --binding TENNIS_DATA --remote --preview false`). Worker also ignores Basic-sized snapshots older than 60s so Pro headers can rewrite the gate.
+- Photos: always via Worker proxy (never put `x-rapidapi-key` in iOS). Edge cache means thousands of clients = one RapidAPI hit per image/month. Head+hero share one edge entry (same RapidAPI bytes). Missing photos normalize to **404** (inactive/unranked), not CDN 403.
 
 iOS only calls lookup / photo / season-record when the user **picks** a custom favorite (`FavoritePlayerEnricher`). Display surfaces + WidgetKit read app-group cache only.
 
+### Custom player photos — agent best practices (learned Jul 2026)
+
+**Do not reinvent. Cost model is unchanged:** pick-only enrich → Worker edge + app-group disk → UI. WidgetKit **never** calls the Worker (`WidgetPayloadReader.loadCached()` only). Live-scores timeline (~15 min) and rankings timeline (~30 min) only **re-paint cache** — that is not a RapidAPI fetch. Shared RapidAPI burn is still pull-to-refresh + Worker KV stale after **6 h** (5 upstream calls). Do **not** add per-match polling, “stop when match ends” live fetch loops, or monthly rankings fetches (rankings move weekly; monthly would look broken; 6 h on-demand is already cheaper).
+
+| Rule | Why |
+|------|-----|
+| **No user photo upload (UGC)** | Luxury control, App Review / moderation, and widgets assume one canonical Worker/app-group photo key — not per-user blobs |
+| **No typographic initials fallback** | Conflicts with established `PlayerSilhouetteView` + ban on letter placeholders |
+| **RapidAPI studio JPEG ≠ torso cutout** | Opaque ~150×200 plates (same bytes for head+hero). Store as **head** only; show **circular** headshot on Home / Settings / widgets — never a grey rectangle “hero” |
+| **Bundled `-hero` PNGs** | Only path for transparent cutouts (featured top-10). Optional curated assets for inactive legends later |
+| **Inactive / unranked (e.g. Kyrgios)** | Outside rankings top-100 → lookup 404; often no RapidAPI photo + ATP CDN Cloudflare 403. Fail **silently** with silhouette (`mediaFailureReason = notFound`). Never blame “daily API limit” |
+| **Quota helper copy** | Only for true **429/503**. Split reasons in `FavoritePlayerEnricher` (`.quota` / `.notFound` / `.upstream`) |
+| **Picker** | Keep bundled avatars (`preferLivePhotos: false`). Persist favorite ID immediately; enrich photos in background; notify via `favoritePlayerDidChange` |
+| **Edge cache keys** | Must include `apiId` **or** name-slug **or** `code` — never bare `tour+variant` (cross-player collision + poisoned 403s). Cache **success** only |
+| **Stale Basic → Pro gate** | KV `rapidapi-quota` can stick at `{remaining:4, limit:50}` and permanently 429 photos. Delete key after upgrade; Worker ignores Basic-sized snapshots older than 60s so Pro headers can rewrite |
+| **iOS photo cache schema** | Bump `playerCacheSchemaVersion` when changing head/hero semantics so poisoned `-hero.jpg` studio plates are wiped |
+
+**Verified apiId overrides:** Worker `PLAYER_META_OVERRIDES` is for **verified** Matchstat ids only — never guess (wrong player photo). ATP `PlayerSearchCatalog.atpTourCodes` / `atpApiIds` help ranked/search-catalog names when lookup is rate-limited.
+
+---
 
 ```json
 {
@@ -177,6 +197,8 @@ iOS only calls lookup / photo / season-record when the user **picks** a custom f
 - Do **not** migrate TournamentCalendar to the network — keep bundled.
 - Do **not** expose RapidAPI keys in the Swift client.
 - Do **not** stay on RapidAPI Basic (50/day) if custom favorites / photos / W/L are product requirements.
+- Do **not** add user-uploaded favorite photos (UGC) — curated cutouts / Worker photos only.
+- Do **not** treat WidgetKit timeline intervals as API cadence; do **not** switch rankings to monthly refresh.
 
 ### Deployment checklist (user action required)
 
@@ -673,7 +695,9 @@ after TestFlight install.
 - **Paywall + onboarding chrome:** do **not** wrap the paywall step in `OnboardingFlowView`’s top `safeAreaInset` chrome. The inset reserves a band that only shows `.courtifyBackground()` while the marquee lives in the content below → top-left blackout bar. Paywall should own full-bleed background + its own close control (`managesOwnCloseButton`).
 - **WidgetKit catalog:** `CourtifyWidgetCatalog` is the single source of truth for gallery cards and WidgetKit kinds. Exceed the 10-kind builder limit with `OtherBundle().body` (not `OtherBundle()` as a `Widget`). Lock Screen kinds live in `LockScreenWidgets.swift`.
 - **Rectangular slam logos in Settings:** wrap with `FavoriteSlamLogoBadge` — `scaledToFill` + `clipShape(Circle())` so AO / RG / Wimbledon / US Open all read as round badges (wide US Open wordmark fills then clips).
-- **Quota UX:** when custom favorite photos fail (RapidAPI 429), show silhouette + helper copy / one-shot alert — don’t leave blank heroes or look “broken.”
+- **Quota UX:** when custom favorite photos fail with **true quota (429/503)**, show a short helper + one-shot alert. Inactive/unranked / not-found fails **silently** with `PlayerSilhouetteView` (or circular studio headshot when a head JPEG exists) — never blame “API limit” for Kyrgios-style misses.
+- **API studio photos are not cutouts:** RapidAPI `Photo/{id}.jpg` is an opaque ~180×200 plate (same bytes for head+hero). `PlayerTorsoPhotoView` / widget heroes use bundled `-hero` or a real bodyshot file only; otherwise a **circular** headshot or silhouette — never a grey rectangle “torso.”
+- **Photo edge cache:** Worker keys must include `apiId` / `code` / name-slug — never bare `tour+variant` (collides + poisoned 403s). Success responses only are edge-cached; head+hero share one RapidAPI cache entry.
 - **Glass inside cards:** never clip `CourtifyAmbientGlow` inside a glass card — it fills OLED black and kills `.ultraThinMaterial`. Use transparent `RadialGradient` washes only.
 - **Disabled primary CTAs:** use `.courtifyDormantButtonLabel()` (glass + white @ 30% text), not dimmed `brandYellow` or `midnightGreen`.
 - **Splash marquee:** `CourtifyMarqueeBackground` needs `.drawingGroup` before `.blur(16)` + `Color.black.opacity(0.65)` scrim — blur alone stays too sharp.
