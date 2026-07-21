@@ -9,6 +9,13 @@ struct WidgetGalleryPreview: View {
     let payload: WidgetDataPayload?
 
     var body: some View {
+        previewContent
+            // Quiet in-app previews — home-screen WidgetKit still shows the stamp by default.
+            .environment(\.showsWidgetMadeByStamp, false)
+    }
+
+    @ViewBuilder
+    private var previewContent: some View {
         switch item.id {
         case "favorite":
             FavoritePlayerWidgetView(player: favoritePlayer, widgetID: "favorite")

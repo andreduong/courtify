@@ -75,12 +75,15 @@ private struct FavoritePlayerWidgetContainer: View {
     let entry: FavoritePlayerEntry
 
     var body: some View {
-        switch family {
-        case .systemMedium:
-            FavoritePlayerMediumWidgetView(player: entry.player, widgetID: "favorite")
-        default:
-            FavoritePlayerWidgetView(player: entry.player, widgetID: "favorite")
+        Group {
+            switch family {
+            case .systemMedium:
+                FavoritePlayerMediumWidgetView(player: entry.player, widgetID: "favorite")
+            default:
+                FavoritePlayerWidgetView(player: entry.player, widgetID: "favorite")
+            }
         }
+        .courtifyHomeWidgetStampEnabled()
     }
 }
 

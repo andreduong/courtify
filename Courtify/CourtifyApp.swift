@@ -17,7 +17,6 @@ private struct AppRootView: View {
     @AppStorage(AppGroupConstants.Keys.referralBypassActive, store: AppGroupConstants.appGroupStorage)
     private var referralBypassActive = false
     @StateObject private var revenueCat = RevenueCatManager.shared
-    @ObservedObject private var appearance = AppAppearanceStore.shared
     @State private var isBootstrapped = false
 
     /// Home requires finished onboarding — not bare Pro/referral.
@@ -50,7 +49,7 @@ private struct AppRootView: View {
         }
         .animation(CourtifyMotion.screen, value: isBootstrapped)
         .animation(CourtifyMotion.screen, value: shouldShowHome)
-        .background(appearance.canvasColor.ignoresSafeArea())
+        .background(ThemeManager.oledBlack.ignoresSafeArea())
         // Universal press: every Button gets scale + haptic; any surface tap
         // (hero, empty canvas, non-controls) also soft-scales. Nested sheets can
         // call this again — only the outermost install owns the window gesture.

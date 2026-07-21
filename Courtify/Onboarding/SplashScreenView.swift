@@ -6,7 +6,7 @@ struct SplashScreenView: View {
 
     var body: some View {
         ZStack {
-            appearance.canvasColor.ignoresSafeArea()
+            ThemeManager.oledBlack.ignoresSafeArea()
 
             CourtifyMarqueeBackground()
                 .allowsHitTesting(false)

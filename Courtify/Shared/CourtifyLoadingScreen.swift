@@ -32,7 +32,7 @@ struct CourtifyLoadingScreen: View {
 struct CourtifyStarryBackground: View {
     var body: some View {
         ZStack {
-            ThemeManager.midnightGreen.ignoresSafeArea()
+            ThemeManager.oledBlack.ignoresSafeArea()
 
             Canvas { context, size in
                 for index in 0..<90 {
@@ -48,15 +48,11 @@ struct CourtifyStarryBackground: View {
             }
             .ignoresSafeArea()
 
-            RadialGradient(
-                colors: [
-                    ThemeManager.emeraldGreen.opacity(0.55),
-                    ThemeManager.opticYellow.opacity(0.12),
-                    .clear,
-                ],
-                center: .bottomTrailing,
-                startRadius: 40,
-                endRadius: 420
+            CourtifyAmbientGlow(
+                primary: ThemeManager.emeraldGreen,
+                secondary: ThemeManager.opticYellow,
+                intensity: 0.7,
+                anchor: .bottom
             )
             .ignoresSafeArea()
 

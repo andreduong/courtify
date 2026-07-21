@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum HomeTab: String, CaseIterable, Identifiable {
     case home
@@ -71,15 +72,13 @@ struct HomeView: View {
                 }
                 .tag(HomeTab.widgets)
         }
-        .tint(ThemeManager.opticYellow)
-        .toolbarBackground(
-            selectedTab == .home ? AnyShapeStyle(.clear) : AnyShapeStyle(.ultraThinMaterial),
-            for: .tabBar
-        )
-        .toolbarBackground(.visible, for: .tabBar)
+        .tint(ThemeManager.brandYellow)
         .preferredColorScheme(.dark)
         .courtifySelectionFeedback(selectedTab)
-        .onAppear(perform: openPaywallFromDeepLinkIfNeeded)
+        .onAppear {
+            CourtifyTabBarChrome.apply()
+            openPaywallFromDeepLinkIfNeeded()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .courtifyOpenPaywall)) { _ in
             openPaywallFromDeepLinkIfNeeded()
         }
@@ -99,6 +98,49 @@ struct HomeView: View {
         PaywallDeepLink.shouldOpenPaywall = false
         guard !revenueCat.isProUser, !AppGroupConstants.referralBypassActive else { return }
         showPaywallFromDeepLink = true
+    }
+}
+
+// MARK: - Native tab bar chrome
+
+enum CourtifyTabBarChrome {
+    /// Edge-to-edge frosted pane — no solid fill so OLED / ambient glow blur underneath.
+    static func apply() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundEffect = UIBlurEffect(style: .systemChromeMaterialDark)
+        appearance.backgroundColor = .clear
+        appearance.shadowColor = .clear
+        appearance.shadowImage = UIImage()
+
+        let item = UITabBarItemAppearance()
+        let inactive = UIColor.white.withAlphaComponent(0.42)
+        let active = UIColor(red: 0xCC / 255, green: 0xFF / 255, blue: 0, alpha: 1)
+        [item.normal, item.selected, item.disabled, item.focused].forEach { state in
+            state.iconColor = inactive
+            state.titleTextAttributes = [
+                .foregroundColor: inactive,
+                .font: UIFont.systemFont(ofSize: 10, weight: .medium),
+            ]
+        }
+        item.selected.iconColor = active
+        item.selected.titleTextAttributes = [
+            .foregroundColor: active,
+            .font: UIFont.systemFont(ofSize: 10, weight: .semibold),
+        ]
+        appearance.stackedLayoutAppearance = item
+        appearance.inlineLayoutAppearance = item
+        appearance.compactInlineLayoutAppearance = item
+
+        let tabBar = UITabBar.appearance()
+        tabBar.standardAppearance = appearance
+        tabBar.scrollEdgeAppearance = appearance
+        tabBar.isTranslucent = true
+        tabBar.backgroundImage = UIImage()
+        tabBar.shadowImage = UIImage()
+        tabBar.tintColor = active
+        tabBar.unselectedItemTintColor = inactive
+        tabBar.selectionIndicatorImage = UIImage()
     }
 }
 

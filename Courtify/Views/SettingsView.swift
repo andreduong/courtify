@@ -93,7 +93,7 @@ struct SettingsView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 32)
             }
-            .background(appearance.canvasColor.ignoresSafeArea())
+            .background(ThemeManager.oledBlack.ignoresSafeArea())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -105,13 +105,17 @@ struct SettingsView: View {
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white.opacity(0.8))
                             .padding(9)
-                            .background(.white.opacity(0.12))
+                            .background(.ultraThinMaterial)
                             .clipShape(Circle())
+                            .overlay {
+                                Circle()
+                                    .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                            }
                     }
                     .courtifyButton(.icon)
                 }
             }
-            .toolbarBackground(appearance.canvasColor, for: .navigationBar)
+            .toolbarBackground(ThemeManager.oledBlack, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
         .onAppear {
@@ -405,11 +409,19 @@ private struct FavoriteCard<Artwork: View>: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [appearance.liftColor.opacity(0.85), appearance.canvasColor],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            ZStack {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.ultraThinMaterial)
+
+                CourtifyAmbientGlow(
+                    primary: appearance.liftColor,
+                    secondary: appearance.accentColor,
+                    intensity: 0.55,
+                    anchor: .topTrailing
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .opacity(0.7)
+            }
 
             artwork()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -438,10 +450,10 @@ private struct FavoriteCard<Artwork: View>: View {
                 Button(action: action) {
                     Text("Change")
                         .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
-                        .foregroundStyle(appearance.canvasColor)
+                        .foregroundStyle(.black)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(Color.white)
+                        .background(ThemeManager.opticYellow)
                         .clipShape(Capsule())
                 }
                 .courtifyButton(.ghost)
@@ -453,6 +465,10 @@ private struct FavoriteCard<Artwork: View>: View {
         .frame(minWidth: 0, maxWidth: .infinity)
         .frame(height: FavoriteCardMetrics.height)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+        }
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
@@ -479,8 +495,7 @@ private struct SettingsRowLabel<Trailing: View>: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 15)
-        .background(.white.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .courtifyGlassSurface(cornerRadius: 16)
         .contentShape(Rectangle())
     }
 }
@@ -570,8 +585,7 @@ private struct SettingsPremiumRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
-            .background(.white.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .courtifyGlassSurface(cornerRadius: 16)
             .contentShape(Rectangle())
         }
         .courtifyButton(.card)
@@ -615,8 +629,7 @@ private struct AppThemePickerSheet: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(.white.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .courtifyGlassSurface(cornerRadius: 16)
                 }
                 .courtifyButton(.card)
             }
@@ -653,8 +666,7 @@ private struct LogoBallPickerSheet: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(.white.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .courtifyGlassSurface(cornerRadius: 16)
                 }
                 .courtifyButton(.card)
             }
@@ -715,7 +727,6 @@ private struct PickerSheetShell<Content: View>: View {
     let title: String
     @ViewBuilder var content: () -> Content
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var appearance = AppAppearanceStore.shared
 
     var body: some View {
         NavigationStack {
@@ -725,7 +736,7 @@ private struct PickerSheetShell<Content: View>: View {
                 }
                 .padding(.top, 8)
             }
-            .background(appearance.canvasColor.ignoresSafeArea())
+            .background(ThemeManager.oledBlack.ignoresSafeArea())
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -736,7 +747,7 @@ private struct PickerSheetShell<Content: View>: View {
                         .courtifyButton(.ghost)
                 }
             }
-            .toolbarBackground(appearance.canvasColor, for: .navigationBar)
+            .toolbarBackground(ThemeManager.oledBlack, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
         .presentationDetents([.medium, .large])
@@ -746,7 +757,6 @@ private struct PickerSheetShell<Content: View>: View {
 // MARK: - Widgets how-to
 
 private struct HowToAddWidgetsView: View {
-    @ObservedObject private var appearance = AppAppearanceStore.shared
     private let steps: [(icon: String, text: String)] = [
         ("hand.tap.fill", "Touch and hold an empty area on your Home Screen until the apps jiggle."),
         ("plus.circle.fill", "Tap the + button in the top-left corner."),
@@ -777,16 +787,15 @@ private struct HowToAddWidgetsView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.white.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .courtifyGlassSurface(cornerRadius: 16)
                 }
             }
             .padding(20)
         }
-        .background(appearance.canvasColor.ignoresSafeArea())
+        .background(ThemeManager.oledBlack.ignoresSafeArea())
         .navigationTitle("How to add widgets")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(appearance.canvasColor, for: .navigationBar)
+        .toolbarBackground(ThemeManager.oledBlack, for: .navigationBar)
     }
 }
 

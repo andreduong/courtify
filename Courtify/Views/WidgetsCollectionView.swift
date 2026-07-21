@@ -106,18 +106,30 @@ struct WidgetsCollectionView: View {
     var body: some View {
         CourtifyPlainScrollScreen {
             VStack(alignment: .leading, spacing: 24) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Widgets collection")
-                            .font(ThemeManager.roundedFont(.title2, weight: .bold))
-                            .foregroundStyle(.white)
+                ZStack(alignment: .topLeading) {
+                    CourtifyAmbientGlow(
+                        primary: AppAppearanceStore.shared.liftColor,
+                        secondary: AppAppearanceStore.shared.accentColor,
+                        intensity: 0.55,
+                        anchor: .top
+                    )
+                    .frame(height: 140)
+                    .offset(y: -40)
+                    .allowsHitTesting(false)
 
-                        LastUpdatedLabel(date: dataStore.lastUpdated)
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Widgets collection")
+                                .font(ThemeManager.roundedFont(.title2, weight: .bold))
+                                .foregroundStyle(.white)
+
+                            LastUpdatedLabel(date: dataStore.lastUpdated)
+                        }
+
+                        Spacer()
+
+                        ProfileIconButton(showSettings: $showSettings)
                     }
-
-                    Spacer()
-
-                    ProfileIconButton(showSettings: $showSettings)
                 }
 
                 filterBar
@@ -430,24 +442,28 @@ struct WidgetsCollectionView: View {
                             showPaywall = true
                         }
                     } label: {
-                        Image(systemName: isEntitled ? "circle.lefthalf.filled" : "lock.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(8)
-                            .background(.black.opacity(0.45))
-                            .clipShape(Circle())
+                        if isEntitled {
+                            Image(systemName: "circle.lefthalf.filled")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(8)
+                                .background {
+                                    Circle()
+                                        .fill(.thinMaterial)
+                                }
+                                .overlay {
+                                    Circle()
+                                        .strokeBorder(Color.white.opacity(0.20), lineWidth: 0.5)
+                                }
+                        } else {
+                            CourtifyGlassLockBadge()
+                        }
                     }
                     .courtifyButton(.icon)
                     .padding(10)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 } else if locked {
-                    Text("Premium")
-                        .font(ThemeManager.roundedFont(.caption2, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.black.opacity(0.45))
-                        .clipShape(Capsule())
+                    CourtifyGlassLockBadge()
                         .padding(10)
                         .allowsHitTesting(false)
                 }
@@ -458,10 +474,16 @@ struct WidgetsCollectionView: View {
                     } label: {
                         Image(systemName: "person.crop.circle")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.secondary)
                             .padding(8)
-                            .background(.black.opacity(0.45))
-                            .clipShape(Circle())
+                            .background {
+                                Circle()
+                                    .fill(.thinMaterial)
+                            }
+                            .overlay {
+                                Circle()
+                                    .strokeBorder(Color.white.opacity(0.20), lineWidth: 0.5)
+                            }
                     }
                     .courtifyButton(.icon)
                     .padding(10)

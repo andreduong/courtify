@@ -22,12 +22,21 @@ enum WidgetTheme {
         )
     }
 
-    // MARK: Typography — mix heavy display numerals with rounded labels
+    // MARK: Typography — rounded scoreboard numerals + micro labels
 
-    /// Big ranks, countdowns, scores — default design reads more “sports broadcast”.
+    /// Big ranks, countdowns, scores — rounded heavy (no stencil / compressed default).
     static func displayFont(size: CGFloat, weight: Font.Weight = .heavy) -> Font {
-        .system(size: size, weight: weight, design: .default)
+        .system(size: size, weight: weight, design: .rounded)
     }
+
+    /// Extreme-contrast unit labels under scoreboard numbers (DAYS, WINS, …).
+    static func microLabelFont(size: CGFloat = 10, weight: Font.Weight = .semibold) -> Font {
+        .system(size: size, weight: weight, design: .rounded)
+    }
+
+    static let scoreboardKerning: CGFloat = -1.5
+    static let microLabelKerning: CGFloat = 2
+
 
     static func roundedFont(_ style: Font.TextStyle, weight: Font.Weight = .regular) -> Font {
         .system(style, design: .rounded).weight(weight)

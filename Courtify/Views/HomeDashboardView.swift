@@ -47,23 +47,13 @@ struct HomeDashboardView: View {
         return Color(hex: slam.highlightColor)
     }
 
-    private var slamBase: Color {
-        guard let slam = nextSlam else { return appearance.canvasColor }
+    private var slamGlow: Color {
+        guard let slam = nextSlam else { return appearance.liftColor }
         switch slam {
-        case .australianOpen: return Color(hex: 0x08263D)
-        case .frenchOpen: return Color(hex: 0x3B1404)
-        case .wimbledon: return Color(hex: 0x140B22)
-        case .usOpen: return Color(hex: 0x07111F)
-        }
-    }
-
-    private var slamLift: Color {
-        guard let slam = nextSlam else { return appearance.liftColor.opacity(0.35) }
-        switch slam {
-        case .australianOpen: return Color(hex: 0x0E4A72)
-        case .frenchOpen: return Color(hex: 0x8A2E05)
-        case .wimbledon: return Color(hex: 0x2A1848)
-        case .usOpen: return Color(hex: 0x0C2340)
+        case .australianOpen: return Color(hex: 0x0085CA)
+        case .frenchOpen: return Color(hex: 0xE35205)
+        case .wimbledon: return Color(hex: 0x006633)
+        case .usOpen: return Color(hex: 0x4A90D9)
         }
     }
 
@@ -72,7 +62,7 @@ struct HomeDashboardView: View {
     }
 
     var body: some View {
-        // App-theme canvas bleeds under the translucent tab bar + home indicator.
+        // OLED black canvas; ambient glow lives in the player hero.
         // ScrollView is viewport-tall (no free scroll) so pull-to-refresh works
         // without changing the flex hero + fixed countdown layout.
         CourtifyFullBleedScreen { safeTop, size in
@@ -82,9 +72,9 @@ struct HomeDashboardView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipped()
 
-                    // Content-sized band; slam `canvasColor` bleeds under the tab bar.
                     grandSlamCountdownSection
                         .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 16)
                 }
                 .frame(width: size.width, height: size.height, alignment: .top)
             }
@@ -97,10 +87,6 @@ struct HomeDashboardView: View {
             }
             .tint(ThemeManager.opticYellow)
         }
-        // Slam chrome under the countdown panel + tab bar; hero above stays on app theme.
-        .toolbarBackground(slamBase, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(.dark, for: .tabBar)
         .onAppear {
             dataStore.loadCachedPayload()
             #if DEBUG
@@ -202,10 +188,9 @@ struct HomeDashboardView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             if let rank = liveRank {
                                 Text("\(rank)")
-                                    .font(WidgetTheme.displayFont(size: 92, weight: .black))
-                                    .fontWidth(.compressed)
+                                    .font(WidgetTheme.displayFont(size: 92, weight: .heavy))
+                                    .courtifyScoreboardNumber()
                                     .foregroundStyle(.white)
-                                    .tracking(-5)
                                     .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
                             }
 
@@ -251,19 +236,15 @@ struct HomeDashboardView: View {
     @ViewBuilder
     private func playerHeroBackground(safeTop: CGFloat) -> some View {
         ZStack {
-            CourtifyHeroBackground(topOpacity: 0.95, midOpacity: 0.5)
-
-            LinearGradient(
-                colors: [
-                    appearance.accentColor.opacity(0.08),
-                    .clear,
-                ],
-                startPoint: .top,
-                endPoint: .center
+            CourtifyAmbientGlow(
+                primary: appearance.liftColor,
+                secondary: appearance.accentColor,
+                intensity: 1.15,
+                anchor: .trailing
             )
 
             if let player = favoritePlayer {
-                PlayerTorsoPhotoView(player: player, contentMode: .fit)
+                PlayerTorsoPhotoView(player: player, contentMode: .fit, fadePortion: 0.25)
                     .id("\(favoritePlayerID)-\(photoRefreshToken)")
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(.top, safeTop + 28)
@@ -271,6 +252,16 @@ struct HomeDashboardView: View {
                     .padding(.trailing, -24)
                     .padding(.bottom, 4)
             }
+        }
+        .overlay(alignment: .bottom) {
+            // Soften the flex-hero → countdown seam (clips otherwise leave a hard waist line).
+            LinearGradient(
+                colors: [.clear, ThemeManager.oledBlack.opacity(0.55), ThemeManager.oledBlack],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 120)
+            .allowsHitTesting(false)
         }
     }
 
@@ -308,7 +299,7 @@ struct HomeDashboardView: View {
                     Text("Choose player")
                         .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
                 }
-                .foregroundStyle(appearance.canvasColor)
+                .foregroundStyle(.black)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 12)
                 .background(appearance.accentColor)
@@ -395,37 +386,49 @@ struct HomeDashboardView: View {
             .padding(.bottom, 28)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background { grandSlamBackground }
-    }
+        .background {
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color.white.opacity(0.04))
 
-    private var grandSlamBackground: some View {
-        ZStack(alignment: .leading) {
-            LinearGradient(
-                colors: [slamLift, slamBase],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial)
 
-            Rectangle()
-                .fill(slamHighlight)
-                .frame(width: 3)
-                .opacity(0.9)
+                CourtifyAmbientGlow(
+                    primary: slamGlow,
+                    secondary: slamHighlight,
+                    intensity: 0.55,
+                    anchor: .leading
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .opacity(0.65)
+                .allowsHitTesting(false)
 
-            CourtifyTennisBallWatermark()
+                Capsule()
+                    .fill(slamHighlight)
+                    .frame(width: 3)
+                    .padding(.vertical, 16)
+                    .opacity(0.95)
+
+                CourtifyTennisBallWatermark()
+                    .allowsHitTesting(false)
+            }
         }
-        .clipped()
+        .overlay {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
     private func countdownUnit(value: Int, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(String(format: "%02d", value))
                 .font(WidgetTheme.displayFont(size: 36, weight: .heavy))
+                .courtifyScoreboardNumber()
                 .foregroundStyle(.white)
-                .monospacedDigit()
             Text(label)
-                .font(ThemeManager.roundedFont(size: 10, weight: .bold))
-                .foregroundStyle(slamHighlight.opacity(0.8))
-                .tracking(1.3)
+                .courtifyMicroLabel()
         }
     }
 }

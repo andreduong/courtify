@@ -104,12 +104,22 @@ struct PaywallView: View {
                             Group {
                                 if revenueCat.isLoading {
                                     ProgressView()
-                                        .tint(ThemeManager.midnightGreen)
+                                        .tint(.black)
                                 } else {
                                     Text("Subscribe")
+                                        .font(ThemeManager.roundedFont(.headline, weight: .black))
+                                        .foregroundStyle(.black)
                                 }
                             }
-                            .courtifyPrimaryButtonLabel(cornerRadius: 16, verticalPadding: 18)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(ThemeManager.brandYellow)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(
+                                color: ThemeManager.brandYellow.opacity(0.3),
+                                radius: 20,
+                                y: 8
+                            )
                         }
                         .courtifyButton(.primary, enabled: !revenueCat.isLoading)
 
@@ -208,23 +218,15 @@ struct PaywallView: View {
         }
     }
 
-    /// Soft wash so colorful widgets sit behind the CTA — still visible, not screaming.
+    /// Heavy blur + dark wash so marquee widgets become ambient color only.
     private var paywallFocusScrim: some View {
         ZStack {
-            Color.black.opacity(0.22)
+            Rectangle()
+                .fill(.ultraThinMaterial)
                 .ignoresSafeArea()
 
-            RadialGradient(
-                colors: [
-                    Color.clear,
-                    Color.black.opacity(0.12),
-                    Color.black.opacity(0.28),
-                ],
-                center: .center,
-                startRadius: 220,
-                endRadius: 680
-            )
-            .ignoresSafeArea()
+            Color.black.opacity(0.7)
+                .ignoresSafeArea()
         }
     }
 
@@ -351,6 +353,8 @@ private struct PlanOptionRow: View {
     let isSelected: Bool
     let onSelect: () -> Void
 
+    private var isYearlyVIP: Bool { plan == .yearly }
+
     var body: some View {
         Button(action: onSelect) {
             HStack {
@@ -363,17 +367,17 @@ private struct PlanOptionRow: View {
                         if let badge = plan.badge {
                             Text(badge)
                                 .font(ThemeManager.roundedFont(.caption2, weight: .bold))
-                                .foregroundStyle(ThemeManager.midnightGreen)
+                                .foregroundStyle(.black)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
-                                .background(ThemeManager.opticYellow)
+                                .background(ThemeManager.brandYellow)
                                 .clipShape(Capsule())
                         }
                     }
 
                     Text(plan.price)
                         .font(ThemeManager.roundedFont(.title3, weight: .bold))
-                        .foregroundStyle(ThemeManager.opticYellow)
+                        .foregroundStyle(ThemeManager.brandYellow)
 
                     Text(plan.subtitle)
                         .font(
@@ -384,7 +388,7 @@ private struct PlanOptionRow: View {
                         )
                         .foregroundStyle(
                             plan.emphasizesSubtitle
-                                ? ThemeManager.opticYellow
+                                ? ThemeManager.brandYellow
                                 : .white.opacity(0.65)
                         )
                 }
@@ -393,19 +397,64 @@ private struct PlanOptionRow: View {
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundStyle(isSelected ? ThemeManager.opticYellow : .white.opacity(0.3))
+                    .foregroundStyle(isSelected ? ThemeManager.brandYellow : .white.opacity(0.3))
             }
-            .glassCard(cornerRadius: 16, padding: 18)
+            .padding(18)
+            .background {
+                if isYearlyVIP {
+                    yearlyMetalGlassBackground
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                }
+            }
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .strokeBorder(
-                        isSelected ? ThemeManager.opticYellow : Color.white.opacity(0.1),
-                        lineWidth: isSelected ? 2 : 1
+                        isYearlyVIP
+                            ? ThemeManager.brandYellow
+                            : (isSelected ? ThemeManager.brandYellow.opacity(0.55) : Color.white.opacity(0.1)),
+                        lineWidth: isYearlyVIP ? 1 : (isSelected ? 1.5 : 0.5)
                     )
             }
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .courtifySelection(isSelected)
         }
         .courtifyButton(.card)
+    }
+
+    private var yearlyMetalGlassBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.22),
+                            Color.white.opacity(0.06),
+                            ThemeManager.brandYellow.opacity(0.14),
+                            Color.black.opacity(0.25),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.28),
+                            Color.clear,
+                        ],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                )
+                .blendMode(.softLight)
+        }
     }
 }
 

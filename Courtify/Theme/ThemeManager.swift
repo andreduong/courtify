@@ -3,12 +3,21 @@ import SwiftUI
 enum ThemeManager {
     // MARK: - Brand Colors
 
-    /// Canonical Courtify midnight green (also the default app-theme preset).
+    /// Pure OLED screen canvas — all main surfaces sit on this, not flat gray/green fills.
+    static let oledBlack = Color.black
+    /// Legacy brand midnight (Settings swatches / widget fallbacks); screens use `oledBlack`.
     static let midnightGreen = Color(hex: 0x0A120D)
+    /// Neon active / highlight — tab selection, countdowns, CTAs.
     static let opticYellow = Color(hex: 0xCCFF00)
+    /// Alias for paywall / tab chrome (“brand yellow”).
+    static let brandYellow = opticYellow
     static let emeraldGreen = Color(hex: 0x00703C)
     /// Brighter green for accent text on dark tiles (subtitles, highlights).
     static let courtGreen = Color(hex: 0x35C77F)
+
+    /// Hairline edge on frosted glass surfaces (physical light-catch).
+    static let glassEdge = Color.white.opacity(0.10)
+    static let glassEdgeWidth: CGFloat = 0.5
 
     // MARK: - Typography
 
@@ -57,6 +66,7 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Swatch color in Settings — ambient glow uses `liftHex` / `accentHex` on OLED black.
     var hex: UInt {
         switch self {
         case .courtify: 0x0A120D
@@ -84,7 +94,7 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Hero / widget gradient lift atop the canvas.
+    /// Ambient glow / hero wash atop OLED black.
     var liftHex: UInt {
         switch self {
         case .courtify: 0x00703C
@@ -146,7 +156,10 @@ final class AppAppearanceStore: ObservableObject {
     @Published private(set) var theme: AppThemePreset
     @Published private(set) var logoBall: LogoBallPreset
 
+    /// Settings swatch / legacy theme chip — not the screen fill.
     var canvasColor: Color { theme.color }
+    /// Every main screen canvas is pure OLED black; color comes from ambient glow.
+    var screenBackground: Color { ThemeManager.oledBlack }
     var accentColor: Color { theme.accentColor }
     var liftColor: Color { theme.liftColor }
     var logoBallColor: Color { logoBall.color }
@@ -174,66 +187,157 @@ final class AppAppearanceStore: ObservableObject {
     }
 }
 
-// MARK: - View Modifiers
+// MARK: - Ambient glow (neon on OLED)
 
-/// Emerald → app canvas gradient (Rankings, Schedule hero tops).
+/// Soft brand-colored bloom behind headers / player profiles — reads as neon light on a dark wall.
+struct CourtifyAmbientGlow: View {
+    var primary: Color
+    var secondary: Color? = nil
+    var intensity: Double = 1.0
+    /// `.top` = header wash; `.trailing` = player profile bloom; `.center` = modal wash.
+    var anchor: UnitPoint = .top
+
+    var body: some View {
+        ZStack {
+            ThemeManager.oledBlack
+
+            if #available(iOS 18.0, *) {
+                meshBloom
+                    .blur(radius: 120)
+                    .opacity(0.9 * intensity)
+            }
+
+            // Always layer radial blooms — Mesh alone can read muddy; radials keep the neon spot.
+            radialBloom
+                .blur(radius: 120)
+                .opacity(intensity)
+        }
+        .allowsHitTesting(false)
+    }
+
+    @available(iOS 18.0, *)
+    private var meshBloom: some View {
+        let glow = secondary ?? primary
+        return MeshGradient(
+            width: 3,
+            height: 3,
+            points: [
+                SIMD2<Float>(0.0, 0.0), SIMD2<Float>(0.5, 0.0), SIMD2<Float>(1.0, 0.0),
+                SIMD2<Float>(0.0, 0.5), SIMD2<Float>(0.5, 0.5), SIMD2<Float>(1.0, 0.5),
+                SIMD2<Float>(0.0, 1.0), SIMD2<Float>(0.5, 1.0), SIMD2<Float>(1.0, 1.0),
+            ],
+            colors: meshColors(primary: primary, secondary: glow)
+        )
+        .scaleEffect(1.2)
+    }
+
+    private var radialBloom: some View {
+        let glow = secondary ?? primary
+        return ZStack {
+            // Tight neon core — spotlight, not a full-screen wash
+            RadialGradient(
+                colors: [
+                    glow.opacity(0.9),
+                    primary.opacity(0.55),
+                    primary.opacity(0.18),
+                    .clear,
+                ],
+                center: anchor,
+                startRadius: 4,
+                endRadius: 160
+            )
+
+            // Soft wall spill — stays localized after blur
+            RadialGradient(
+                colors: [
+                    primary.opacity(0.4),
+                    primary.opacity(0.12),
+                    .clear,
+                ],
+                center: secondaryCenter,
+                startRadius: 30,
+                endRadius: 260
+            )
+        }
+    }
+
+    private var secondaryCenter: UnitPoint {
+        if anchor == .top { return .topTrailing }
+        if anchor == .trailing { return .center }
+        if anchor == .bottom { return .bottomLeading }
+        return .center
+    }
+
+    private func meshColors(primary: Color, secondary: Color) -> [Color] {
+        if anchor == .trailing {
+            return [
+                .clear, primary.opacity(0.15), primary.opacity(0.55),
+                .clear, secondary.opacity(0.35), primary.opacity(0.4),
+                .clear, .clear, secondary.opacity(0.2),
+            ]
+        }
+        if anchor == .bottom {
+            return [
+                .clear, .clear, .clear,
+                primary.opacity(0.2), secondary.opacity(0.35), .clear,
+                primary.opacity(0.55), secondary.opacity(0.4), primary.opacity(0.25),
+            ]
+        }
+        return [
+            primary.opacity(0.65), secondary.opacity(0.45), primary.opacity(0.35),
+            secondary.opacity(0.3), primary.opacity(0.2), .clear,
+            .clear, .clear, .clear,
+        ]
+    }
+}
+
+/// Emerald/brand ambient wash → OLED black (Rankings, Schedule, Home heroes).
 struct CourtifyHeroBackground: View {
     var topOpacity: Double = 0.95
     var midOpacity: Double = 0.5
     @ObservedObject private var appearance = AppAppearanceStore.shared
 
     var body: some View {
-        LinearGradient(
-            colors: [
-                appearance.liftColor.opacity(topOpacity),
-                appearance.liftColor.opacity(midOpacity),
-                appearance.canvasColor,
-            ],
-            startPoint: .top,
-            endPoint: .bottom
+        CourtifyAmbientGlow(
+            primary: appearance.liftColor,
+            secondary: appearance.accentColor,
+            intensity: max(topOpacity, midOpacity),
+            anchor: .top
         )
     }
 }
 
-/// Full-screen canvas with optional soft emerald wash (share screen, modals).
+/// Full-screen OLED canvas with optional soft brand wash (share screen, modals).
 struct CourtifyThemeBackdrop: View {
     var heroWash: Bool = false
     @ObservedObject private var appearance = AppAppearanceStore.shared
 
     var body: some View {
         ZStack {
-            appearance.canvasColor.ignoresSafeArea()
+            ThemeManager.oledBlack.ignoresSafeArea()
             if heroWash {
-                LinearGradient(
-                    colors: [
-                        appearance.liftColor.opacity(0.35),
-                        appearance.canvasColor,
-                        appearance.canvasColor,
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
+                CourtifyAmbientGlow(
+                    primary: appearance.liftColor,
+                    secondary: appearance.accentColor,
+                    intensity: 0.55,
+                    anchor: .top
                 )
                 .ignoresSafeArea()
-                .allowsHitTesting(false)
             }
         }
     }
 }
 
 struct CourtifyThemedNavigationBar: ViewModifier {
-    @ObservedObject private var appearance = AppAppearanceStore.shared
-
     func body(content: Content) -> some View {
-        content.toolbarBackground(appearance.canvasColor, for: .navigationBar)
+        content.toolbarBackground(ThemeManager.oledBlack, for: .navigationBar)
     }
 }
 
 struct CourtifyBackground: ViewModifier {
-    @ObservedObject private var appearance = AppAppearanceStore.shared
-
     func body(content: Content) -> some View {
         ZStack {
-            appearance.canvasColor.ignoresSafeArea()
+            ThemeManager.oledBlack.ignoresSafeArea()
             content
         }
         .preferredColorScheme(.dark)
@@ -248,13 +352,40 @@ struct GlassCardModifier: ViewModifier {
         content
             .padding(padding)
             .background {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                ZStack {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(Color.white.opacity(0.04))
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                }
             }
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(ThemeManager.opticYellow.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
             }
+    }
+}
+
+/// Frosted glass fill + hairline white edge for cards / list rows (no extra padding).
+struct CourtifyGlassSurfaceModifier: ViewModifier {
+    var cornerRadius: CGFloat = 16
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                ZStack {
+                    // Give material something to refract on OLED black.
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(Color.white.opacity(0.04))
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 }
 
@@ -269,5 +400,9 @@ extension View {
 
     func glassCard(cornerRadius: CGFloat = 20, padding: CGFloat = 16) -> some View {
         modifier(GlassCardModifier(cornerRadius: cornerRadius, padding: padding))
+    }
+
+    func courtifyGlassSurface(cornerRadius: CGFloat = 16) -> some View {
+        modifier(CourtifyGlassSurfaceModifier(cornerRadius: cornerRadius))
     }
 }

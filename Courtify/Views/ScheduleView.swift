@@ -109,13 +109,13 @@ struct ScheduleView: View {
     }
 
     private func countdownUnit(value: Int, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(String(format: "%02d", value))
-                .font(ThemeManager.roundedFont(size: 34, weight: .bold))
+                .font(WidgetTheme.displayFont(size: 34, weight: .heavy))
+                .courtifyScoreboardNumber()
                 .foregroundStyle(ThemeManager.opticYellow)
             Text(label)
-                .font(ThemeManager.roundedFont(.caption2, weight: .medium))
-                .foregroundStyle(.white.opacity(0.55))
+                .courtifyMicroLabel()
         }
     }
 
@@ -126,23 +126,23 @@ struct ScheduleView: View {
         sectionHeader("2026 \(selectedTour.rawValue) calendar · Slams & Masters 1000")
             .padding(.top, 10)
 
-        ForEach(upcomingEvents) { event in
-            VStack(spacing: 0) {
+        VStack(spacing: 16) {
+            ForEach(upcomingEvents) { event in
                 TournamentTile(event: event, isPast: false)
-                CourtifyTileDivider()
             }
         }
+        .padding(.horizontal, 16)
 
         if !completedEvents.isEmpty {
             sectionHeader("Completed")
                 .padding(.top, 20)
 
-            ForEach(completedEvents) { event in
-                VStack(spacing: 0) {
+            VStack(spacing: 16) {
+                ForEach(completedEvents) { event in
                     TournamentTile(event: event, isPast: true)
-                    CourtifyTileDivider()
                 }
             }
+            .padding(.horizontal, 16)
         }
     }
 
@@ -220,10 +220,11 @@ private struct TournamentTile: View {
                         .foregroundStyle(.white.opacity(isPast ? 0.2 : 0.45))
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .contentShape(Rectangle())
         }
+        .courtifyGlassSurface(cornerRadius: 16)
         .courtifyButton(.row)
         .accessibilityLabel("\(event.name), \(event.location)")
     }

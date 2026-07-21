@@ -59,19 +59,18 @@ struct FavoritePlayerWidgetView: View {
                         .font(WidgetTheme.displayFont(size: 13, weight: .bold))
                         .foregroundStyle(.white.opacity(0.85))
                     Text("SEASON")
-                        .font(WidgetTheme.roundedFont(size: 9, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .courtifyMicroLabel()
                 } else if player?.isCustom == true {
                     Text("—")
                         .font(WidgetTheme.displayFont(size: 13, weight: .bold))
                         .foregroundStyle(.white.opacity(0.55))
                     Text("SEASON")
-                        .font(WidgetTheme.roundedFont(size: 9, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.45))
+                        .courtifyMicroLabel()
                 }
 
                 Text(rankLabel)
                     .font(WidgetTheme.displayFont(size: 36, weight: .heavy))
+                    .courtifyScoreboardNumber()
                     .foregroundStyle(.white)
                     .padding(.top, 2)
             }
@@ -159,6 +158,7 @@ struct FavoritePlayerMediumWidgetView: View {
 
                     Text(WidgetTheme.ordinalRank(player?.ranking))
                         .font(WidgetTheme.displayFont(size: 42, weight: .heavy))
+                        .courtifyScoreboardNumber()
                         .foregroundStyle(.white)
 
                     if let record = player?.displaySeasonRecord {
@@ -200,13 +200,13 @@ struct FavoritePlayerMediumWidgetView: View {
     }
 
     private func mediumStat(value: String, label: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(WidgetTheme.displayFont(size: 15, weight: .bold))
+                .font(WidgetTheme.displayFont(size: 15, weight: .heavy))
+                .courtifyScoreboardNumber()
                 .foregroundStyle(.white)
             Text(label)
-                .font(WidgetTheme.roundedFont(size: 9, weight: .medium))
-                .foregroundStyle(.white.opacity(0.5))
+                .courtifyMicroLabel()
         }
     }
 
@@ -243,6 +243,7 @@ private struct MediumFavoriteHeroCutout: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .courtifyHeroFadeMask()
         .offset(x: 10, y: 10)
         .allowsHitTesting(false)
     }
@@ -289,6 +290,7 @@ struct FavoritePlayerHeroImage: View {
             maxHeight: .infinity,
             alignment: edge == .leading ? .bottomLeading : .bottomTrailing
         )
+        .courtifyHeroFadeMask()
         .padding(edge == .leading ? .trailing : .leading, 88)
         .offset(x: edge == .leading ? -8 : 8, y: 8)
         .opacity(0.97)
@@ -1577,13 +1579,12 @@ func rankingsGradient(for tour: TourPreference, large: Bool) -> LinearGradient {
 }
 
 private func widgetCountdownCell(_ value: String, unit: String) -> some View {
-    VStack(spacing: 2) {
+    VStack(spacing: 3) {
         Text(value)
             .font(WidgetTheme.displayFont(size: 28, weight: .heavy))
+            .courtifyScoreboardNumber()
             .foregroundStyle(WidgetTheme.opticYellow)
         Text(unit)
-            .font(WidgetTheme.roundedFont(size: 9, weight: .bold))
-            .foregroundStyle(.white.opacity(0.5))
-            .tracking(0.8)
+            .courtifyMicroLabel()
     }
 }

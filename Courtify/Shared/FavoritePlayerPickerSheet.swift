@@ -43,7 +43,7 @@ struct FavoritePlayerPickerSheet: View {
                 }
                 .padding(.top, 8)
             }
-            .background(appearance.canvasColor.ignoresSafeArea())
+            .background(ThemeManager.oledBlack.ignoresSafeArea())
             .navigationTitle("Favorite player")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

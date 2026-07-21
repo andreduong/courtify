@@ -56,6 +56,7 @@ struct RankingsView: View {
                     .frame(maxWidth: 220, maxHeight: 260, alignment: .bottomTrailing)
                     .padding(.trailing, 8)
                     .opacity(0.92)
+                    .courtifyHeroFadeMask(fadePortion: 0.25)
             }
         }
     }
@@ -136,16 +137,17 @@ struct RankingsView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 40)
         } else {
-            ForEach(Array(rankings.enumerated()), id: \.element.id) { index, entry in
-                VStack(spacing: 0) {
+            VStack(spacing: 16) {
+                ForEach(Array(rankings.enumerated()), id: \.element.id) { index, entry in
                     RankingTile(
                         rank: entry.rank ?? index + 1,
                         entry: entry,
                         tour: selectedTour
                     )
-                    CourtifyTileDivider()
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
         }
     }
 
@@ -188,7 +190,8 @@ private struct RankingTile: View {
         } label: {
             HStack(spacing: 16) {
                 Text(String(format: "%02d", rank))
-                    .font(ThemeManager.roundedFont(.title3, weight: .bold))
+                    .font(WidgetTheme.displayFont(size: 22, weight: .heavy))
+                    .courtifyScoreboardNumber()
                     .foregroundStyle(.white.opacity(rank <= 3 ? 1 : 0.55))
                     .frame(width: 44, alignment: .center)
 
@@ -215,18 +218,19 @@ private struct RankingTile: View {
                 if let points = entry.points {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(points.formatted())
-                            .font(ThemeManager.roundedFont(.headline, weight: .bold))
+                            .font(WidgetTheme.displayFont(size: 17, weight: .heavy))
+                            .courtifyScoreboardNumber()
                             .foregroundStyle(.white)
                         Text("PTS")
-                            .font(ThemeManager.roundedFont(.caption2, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.45))
+                            .courtifyMicroLabel()
                     }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .contentShape(Rectangle())
         }
+        .courtifyGlassSurface(cornerRadius: 16)
         .courtifyButton(.row)
         .accessibilityLabel("\(entry.player.name), rank \(rank)")
         .accessibilityHint(isFavorite ? "Current favorite" : "Sets as favorite player")

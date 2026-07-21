@@ -235,19 +235,20 @@ private struct MarqueeLiveRow: View {
         let tour: TourPreference = .atp
         let rankings = WidgetPreviewSamples.rankings(for: .atp)
 
-        switch card {
-        case .favorite(let playerID, let slam):
-            FavoritePlayerWidgetView(
-                player: MarqueeShowcaseData.player(id: playerID),
-                widgetID: "favorite",
-                forceAccent: Color(hex: slam.accentColor)
-            )
-        case .favoriteMedium(let playerID, let slam):
-            FavoritePlayerMediumWidgetView(
-                player: MarqueeShowcaseData.player(id: playerID),
-                widgetID: "favorite-medium",
-                forceAccent: Color(hex: slam.accentColor)
-            )
+        Group {
+            switch card {
+            case .favorite(let playerID, let slam):
+                FavoritePlayerWidgetView(
+                    player: MarqueeShowcaseData.player(id: playerID),
+                    widgetID: "favorite",
+                    forceAccent: Color(hex: slam.accentColor)
+                )
+            case .favoriteMedium(let playerID, let slam):
+                FavoritePlayerMediumWidgetView(
+                    player: MarqueeShowcaseData.player(id: playerID),
+                    widgetID: "favorite-medium",
+                    forceAccent: Color(hex: slam.accentColor)
+                )
         case .nextSmall(let slam):
             NextTournamentSmallView(tour: tour, forceSlam: slam)
         case .countdown(let slam):
@@ -301,6 +302,8 @@ private struct MarqueeLiveRow: View {
                 .padding(10)
         case .lockNext:
             LockScreenRectangularNextView(tour: tour, showsPreviewPlate: true)
+            }
         }
+        .environment(\.showsWidgetMadeByStamp, false)
     }
 }

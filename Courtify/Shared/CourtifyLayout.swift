@@ -3,6 +3,7 @@ import UIKit
 
 enum CourtifyLayout {
     static let heroListOverlap: CGFloat = 20
+    /// Native UITabBar content height (scroll clearance above the bar).
     static let tabBarHeight: CGFloat = 49
     static let scrollBottomExtra: CGFloat = 24
     static let heroContentTopExtra: CGFloat = 8
@@ -37,11 +38,8 @@ enum CourtifyLayout {
 /// it measures the real inset, then grows the content by that amount and shifts
 /// it up so it draws edge-to-edge under the status bar.
 struct CourtifyFullBleedScreen<Content: View>: View {
-    /// Canvas behind content — bleeds under the tab bar / home indicator.
-    /// Home passes the next slam brand so navy (etc.) shows through the material tab bar.
-    /// `nil` uses the Settings app-theme canvas (default Courtify midnight green).
+    /// Optional canvas override (e.g. slam brand under Home countdown). `nil` → OLED black.
     var canvasColor: Color? = nil
-    @ObservedObject private var appearance = AppAppearanceStore.shared
     @ViewBuilder var content: (_ safeTop: CGFloat, _ size: CGSize) -> Content
 
     var body: some View {
@@ -52,21 +50,19 @@ struct CourtifyFullBleedScreen<Content: View>: View {
                 .frame(width: size.width, height: size.height, alignment: .top)
                 .offset(y: -safeTop)
         }
-        .background((canvasColor ?? appearance.canvasColor).ignoresSafeArea())
+        .background((canvasColor ?? ThemeManager.oledBlack).ignoresSafeArea())
     }
 }
 
 // MARK: - Gradient hero + dark tile list (Schedule, Rankings)
 
-/// F1-app-style screen: a full-bleed gradient hero on top that fades into the
-/// dark background, followed by flat list tiles separated by hairline dividers
-/// (no white card). `listContent` rows are wrapped in a single VStack here so
-/// row modifiers never accidentally apply per-`ForEach`-element.
+/// Luxury sports screen: ambient-glow hero on OLED black, frosted list tiles below.
+/// `listContent` rows are wrapped in a single VStack here so row modifiers never
+/// accidentally apply per-`ForEach`-element.
 struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListContent: View, ScrollTrigger: Equatable>: View {
     let heroHeight: CGFloat
     let scrollTrigger: ScrollTrigger
     let onScroll: ((ScrollViewProxy) -> Void)?
-    @ObservedObject private var appearance = AppAppearanceStore.shared
     @ViewBuilder var heroBackground: () -> HeroBackground
     @ViewBuilder var heroContent: () -> HeroContent
     @ViewBuilder var listContent: () -> ListContent
@@ -98,7 +94,7 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
                         CourtifyHeroBlock(
                             heroHeight: heroHeight,
                             safeTop: safeTop,
-                            fadeColor: appearance.canvasColor,
+                            fadeColor: ThemeManager.oledBlack,
                             heroBackground: heroBackground,
                             heroContent: heroContent
                         )
@@ -124,16 +120,16 @@ struct CourtifyHeroScrollScreen<HeroBackground: View, HeroContent: View, ListCon
                 }
             }
         }
-        .background(appearance.canvasColor.ignoresSafeArea())
+        .background(ThemeManager.oledBlack.ignoresSafeArea())
     }
 }
 
 /// Hero background extended under the status bar, content inset below it,
-/// bottom fade into the screen background so the list tiles blend seamlessly.
+/// bottom fade into OLED black so list tiles blend seamlessly.
 private struct CourtifyHeroBlock<HeroBackground: View, HeroContent: View>: View {
     let heroHeight: CGFloat
     let safeTop: CGFloat
-    var fadeColor: Color = ThemeManager.midnightGreen
+    var fadeColor: Color = ThemeManager.oledBlack
     @ViewBuilder var heroBackground: () -> HeroBackground
     @ViewBuilder var heroContent: () -> HeroContent
 
@@ -162,7 +158,7 @@ private struct CourtifyHeroBlock<HeroBackground: View, HeroContent: View>: View 
     }
 }
 
-/// Hairline separator between list tiles.
+/// Hairline separator between list tiles (legacy flat lists).
 struct CourtifyTileDivider: View {
     var body: some View {
         Rectangle()
@@ -175,7 +171,6 @@ struct CourtifyTileDivider: View {
 // MARK: - Plain scroll (Widgets)
 
 struct CourtifyPlainScrollScreen<Content: View>: View {
-    @ObservedObject private var appearance = AppAppearanceStore.shared
     @ViewBuilder var content: () -> Content
 
     var body: some View {
@@ -189,7 +184,7 @@ struct CourtifyPlainScrollScreen<Content: View>: View {
             }
             .scrollContentBackground(.hidden)
         }
-        .background(appearance.canvasColor.ignoresSafeArea())
+        .background(ThemeManager.oledBlack.ignoresSafeArea())
     }
 }
 
@@ -202,8 +197,11 @@ struct TourPillToggle: View {
             pill("WTA", tour: .wta)
         }
         .padding(4)
-        .background(.white.opacity(0.12))
-        .clipShape(Capsule())
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay {
+            Capsule()
+                .strokeBorder(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+        }
         .courtifySelectionFeedback(selectedTour)
     }
 
@@ -214,10 +212,10 @@ struct TourPillToggle: View {
         } label: {
             Text(title)
                 .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
-                .foregroundStyle(isSelected ? ThemeManager.midnightGreen : .white.opacity(0.85))
+                .foregroundStyle(isSelected ? Color.black : .white.opacity(0.85))
                 .padding(.horizontal, 18)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.white : Color.clear)
+                .background(isSelected ? ThemeManager.opticYellow : Color.clear)
                 .clipShape(Capsule())
         }
         .courtifyButton(.ghost)

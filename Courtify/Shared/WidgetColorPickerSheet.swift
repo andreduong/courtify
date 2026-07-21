@@ -56,7 +56,7 @@ struct WidgetColorPickerSheet: View {
                 .padding(20)
                 .padding(.bottom, 36)
             }
-            .background(appearance.canvasColor.ignoresSafeArea())
+            .background(ThemeManager.oledBlack.ignoresSafeArea())
             .navigationTitle("Customize")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

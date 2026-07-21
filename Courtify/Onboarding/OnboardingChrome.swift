@@ -103,7 +103,7 @@ private struct OnboardingProgressBar: View {
 
 #Preview {
     ZStack {
-        ThemeManager.midnightGreen.ignoresSafeArea()
+        ThemeManager.oledBlack.ignoresSafeArea()
         VStack {
             OnboardingChrome(
                 progress: 1,
