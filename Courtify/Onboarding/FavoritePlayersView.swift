@@ -102,10 +102,11 @@ struct FavoritePlayersView: View {
         .sheet(isPresented: $showCustomPlayerSheet) {
             CustomPlayerSearchSheet(
                 tourPreference: tourPreference,
-                onSelect: { entry in
-                    let player = customPlayer(from: entry)
-                    Task { await selectCustomPlayer(player) }
-                    showCustomPlayerSheet = false
+                onSelect: { player in
+                    CourtifyMotion.animateSelection {
+                        selectedPlayerIDs.insert(player.id)
+                        favoritePlayerID = player.id
+                    }
                 }
             )
             .presentationDetents([.medium, .large])
@@ -115,25 +116,6 @@ struct FavoritePlayersView: View {
 
     private var isCustomSelectionActive: Bool {
         selectedPlayerIDs.contains(where: { $0.hasPrefix("custom:") })
-    }
-
-    private func customPlayer(from entry: PlayerSearchCatalog.Entry) -> TennisPlayer {
-        FavoritePlayerCatalog.player(from: entry)
-    }
-
-    @MainActor
-    private func selectCustomPlayer(_ player: TennisPlayer) async {
-        dataStore.loadCachedPayload()
-        await FavoritePlayerEnricher.enrich(
-            player,
-            payload: dataStore.payload,
-            clearExisting: true
-        )
-
-        CourtifyMotion.animateSelection {
-            selectedPlayerIDs.insert(player.id)
-            favoritePlayerID = player.id
-        }
     }
 
     private func togglePlayer(_ player: TennisPlayer) {
@@ -285,11 +267,13 @@ private struct PlayerAvatarCard: View {
 
 private struct CustomPlayerSearchSheet: View {
     let tourPreference: TourPreference
-    let onSelect: (PlayerSearchCatalog.Entry) -> Void
+    let onSelect: (TennisPlayer) -> Void
 
+    @ObservedObject private var dataStore = WidgetDataStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var manualTour: TourPreference = .atp
+    @State private var isSaving = false
     @FocusState private var isFieldFocused: Bool
 
     private var suggestions: [PlayerSearchCatalog.Entry] {
@@ -303,10 +287,6 @@ private struct CustomPlayerSearchSheet: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Find a player by name. We'll use a tour placeholder icon - no photo lookup needed.")
-                    .font(ThemeManager.roundedFont(.subheadline))
-                    .foregroundStyle(.white.opacity(0.65))
-
                 if tourPreference == .both {
                     Picker("Tour", selection: $manualTour) {
                         Text("ATP").tag(TourPreference.atp)
@@ -321,6 +301,7 @@ private struct CustomPlayerSearchSheet: View {
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled()
                     .focused($isFieldFocused)
+                    .disabled(isSaving)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                     .background(.white.opacity(0.08))
@@ -330,7 +311,7 @@ private struct CustomPlayerSearchSheet: View {
                     VStack(spacing: 0) {
                         ForEach(suggestions) { entry in
                             Button {
-                                onSelect(entry)
+                                Task { await select(FavoritePlayerCatalog.player(from: entry)) }
                             } label: {
                                 HStack(spacing: 12) {
                                     TennisPlayerPhotoView(
@@ -354,6 +335,7 @@ private struct CustomPlayerSearchSheet: View {
                                 .padding(.horizontal, 4)
                             }
                             .courtifyButton(.ghost)
+                            .disabled(isSaving)
 
                             if entry.id != suggestions.last?.id {
                                 Divider().overlay(Color.white.opacity(0.1))
@@ -363,7 +345,13 @@ private struct CustomPlayerSearchSheet: View {
                 } else if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Button {
                         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-                        onSelect(PlayerSearchCatalog.Entry(name: trimmed, tour: resolvedManualTour))
+                        Task {
+                            await select(
+                                FavoritePlayerCatalog.player(
+                                    from: PlayerSearchCatalog.Entry(name: trimmed, tour: resolvedManualTour)
+                                )
+                            )
+                        }
                     } label: {
                         HStack(spacing: 12) {
                             TennisPlayerPhotoView(
@@ -386,6 +374,7 @@ private struct CustomPlayerSearchSheet: View {
                         .padding(.vertical, 8)
                     }
                     .courtifyButton(.ghost)
+                    .disabled(isSaving)
                 }
 
                 Spacer()
@@ -398,12 +387,38 @@ private struct CustomPlayerSearchSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") { dismiss() }
                         .foregroundStyle(ThemeManager.opticYellow)
+                        .disabled(isSaving)
                         .courtifyButton(.ghost)
+                }
+            }
+            .overlay {
+                if isSaving {
+                    ZStack {
+                        Color.black.opacity(0.35).ignoresSafeArea()
+                        ProgressView()
+                            .tint(ThemeManager.opticYellow)
+                    }
                 }
             }
             .onAppear { isFieldFocused = true }
         }
         .preferredColorScheme(.dark)
+        .interactiveDismissDisabled(isSaving)
+    }
+
+    @MainActor
+    private func select(_ player: TennisPlayer) async {
+        guard !isSaving else { return }
+        isSaving = true
+        dataStore.loadCachedPayload()
+        await FavoritePlayerEnricher.enrich(
+            player,
+            payload: dataStore.payload,
+            clearExisting: true
+        )
+        onSelect(player)
+        isSaving = false
+        dismiss()
     }
 }
 
