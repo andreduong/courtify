@@ -10,9 +10,23 @@ final class WidgetDataStore: ObservableObject {
     @Published private(set) var quotaExceededOnLastRefresh = false
 
     private static let cacheKey = AppGroupConstants.Keys.widgetDataPayloadCache
+    private static let lastSyncedKey = AppGroupConstants.Keys.widgetDataLastSyncedAt
     private var refreshTask: Task<Void, Never>?
 
-    var lastUpdated: Date? { payload?.updatedAt }
+    /// When this device last synced with the Worker (set on every successful fetch,
+    /// even if the server payload was unchanged). The Worker only rewrites
+    /// `payload.updatedAt` every 6 h, so showing that alone made a successful
+    /// pull-to-refresh look broken ("timestamp won't update").
+    @Published private(set) var lastSyncedAt: Date?
+
+    var lastUpdated: Date? { lastSyncedAt ?? payload?.updatedAt }
+
+    private init() {
+        let stored = AppGroupConstants.userDefaults.double(forKey: Self.lastSyncedKey)
+        if stored > 0 {
+            lastSyncedAt = Date(timeIntervalSince1970: stored)
+        }
+    }
 
     var hasCachedPayload: Bool {
         payload != nil || AppGroupConstants.userDefaults.data(forKey: Self.cacheKey) != nil
@@ -44,6 +58,12 @@ final class WidgetDataStore: ObservableObject {
                 let decoded = try JSONDecoder().decode(WidgetDataPayload.self, from: data)
                 payload = decoded
                 AppGroupConstants.userDefaults.set(data, forKey: Self.cacheKey)
+                let syncedAt = Date()
+                lastSyncedAt = syncedAt
+                AppGroupConstants.userDefaults.set(
+                    syncedAt.timeIntervalSince1970,
+                    forKey: Self.lastSyncedKey
+                )
             } catch {
                 guard !RefreshErrorFilter.isBenignCancellation(error) else { return }
                 if let apiError = error as? WidgetAPIError, apiError.isQuotaExceeded {
@@ -65,12 +85,14 @@ final class WidgetDataStore: ObservableObject {
         await task.value
     }
 
-    /// Fires a single-player season W/L fetch when the active favorite is `custom:` and
-    /// `PlayerSeasonRecordCache` has nothing stored. Does not touch shared widget-data cost.
+    /// Fires a single-player fetch when the active favorite is `custom:` and the season
+    /// W/L or the display rank is missing. Does not touch shared widget-data cost.
     private func scheduleFavoriteSeasonRecordHeal() {
         let playerID = AppGroupConstants.userDefaults.string(forKey: AppGroupConstants.Keys.favoritePlayerID) ?? ""
         guard playerID.hasPrefix("custom:") else { return }
-        guard PlayerSeasonRecordCache.record(for: playerID) == nil else { return }
+        let needsSeason = PlayerSeasonRecordCache.record(for: playerID) == nil
+        let needsRank = (FavoritePlayerCatalog.displayRank(for: playerID, payload: payload) ?? 0) <= 0
+        guard needsSeason || needsRank else { return }
         let snapshot = payload
         Task { @MainActor in
             _ = await FavoritePlayerEnricher.healSeasonRecordIfNeeded(

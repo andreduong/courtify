@@ -32,8 +32,12 @@ enum PlayerRemoteLookup {
             return .skipped
         }
 
-        if let cached = PlayerRankCache.entry(for: player.id),
-           let apiId = cached.apiId, apiId > 0 {
+        let cached = PlayerRankCache.entry(for: player.id)
+
+        // Fully-resolved cache (id + real rank) needs no network. A cached apiId with
+        // rank <= 0 (e.g. outside the top 100 at first pick) still retries the Worker so
+        // the profile fallback can fill the live rank in.
+        if let cached, let apiId = cached.apiId, apiId > 0, cached.rank > 0 {
             return .found(Meta(id: apiId, rank: cached.rank, name: cached.name ?? player.name))
         }
 
@@ -41,27 +45,38 @@ enum PlayerRemoteLookup {
             return .skipped
         }
 
-        let remote = await fetchFromWorkerStatus(for: player)
-        switch remote {
-        case .found, .quota, .failed, .notFound:
+        // Verified apiId hint lets the Worker resolve players ranked outside the
+        // top 100 via the profile endpoint (rankings scan alone misses them).
+        let apiIdHint = cached?.apiId
+            ?? PlayerSearchCatalog.bundledApiId(for: player.name, tour: player.tour)
+
+        let remote = await fetchFromWorkerStatus(for: player, apiIdHint: apiIdHint)
+        if case .found = remote {
             return remote
-        case .skipped:
-            break
         }
 
-        if let bundledId = PlayerSearchCatalog.bundledApiId(for: player.name, tour: player.tour), bundledId > 0 {
+        // Worker miss/failure: a known apiId (cached or bundled-verified) still enables
+        // photos + season W/L even when the live rank is unknown.
+        if let cached, let apiId = cached.apiId, apiId > 0 {
+            return .found(Meta(id: apiId, rank: cached.rank, name: cached.name ?? player.name))
+        }
+        if let bundledId = apiIdHint, bundledId > 0 {
             return .found(Meta(id: bundledId, rank: 0, name: player.name))
         }
 
-        return .notFound
+        return remote
     }
 
-    private static func fetchFromWorkerStatus(for player: TennisPlayer) async -> Status {
+    private static func fetchFromWorkerStatus(for player: TennisPlayer, apiIdHint: Int?) async -> Status {
         var components = URLComponents(string: WidgetAPIService.playerLookupURL.absoluteString)
-        components?.queryItems = [
+        var queryItems = [
             URLQueryItem(name: "tour", value: player.tour == .wta ? "wta" : "atp"),
             URLQueryItem(name: "name", value: player.name),
         ]
+        if let apiIdHint, apiIdHint > 0 {
+            queryItems.append(URLQueryItem(name: "apiId", value: String(apiIdHint)))
+        }
+        components?.queryItems = queryItems
         guard let url = components?.url else { return .failed }
 
         do {

@@ -172,6 +172,16 @@ struct FavoritePlayerMediumWidgetView: View {
                             mediumStat(value: winPct(record), label: "Win %")
                         }
                         .padding(.top, 6)
+                    } else if player?.isCustom == true {
+                        // Keeps the stat column from collapsing into jarring empty space
+                        // while the season record syncs (or is unavailable for retirees).
+                        HStack(spacing: 10) {
+                            mediumStat(value: "—", label: "Wins")
+                            mediumStat(value: "—", label: "Losses")
+                            mediumStat(value: "—", label: "Win %")
+                        }
+                        .padding(.top, 6)
+                        .opacity(0.55)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -198,7 +198,8 @@ enum PlayerSearchCatalog {
         "Andrey Rublev": 29372,
         "Stefanos Tsitsipas": 30470,
         "Tommy Paul": 29935,
-        "Grigor Dimitrov": 28064,
+        "Grigor Dimitrov": 11953, // 28064 was a doubles pairing — verified via profile endpoint Jul 2026
+
         "Frances Tiafoe": 29939,
         "Holger Rune": 69471,
         "Sebastian Korda": 42451,

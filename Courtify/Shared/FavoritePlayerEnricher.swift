@@ -185,12 +185,15 @@ enum FavoritePlayerEnricher {
         _ = await seasonStored
     }
 
-    /// Sparse on-demand W/L heal — used by pull-to-refresh when cache is missing.
+    /// Sparse on-demand heal for the active custom favorite — used by pull-to-refresh
+    /// when the season W/L or the rank is missing. Never part of shared widget-data cost.
     @MainActor
     @discardableResult
     static func healSeasonRecordIfNeeded(playerID: String, payload: WidgetDataPayload?) async -> Bool {
         guard playerID.hasPrefix("custom:") else { return false }
-        guard PlayerSeasonRecordCache.record(for: playerID) == nil else { return false }
+        let needsSeason = PlayerSeasonRecordCache.record(for: playerID) == nil
+        let needsRank = (FavoritePlayerCatalog.displayRank(for: playerID, payload: payload) ?? 0) <= 0
+        guard needsSeason || needsRank else { return false }
         guard let player = FavoritePlayerCatalog.resolvedPlayer(id: playerID, payload: payload),
               player.imageName == nil else { return false }
 
@@ -199,8 +202,11 @@ enum FavoritePlayerEnricher {
             seedFromPayloadIfNeeded(player, payload: payload)
             apiId = PlayerRankCache.apiId(for: playerID)
         }
-        if apiId == nil || (apiId ?? 0) <= 0 {
+        var healedRank = false
+        if apiId == nil || (apiId ?? 0) <= 0 || needsRank {
+            // fetchStatus retries the Worker (with apiId hint) when the cached rank is <= 0.
             if let meta = await PlayerRemoteLookup.fetch(for: player, payload: payload) {
+                let previousRank = PlayerRankCache.rank(for: playerID) ?? 0
                 PlayerRankCache.store(
                     rank: meta.rank,
                     apiId: meta.id,
@@ -209,11 +215,14 @@ enum FavoritePlayerEnricher {
                     for: playerID
                 )
                 apiId = meta.id
+                healedRank = meta.rank > 0 && previousRank <= 0
             }
         }
 
-        let stored = await ensureSeasonRecord(playerID: playerID, tour: player.tour, apiId: apiId)
-        guard stored else { return false }
+        let storedSeason = needsSeason
+            ? await ensureSeasonRecord(playerID: playerID, tour: player.tour, apiId: apiId)
+            : false
+        guard storedSeason || healedRank else { return false }
         WidgetTimelineRefresher.reloadAll()
         NotificationCenter.default.post(name: AppGroupConstants.favoritePlayerDidChange, object: nil)
         return true

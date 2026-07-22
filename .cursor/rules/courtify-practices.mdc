@@ -37,8 +37,8 @@ Full context lives in `AGENTS.md` (start with **Agent quick start**). Do not re-
 | Data | Source | When it fetches |
 |------|--------|-----------------|
 | Favorite player hero (bundled) | `player-*-hero` assets | Never at runtime |
-| Custom favorite rank/photo | `/api/player-lookup` + `/api/player-photo` | **On pick only**; Worker KV 30d + edge photo 30d (head+hero = one edge entry) |
-| Custom favorite season W/L | `/api/player-season-record` → `PlayerSeasonRecordCache` | **On pick** (always, even if photo 404/429); **heal on pull-to-refresh** only when cache nil for the active `custom:` favorite. Worker KV 24h |
+| Custom favorite rank/photo | `/api/player-lookup` (+ optional verified `apiId` hint → profile fallback for outside-top-100 ranks) + `/api/player-photo` | **On pick only**; Worker KV 30d (7d profile-sourced) + edge photo 30d (head+hero = one edge entry) |
+| Custom favorite season W/L | `/api/player-season-record` → `PlayerSeasonRecordCache` | **On pick** (always, even if photo 404/429); **heal on pull-to-refresh** only when season **or rank** missing for the active `custom:` favorite. Worker KV 24h |
 | Tournament schedule | `TournamentCalendar` | Never |
 | Rankings / live / order of play / Home favorite rank | Worker via `WidgetDataStore` | Pull-to-refresh only (Home, Rankings, Widgets) |
 | Onboarding top-10 player row | Worker | **Once ever** via `refreshOnceForOnboarding()` |
@@ -52,6 +52,8 @@ On appear: `loadCachedPayload()` only (always reload from app-group disk). No `r
 **Do not:** UGC player photo upload; typographic initials fallback; WidgetKit network calls; per-match live polling; monthly rankings refresh (use 6 h on-demand + pull-to-refresh).
 
 Worker: on-demand KV refresh (max every 6 h), **5** upstream calls (live + ATP/WTA rankings + ATP/WTA fixtures), ATP/WTA top 20 (`pageSize=20`). Deploy: `npx wrangler deploy`.
+
+**Upstream path trap:** player-stats endpoints (surface-summary, profile) route **without** the `ms-api` prefix on the umbrella product — the Matchstat docs' `ms-api` paths 404. Only `uploads/Photo` keeps `ms-api`. `WidgetDataStore.lastUpdated` = device `lastSyncedAt` (every successful fetch), not raw `payload.updatedAt` (6 h server cadence) — don't revert.
 
 ## Simulator testing (no tap automation)
 

@@ -192,6 +192,13 @@ struct HomeDashboardView: View {
                                     .courtifyScoreboardNumber()
                                     .foregroundStyle(.white)
                                     .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
+                            } else if favoritePlayer?.isCustom == true {
+                                // Genuinely unranked / inactive (rank heals on refresh otherwise) —
+                                // labelled state beats a silent hole in the hero.
+                                Text("Unranked")
+                                    .font(ThemeManager.roundedFont(size: 30, weight: .bold))
+                                    .foregroundStyle(.white.opacity(0.85))
+                                    .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
                             }
 
                             if let record = favoritePlayer?.displaySeasonRecord {
@@ -203,7 +210,7 @@ struct HomeDashboardView: View {
                                     .font(ThemeManager.roundedFont(size: 14, weight: .semibold))
                                     .foregroundStyle(.white.opacity(0.58))
                             } else if favoritePlayer?.isCustom == true {
-                                Text("Season record unavailable")
+                                Text(seasonRecordFallbackText)
                                     .font(ThemeManager.roundedFont(size: 13, weight: .medium))
                                     .foregroundStyle(.white.opacity(0.4))
                             }
@@ -244,18 +251,30 @@ struct HomeDashboardView: View {
             )
 
             if let player = favoritePlayer {
-                PlayerTorsoPhotoView(
-                    player: player,
-                    contentMode: .fit,
-                    fadePortion: 0.25,
-                    circularHeadshotSize: 156
-                )
+                if player.imageName != nil {
+                    // Bundled transparent torso cutout — full-bleed rectangular layout.
+                    PlayerTorsoPhotoView(
+                        player: player,
+                        contentMode: .fit,
+                        fadePortion: 0.25,
+                        circularHeadshotSize: 156
+                    )
                     .id("\(favoritePlayerID)-\(photoRefreshToken)")
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(.top, safeTop + 28)
                     .padding(.leading, 96)
                     .padding(.trailing, 12)
                     .padding(.bottom, 48)
+                } else {
+                    // Custom favorites only have a circular studio headshot (or silhouette) —
+                    // anchor it with a soft glow ring so the flex hero doesn't read as empty.
+                    CustomFavoriteHeroPortrait(player: player, accent: appearance.accentColor)
+                        .id("\(favoritePlayerID)-\(photoRefreshToken)")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        .padding(.top, safeTop + 24)
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 72)
+                }
             }
         }
         .overlay(alignment: .bottom) {
@@ -268,6 +287,16 @@ struct HomeDashboardView: View {
             .frame(height: 120)
             .allowsHitTesting(false)
         }
+    }
+
+    /// When the player's API id is known the record fills in on pull-to-refresh;
+    /// otherwise (retired / unmatched) it is genuinely unavailable.
+    private var seasonRecordFallbackText: String {
+        guard let player = favoritePlayer else { return "" }
+        if (PlayerRankCache.apiId(for: player.id) ?? 0) > 0 {
+            return "Season record syncs on refresh"
+        }
+        return "Season record unavailable"
     }
 
     private var showsFavoriteMediaHint: Bool {
@@ -386,8 +415,8 @@ struct HomeDashboardView: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 22)
-            .padding(.bottom, 28)
+            .padding(.top, 18)
+            .padding(.bottom, 22)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background {
@@ -436,6 +465,50 @@ struct HomeDashboardView: View {
             Text(label)
                 .courtifyMicroLabel()
         }
+    }
+}
+
+/// Hero treatment for custom favorites — a large circular studio headshot (or
+/// silhouette) anchored by transparent radial washes so the flex hero space reads
+/// as a deliberate portrait, not a small photo floating in emptiness.
+private struct CustomFavoriteHeroPortrait: View {
+    let player: TennisPlayer
+    let accent: Color
+
+    var body: some View {
+        ZStack {
+            // Transparent gradient washes only — never a fill behind a silhouette.
+            RadialGradient(
+                colors: [accent.opacity(0.16), .clear],
+                center: .center,
+                startRadius: 20,
+                endRadius: 170
+            )
+
+            Circle()
+                .strokeBorder(
+                    AngularGradient(
+                        colors: [
+                            accent.opacity(0.5),
+                            .white.opacity(0.08),
+                            accent.opacity(0.18),
+                            .white.opacity(0.05),
+                            accent.opacity(0.5),
+                        ],
+                        center: .center
+                    ),
+                    lineWidth: 1.5
+                )
+                .frame(width: 232, height: 232)
+
+            PlayerTorsoPhotoView(
+                player: player,
+                circularHeadshotSize: 208,
+                circularHeadshotAlignment: .center
+            )
+            .frame(width: 208, height: 208)
+        }
+        .frame(width: 264, height: 264)
     }
 }
 

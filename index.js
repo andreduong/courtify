@@ -446,7 +446,7 @@ function lastNameOf(name) {
   return parts.length ? parts[parts.length - 1] : "";
 }
 
-async function lookupPlayerMeta(env, tour, name) {
+async function lookupPlayerMeta(env, tour, name, { apiIdHint = null } = {}) {
   if (!name) return null;
 
   const cacheKey = `player-meta:${tour}:${foldPlayerName(name)}`;
@@ -482,16 +482,52 @@ async function lookupPlayerMeta(env, tour, name) {
   if (!env.RAPID_API_KEY) return null;
 
   let meta = await fetchPlayerMetaFromRankings(env, tour, name);
+
+  // Ranked outside the top 100 (e.g. Dimitrov post-injury at #142): the rankings
+  // scan misses, but a client-supplied verified apiId lets the profile endpoint
+  // return the live rank. Name must match the profile — a wrong hint (stale
+  // bundled id) must never resolve to another player's data.
+  if (!meta && apiIdHint) {
+    meta = await fetchPlayerMetaFromProfile(env, tour, name, apiIdHint);
+  }
+
   if (!meta) return null;
 
-  await cachePlayerMeta(env, cacheKey, meta);
+  // Profile-sourced ranks go stale weekly — cache shorter than the 30d name meta.
+  const ttl = meta.source === "profile" ? 60 * 60 * 24 * 7 : undefined;
+  await cachePlayerMeta(env, cacheKey, meta, ttl);
   return meta;
 }
 
-async function cachePlayerMeta(env, cacheKey, meta) {
+/// One RapidAPI profile call — used only when the client supplies a verified apiId
+/// and the player is outside the rankings top 100. Verifies the name matches.
+async function fetchPlayerProfileMeta(env, tour, apiId) {
+  const path = `/tennis/v2/${tour}/player/profile/${apiId}`;
+  const result = await fetchWithRetry(env, path, `profile-${tour}-${apiId}`, 1, { noRetryOn429: true });
+  if (!result.ok) return null;
+  return result.data?.data ?? null;
+}
+
+async function fetchPlayerMetaFromProfile(env, tour, name, apiIdHint) {
+  const id = Number.parseInt(String(apiIdHint), 10);
+  if (!Number.isFinite(id) || id <= 0) return null;
+
+  const profile = await fetchPlayerProfileMeta(env, tour, id);
+  if (!profile?.name || !namesMatch(profile.name, name)) return null;
+
+  const rank = Number.parseInt(String(profile.currentRank), 10);
+  return {
+    id: String(profile.id ?? id),
+    rank: Number.isFinite(rank) && rank > 0 ? rank : null,
+    name: profile.name,
+    source: "profile",
+  };
+}
+
+async function cachePlayerMeta(env, cacheKey, meta, ttlSeconds) {
   if (!env.TENNIS_DATA) return;
   await env.TENNIS_DATA.put(cacheKey, JSON.stringify(meta), {
-    expirationTtl: 60 * 60 * 24 * 30,
+    expirationTtl: ttlSeconds ?? 60 * 60 * 24 * 30,
   });
 }
 
@@ -561,7 +597,11 @@ async function servePlayerLookup(url, env) {
   const name = url.searchParams.get("name");
   if (!name) return jsonResponse({ error: "Missing name" }, 400);
 
-  const meta = await lookupPlayerMeta(env, tour, name);
+  // Optional client hint (bundled verified apiId) — enables the profile fallback
+  // for players ranked outside the top 100.
+  const apiIdHint = url.searchParams.get("apiId");
+
+  const meta = await lookupPlayerMeta(env, tour, name, { apiIdHint });
   if (!meta?.id) {
     // Name-only photo path may still succeed — surface 404 for rank/id callers.
     return jsonResponse({ error: "Player not found" }, 404);
@@ -602,7 +642,10 @@ async function servePlayerSeasonRecord(url, env) {
   }
 
   const seasonYear = new Date().getUTCFullYear();
-  const path = `/tennis/v2/ms-api/${tour}/player/surface-summary/${apiId}`;
+  // NOTE: the Matchstat docs show `/tennis/v2/ms-api/{tour}/player/surface-summary/{id}`
+  // but the umbrella "Tennis API - ATP WTA ITF" product routes player stats WITHOUT the
+  // `ms-api` prefix (verified Jul 2026 — the ms-api path 404s with "Endpoint does not exist").
+  const path = `/tennis/v2/${tour}/player/surface-summary/${apiId}`;
   const result = await fetchWithRetry(env, path, `surface-summary-${tour}-${apiId}`, 1, {
     noRetryOn429: true,
   });

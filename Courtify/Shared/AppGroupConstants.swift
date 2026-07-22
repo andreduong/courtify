@@ -31,6 +31,7 @@ enum AppGroupConstants {
         static let useMockWidgetData = "useMockWidgetData"
         static let didFetchOnboardingRankings = "didFetchOnboardingRankings"
         static let widgetDataPayloadCache = "widgetDataPayloadCache"
+        static let widgetDataLastSyncedAt = "widgetDataLastSyncedAt"
         static let referralBypassActive = "referralBypassActive"
         static let widgetAccessEnabled = "widgetAccessEnabled"
         static let notificationsEnabled = "notificationsEnabled"

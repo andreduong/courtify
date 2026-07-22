@@ -17,6 +17,25 @@ struct FavoritePlayersView: View {
         return real.isEmpty ? TennisPlayer.topFive(for: tourPreference) : real
     }
 
+    /// Custom picks from the search sheet get their own poster cards (selected +
+    /// starred like any featured player) — the More card is purely an "add" affordance.
+    private var customSelectedPlayers: [TennisPlayer] {
+        selectedPlayerIDs
+            .filter { $0.hasPrefix("custom:") }
+            .compactMap { id -> TennisPlayer? in
+                guard let base = TennisPlayer.player(for: id) else { return nil }
+                let rank = PlayerRankCache.rank(for: id) ?? 0
+                return TennisPlayer(
+                    id: base.id,
+                    name: base.name,
+                    tour: base.tour,
+                    imageName: nil,
+                    ranking: rank
+                )
+            }
+            .sorted { $0.name < $1.name }
+    }
+
     private var realRankedPlayers: [TennisPlayer] {
         guard let payload = dataStore.payload else { return [] }
         switch tourPreference {
@@ -56,9 +75,20 @@ struct FavoritePlayersView: View {
                         .id("\(player.id)-\(photoRefreshToken)")
                     }
 
+                    ForEach(customSelectedPlayers) { player in
+                        PlayerPosterCard(
+                            player: player,
+                            isSelected: true,
+                            isPrimary: favoritePlayerID == player.id
+                        ) {
+                            togglePlayer(player)
+                        }
+                        .id("\(player.id)-\(photoRefreshToken)")
+                    }
+
                     MorePlayerPosterCard(
-                        isSelected: isCustomSelectionActive,
-                        isPrimary: isCustomSelectionActive && favoritePlayerID.hasPrefix("custom:")
+                        isSelected: false,
+                        isPrimary: false
                     ) {
                         showCustomPlayerSheet = true
                     }
@@ -129,10 +159,6 @@ struct FavoritePlayersView: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
-    }
-
-    private var isCustomSelectionActive: Bool {
-        selectedPlayerIDs.contains(where: { $0.hasPrefix("custom:") })
     }
 
     private func togglePlayer(_ player: TennisPlayer) {

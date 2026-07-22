@@ -102,7 +102,14 @@ Courtify uses Matchstat’s umbrella product **[Tennis API - ATP WTA ITF](https:
 | WTA top 20 | `GET /tennis/v2/wta/ranking/singles?pageSize=20` |
 | ATP upcoming | `GET /tennis/v2/atp/fixtures?pageSize=100&filter=PlayerGroup:singles` |
 | WTA upcoming | `GET /tennis/v2/wta/fixtures?pageSize=100&filter=PlayerGroup:singles` |
-| Season W/L | `GET /tennis/v2/ms-api/{atp\|wta}/player/surface-summary/{playerId}` |
+| Season W/L | `GET /tennis/v2/{atp\|wta}/player/surface-summary/{playerId}` |
+| Player profile (rank outside top 100) | `GET /tennis/v2/{atp\|wta}/player/profile/{playerId}` |
+
+> **⚠️ ms-api path trap (verified Jul 2026):** the Matchstat docs show player-stats
+> endpoints under `/tennis/v2/ms-api/…`, but the umbrella "Tennis API - ATP WTA ITF"
+> product routes them **without** the `ms-api` prefix — the documented path 404s with
+> `"Endpoint does not exist"`. Only the **photo uploads** path keeps `ms-api`
+> (`/tennis/v2/ms-api/uploads/Photo/…`). Do not "fix" the Worker back to the docs.
 
 Player headshots are constructed as:
 
@@ -118,7 +125,7 @@ Additional endpoints for **custom favorites** outside the bundled top-10 catalog
 
 | Endpoint | Purpose | RapidAPI cost |
 |----------|---------|---------------|
-| `GET /api/player-lookup?tour=atp\|wta&name=…` | Rank + API id from top-100 rankings | **One** rankings call per uncached name; KV `player-meta:{tour}:{name}` TTL 30 days |
+| `GET /api/player-lookup?tour=atp\|wta&name=…[&apiId=…]` | Rank + API id from top-100 rankings; optional **verified apiId hint** falls back to the profile endpoint for players ranked **outside the top 100** (e.g. Dimitrov at #142 post-injury). Profile name must match the requested name or the hint is rejected (never resolve another player). | **One** rankings call per uncached name (+ **one** profile call when the hint path fires); KV `player-meta:{tour}:{name}` TTL 30 days (7 days for profile-sourced ranks) |
 | `GET /api/player-photo?tour=…&apiId=…&variant=head\|hero` | Proxy player JPEG from RapidAPI (+ optional name-slug / ATP CDN) | **One** upstream image per player on miss — head+hero share one edge key (same RapidAPI bytes); Cloudflare `caches.default` + `Cache-Control: max-age=30d` |
 | `GET /api/player-season-record?tour=atp\|wta&apiId=…` | Current-season wins/losses | **One** `surface-summary` call per uncached player; KV `player-season:{tour}:{apiId}` TTL **24h** |
 
@@ -159,7 +166,7 @@ iOS only calls lookup / photo / season-record when the user **picks** a custom f
 | **Stale Basic → Pro gate** | KV `rapidapi-quota` can stick at `{remaining:4, limit:50}` and permanently 429 photos. Delete key after upgrade; Worker ignores Basic-sized snapshots older than 60s so Pro headers can rewrite |
 | **iOS photo cache schema** | Bump `playerCacheSchemaVersion` when changing head/hero semantics so poisoned `-hero.jpg` studio plates are wiped |
 
-**Verified apiId overrides:** Worker `PLAYER_META_OVERRIDES` is for **verified** Matchstat ids only — never guess (wrong player photo). ATP `PlayerSearchCatalog.atpTourCodes` / `atpApiIds` help ranked/search-catalog names when lookup is rate-limited.
+**Verified apiId overrides:** Worker `PLAYER_META_OVERRIDES` is for **verified** Matchstat ids only — never guess (wrong player photo). ATP `PlayerSearchCatalog.atpTourCodes` / `atpApiIds` help ranked/search-catalog names when lookup is rate-limited, and double as the **apiId hint** for the lookup profile fallback. All `atpApiIds` were verified against `/player/profile/{id}` in Jul 2026 — Dimitrov's old `28064` was actually a doubles pairing (fixed to `11953`). To verify a new id: `curl` the profile endpoint and confirm the `name` matches before shipping.
 
 ---
 
@@ -369,6 +376,18 @@ Gating rules:
 only, and show `LastUpdatedLabel` plus a pull-to-refresh hint. Do not add
 auto-refresh timers or on-appear `refresh()` without an explicit product request.
 
+**"Last updated" label semantics:** `WidgetDataStore.lastUpdated` prefers `lastSyncedAt`
+(device-local timestamp set on every successful Worker fetch, persisted in the app group
+under `widgetDataLastSyncedAt`) over `payload.updatedAt`. The Worker only rewrites
+`updatedAt` every 6 h, so surfacing it alone made a working pull-to-refresh look broken
+("timestamp won't update"). Do not revert the label to raw `payload.updatedAt`.
+
+**Pull-to-refresh heal (custom favorite):** after each `refresh()`,
+`scheduleFavoriteSeasonRecordHeal` fires **one** targeted fetch when the active
+`custom:` favorite is missing its season W/L **or** its display rank
+(`FavoritePlayerEnricher.healSeasonRecordIfNeeded` — lookup with apiId hint + season
+record). Never expand this into a mass fetch.
+
 | Surface | Data source | Network? |
 |---------|-------------|----------|
 | Home tab (favorite rank) | Cached Worker payload | Pull-to-refresh only |
@@ -421,7 +440,16 @@ auto-refresh timers or on-appear `refresh()` without an explicit product request
 `FavoritePlayersView` maps API rankings onto bundled photos via diacritic-insensitive
 last-name + first-initial matching; players outside the bundled catalog get
 `custom:` IDs and silhouettes until photos verify. Custom search (`PlayerSearchCatalog`) stays
-bundled — no API for autocomplete.
+bundled — no API for autocomplete. Custom picks from the search sheet render their **own
+`PlayerPosterCard`** (selected + starred, headshot + `#rank ATP/WTA` from `PlayerRankCache`)
+appended after the featured row — the More card is a pure "add" affordance and is never
+shown selected.
+
+**Home hero for custom favorites:** bundled players keep the full-torso cutout layout;
+custom players render `CustomFavoriteHeroPortrait` (large circular studio headshot inside
+an accent ring + transparent radial wash) so the flex hero doesn't read as empty. Missing
+rank shows a labelled **"Unranked"** state; missing W/L shows *"Season record syncs on
+refresh"* when an apiId is cached (it will heal) or *"Season record unavailable"* otherwise.
 
 **Free vs Pro widget access:** `AppGroupConstants.widgetAccessEnabled` is synced from
 RevenueCat Pro or referral bypass. Free onboarding completion sets it `false` so home
