@@ -1,7 +1,9 @@
 import Foundation
 
 enum FavoritePlayerCatalog {
-    static let defaultPerTourLimit = 5
+    /// Settings / Widgets picker lists top 10 per tour — matches onboarding and the
+    /// bundled `player-{slug}-hero` coverage added Jul 2026.
+    static let defaultPerTourLimit = 10
 
     // MARK: - Ranked lists (cached Worker payload)
 
@@ -25,8 +27,8 @@ enum FavoritePlayerCatalog {
         payload: WidgetDataPayload?,
         perTourLimit: Int = defaultPerTourLimit
     ) -> [TennisPlayer] {
-        // Keep bundled avatars for featured catalog matches — RapidAPI studio plates
-        // look worse in circular rows than the curated cutouts.
+        // Prefer curated hero cutouts (via TennisPlayerPhotoView → bundledHeroCutoutName).
+        // RapidAPI studio plates are a fallback only when no cutout exists.
         let cached = topRankedPlayers(payload: payload, perTourLimit: perTourLimit, preferLivePhotos: false)
         if !cached.isEmpty { return cached }
         return TennisPlayer.topPlayers

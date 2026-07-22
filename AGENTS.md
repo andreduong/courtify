@@ -161,7 +161,7 @@ iOS only calls lookup / photo / season-record when the user **picks** a custom f
 | **Bundled `-hero` PNGs** | Only path for transparent cutouts (featured top-10). Optional curated assets for inactive legends later |
 | **Inactive / unranked (e.g. Kyrgios)** | Outside rankings top-100 → lookup 404; often no RapidAPI photo + ATP CDN Cloudflare 403. Fail **silently** with silhouette (`mediaFailureReason = notFound`). Never blame “daily API limit” |
 | **Quota helper copy** | Only for true **429/503**. Split reasons in `FavoritePlayerEnricher` (`.quota` / `.notFound` / `.upstream`) |
-| **Picker** | Keep bundled avatars (`preferLivePhotos: false`). Persist favorite ID immediately; enrich photos in background; notify via `favoritePlayerDidChange` |
+| **Picker** | Top **10** per tour via `FavoritePlayerCatalog.pickerPlayers`; circular rows use `TennisPlayerPhotoView` → `bundledHeroCutoutName` (featured + name-slug heroes). Prefetch skips anyone with a cutout (`preferLivePhotos: false`). Persist favorite ID immediately; enrich photos in background; notify via `favoritePlayerDidChange` |
 | **Edge cache keys** | Must include `apiId` **or** name-slug **or** `code` — never bare `tour+variant` (cross-player collision + poisoned 403s). Cache **success** only |
 | **Stale Basic → Pro gate** | KV `rapidapi-quota` can stick at `{remaining:4, limit:50}` and permanently 429 photos. Delete key after upgrade; Worker ignores Basic-sized snapshots older than 60s so Pro headers can rewrite |
 | **iOS photo cache schema** | Bump `playerCacheSchemaVersion` when changing head/hero semantics so poisoned `-hero.jpg` studio plates are wiped |

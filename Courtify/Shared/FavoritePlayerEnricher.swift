@@ -55,15 +55,15 @@ enum FavoritePlayerEnricher {
         AppGroupConstants.userDefaults.removeObject(forKey: mediaAlertPresentedKey)
     }
 
-    /// Headshots for picker top-5 rows — apiIds from cached rankings, no lookup calls.
-    /// Keeps bundled avatars for featured catalog names (preferLivePhotos: false).
+    /// Headshots for picker top-10 rows — apiIds from cached rankings, no lookup calls.
+    /// Skips anyone with a bundled hero cutout (featured or name-slug catalog).
     @MainActor
     static func prefetchPickerHeadshots(payload: WidgetDataPayload?) async {
         guard let payload else { return }
         let players = FavoritePlayerCatalog.topRankedPlayers(payload: payload, preferLivePhotos: false)
         for player in players {
-            // Featured bundled players already have avatars — skip network.
-            if player.imageName != nil { continue }
+            // Bundled hero / avatar already covers the circular row — skip network.
+            if player.bundledHeroCutoutName != nil || player.imageName != nil { continue }
 
             guard let entry = FavoritePlayerCatalog.payloadRankingEntry(for: player, payload: payload),
                   let apiId = entry.player.id, apiId > 0 else { continue }

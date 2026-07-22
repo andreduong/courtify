@@ -149,7 +149,7 @@ struct FavoritePlayerPickerSheet: View {
     private var searchSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader("Search")
-            Text("Find a player outside the top 5")
+            Text("Find a player outside the top 10")
                 .font(ThemeManager.roundedFont(.footnote))
                 .foregroundStyle(.white.opacity(0.55))
                 .padding(.horizontal, 20)

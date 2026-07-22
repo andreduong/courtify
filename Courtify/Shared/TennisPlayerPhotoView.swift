@@ -143,10 +143,13 @@ private struct OptionalHeroFade: ViewModifier {
   }
 }
 
-/// Circular list / search headshot. Bundled avatar or cached API JPEG only —
-/// never a grey rectangle. Silhouette fallback is monochrome SF Symbol (no fill).
+/// Circular list / search headshot. Prefers bundled `-hero` cutouts (featured +
+/// name-slug catalog) cropped into the circle, then old circular avatars, then
+/// cached API JPEG — never a grey rectangle. Silhouette fallback is monochrome
+/// SF Symbol (no fill).
 struct TennisPlayerPhotoView: View {
   let player: TennisPlayer
+  /// Retained for call-site compatibility; resolution is identical for both styles.
   var style: TennisPlayerPhotoStyle = .headshot
   var size: CGFloat = 44
 
@@ -175,17 +178,14 @@ struct TennisPlayerPhotoView: View {
     }
   }
 
-  /// Bundled avatar for headshot; bundled `-hero` only when style is `.hero` (cutout elsewhere).
+  /// Prefer transparent hero cutouts (featured `player-{id}-hero` + catalog
+  /// `player-{name-slug}-hero`) cropped into the circle — same wiring as Home /
+  /// onboarding / Settings cards. Fall back to the old circular avatar asset.
   private var bundledAssetName: String? {
-    guard player.imageName != nil else { return nil }
-    switch style {
-    case .headshot:
-      return player.resolvedImageName
-    case .hero:
-      // This view is circular-only — torso cutouts go through PlayerTorsoPhotoView.
-      // Prefer the bundled circular avatar when available.
-      return player.resolvedImageName
+    if let hero = player.bundledHeroCutoutName {
+      return hero
     }
+    return player.resolvedImageName
   }
 
   /// Head preferred; leftover `-hero.jpg` studio plates are the same RapidAPI bytes.
