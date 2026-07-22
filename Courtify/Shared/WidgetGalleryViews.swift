@@ -50,7 +50,10 @@ struct FavoritePlayerWidgetView: View {
                     .font(WidgetTheme.roundedFont(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.92))
                     .lineLimit(2)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.6)
+                    // Reserve full two-line height so tight vertical layouts
+                    // scale the name down instead of truncating ("Casper…").
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: 0)
 
@@ -60,19 +63,31 @@ struct FavoritePlayerWidgetView: View {
                         .foregroundStyle(.white.opacity(0.85))
                     Text("SEASON")
                         .courtifyMicroLabel()
-                } else if player?.isCustom == true {
-                    Text("—")
+                } else if let career = player?.careerRecord {
+                    // Retired legends: lifetime W/L instead of a meaningless season row.
+                    Text("\(career.wins)–\(career.losses)")
                         .font(WidgetTheme.displayFont(size: 13, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.55))
-                    Text("SEASON")
+                        .foregroundStyle(.white.opacity(0.85))
+                    Text("CAREER")
                         .courtifyMicroLabel()
                 }
+                // No em-dash placeholders — a missing record simply omits the row.
 
-                Text(rankLabel)
-                    .font(WidgetTheme.displayFont(size: 36, weight: .heavy))
-                    .courtifyScoreboardNumber()
-                    .foregroundStyle(.white)
-                    .padding(.top, 2)
+                if player?.isRetiredLegend == true {
+                    Text("LEGEND")
+                        .font(WidgetTheme.displayFont(size: 19, weight: .heavy))
+                        .courtifyScoreboardNumber()
+                        .foregroundStyle(WidgetTheme.opticYellow)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.top, 2)
+                } else if (player?.ranking ?? 0) > 0 {
+                    Text(rankLabel)
+                        .font(WidgetTheme.displayFont(size: 36, weight: .heavy))
+                        .courtifyScoreboardNumber()
+                        .foregroundStyle(.white)
+                        .padding(.top, 2)
+                }
             }
             .frame(maxWidth: 108, alignment: .leading)
             .padding(WidgetTheme.contentInsets)
@@ -156,10 +171,19 @@ struct FavoritePlayerMediumWidgetView: View {
 
                     Spacer(minLength: 0)
 
-                    Text(WidgetTheme.ordinalRank(player?.ranking))
-                        .font(WidgetTheme.displayFont(size: 42, weight: .heavy))
-                        .courtifyScoreboardNumber()
-                        .foregroundStyle(.white)
+                    if player?.isRetiredLegend == true {
+                        Text("LEGEND")
+                            .font(WidgetTheme.displayFont(size: 26, weight: .heavy))
+                            .courtifyScoreboardNumber()
+                            .foregroundStyle(WidgetTheme.opticYellow)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    } else if (player?.ranking ?? 0) > 0 {
+                        Text(WidgetTheme.ordinalRank(player?.ranking))
+                            .font(WidgetTheme.displayFont(size: 42, weight: .heavy))
+                            .courtifyScoreboardNumber()
+                            .foregroundStyle(.white)
+                    }
 
                     if let record = player?.displaySeasonRecord {
                         Text("\(record.wins)–\(record.losses) W–L")
@@ -172,17 +196,21 @@ struct FavoritePlayerMediumWidgetView: View {
                             mediumStat(value: winPct(record), label: "Win %")
                         }
                         .padding(.top, 6)
-                    } else if player?.isCustom == true {
-                        // Keeps the stat column from collapsing into jarring empty space
-                        // while the season record syncs (or is unavailable for retirees).
+                    } else if let career = player?.careerRecord {
+                        // Retired legends: lifetime numbers beat blank space or dashes.
+                        Text("\(career.wins)–\(career.losses) career W–L")
+                            .font(WidgetTheme.roundedFont(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.75))
+
                         HStack(spacing: 10) {
-                            mediumStat(value: "—", label: "Wins")
-                            mediumStat(value: "—", label: "Losses")
-                            mediumStat(value: "—", label: "Win %")
+                            mediumStat(value: "\(career.wins)", label: "Wins")
+                            mediumStat(value: "\(career.losses)", label: "Losses")
+                            mediumStat(value: winPct(career), label: "Win %")
                         }
                         .padding(.top, 6)
-                        .opacity(0.55)
                     }
+                    // Active player with no synced record yet: omit the stats
+                    // entirely — never render em-dash placeholders in a widget.
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.trailing, 6)

@@ -263,6 +263,9 @@ private struct PlayerPosterCard: View {
         if player.ranking > 0 {
             return "#\(player.ranking) \(player.tour.rawValue)"
         }
+        if player.isRetiredLegend {
+            return "\(player.tour.rawValue) Legend"
+        }
         return player.tour.rawValue
     }
 
@@ -278,7 +281,16 @@ private struct PlayerPosterCard: View {
                     // deliberate portrait, not artwork sunk to the card's floor.
                     circularHeadshotAlignment: .center
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                // Fixed frame, not maxWidth/maxHeight flex: a `.fill` cutout taller
+                // than 3:4 reports its overflow height through a flexible frame,
+                // inflating the ZStack past the card clip (heads cropped at the top,
+                // rank label pushed below the bottom edge — shipped bug, Jul 2026).
+                // Top alignment keeps faces visible; overflow crops into the fade.
+                .frame(
+                    width: OnboardingPosterMetrics.width,
+                    height: OnboardingPosterMetrics.height,
+                    alignment: .top
+                )
                 .clipped()
                 .allowsHitTesting(false)
 

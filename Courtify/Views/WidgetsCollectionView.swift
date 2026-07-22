@@ -106,7 +106,23 @@ struct WidgetsCollectionView: View {
     var body: some View {
         CourtifyPlainScrollScreen {
             VStack(alignment: .leading, spacing: 24) {
-                ZStack(alignment: .topLeading) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Widgets collection")
+                            .font(ThemeManager.roundedFont(.title2, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        LastUpdatedLabel(date: dataStore.lastUpdated)
+                    }
+
+                    Spacer()
+
+                    ProfileIconButton(showSettings: $showSettings)
+                }
+                // Glow as background, not a ZStack sibling: its 140pt frame was
+                // driving the header's layout height and opening a dead gap
+                // between "Last updated" and the filter bar.
+                .background(alignment: .topLeading) {
                     CourtifyAmbientGlow(
                         primary: AppAppearanceStore.shared.liftColor,
                         secondary: AppAppearanceStore.shared.accentColor,
@@ -116,20 +132,6 @@ struct WidgetsCollectionView: View {
                     .frame(height: 140)
                     .offset(y: -40)
                     .allowsHitTesting(false)
-
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Widgets collection")
-                                .font(ThemeManager.roundedFont(.title2, weight: .bold))
-                                .foregroundStyle(.white)
-
-                            LastUpdatedLabel(date: dataStore.lastUpdated)
-                        }
-
-                        Spacer()
-
-                        ProfileIconButton(showSettings: $showSettings)
-                    }
                 }
 
                 filterBar

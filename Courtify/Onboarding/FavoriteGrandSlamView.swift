@@ -65,14 +65,7 @@ private struct GrandSlamListRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 16) {
-                AssetCatalogImage(name: slam.logoImageName, contentMode: .fit)
-                    .frame(width: 52, height: 52)
-                    .padding(6)
-                    .background {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color(hex: slam.accentColor).opacity(0.28))
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                SlamLogoBadge(slam: slam, size: 56)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(slam.rawValue)

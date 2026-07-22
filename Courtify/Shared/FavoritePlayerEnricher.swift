@@ -139,9 +139,14 @@ enum FavoritePlayerEnricher {
             apiId = PlayerRankCache.apiId(for: player.id) ?? apiId
         }
 
+        // Retired legends never have a live rank or current-season record —
+        // bundled `careerRecord` covers every surface, so skip the lookup and
+        // season-record calls entirely (they would 404 and burn quota).
+        let isLegend = player.isRetiredLegend
+
         let refreshedEntry = PlayerRankCache.entry(for: player.id)
-        let needsRemoteLookup = refreshedEntry?.apiId == nil
-            || ((refreshedEntry?.rank ?? 0) <= 0 && FavoritePlayerCatalog.payloadRankingEntry(for: player, payload: payload) == nil)
+        let needsRemoteLookup = !isLegend && (refreshedEntry?.apiId == nil
+            || ((refreshedEntry?.rank ?? 0) <= 0 && FavoritePlayerCatalog.payloadRankingEntry(for: player, payload: payload) == nil))
 
         if needsRemoteLookup {
             switch await PlayerRemoteLookup.fetchStatus(for: player, payload: payload) {
@@ -164,10 +169,11 @@ enum FavoritePlayerEnricher {
         let resolvedApiId = apiId ?? PlayerRankCache.apiId(for: player.id)
 
         // Photo + season W/L run concurrently — never gate season on photo success/failure.
+        // (nil apiId for legends short-circuits the season fetch.)
         async let seasonStored = ensureSeasonRecord(
             playerID: player.id,
             tour: player.tour,
-            apiId: resolvedApiId
+            apiId: isLegend ? nil : resolvedApiId
         )
 
         if PlayerPhotoStore.hasCachedPhotos(playerID: player.id) {
@@ -196,6 +202,9 @@ enum FavoritePlayerEnricher {
         guard needsSeason || needsRank else { return false }
         guard let player = FavoritePlayerCatalog.resolvedPlayer(id: playerID, payload: payload),
               player.imageName == nil else { return false }
+        // Legends always look "missing rank + season" — without this guard every
+        // pull-to-refresh would re-fire a doomed lookup for Federer-type picks.
+        guard !player.isRetiredLegend else { return false }
 
         var apiId = PlayerRankCache.apiId(for: playerID)
         if apiId == nil || (apiId ?? 0) <= 0 {

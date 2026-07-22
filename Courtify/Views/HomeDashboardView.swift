@@ -137,7 +137,7 @@ struct HomeDashboardView: View {
                 HStack(alignment: .top) {
                     if hasFavoritePlayer, let player = favoritePlayer {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(player.tour == .wta ? "WTA RANKING" : "ATP RANKING")
+                            Text(heroEyebrowText(for: player))
                                 .font(ThemeManager.roundedFont(size: 11, weight: .bold))
                                 .foregroundStyle(appearance.accentColor)
                                 .tracking(1.6)
@@ -174,7 +174,13 @@ struct HomeDashboardView: View {
                     // Rank + record sit low; name stays high so it doesn't fight the torso.
                     VStack(alignment: .leading, spacing: 8) {
                         VStack(alignment: .leading, spacing: 6) {
-                            if let rank = liveRank {
+                            if favoritePlayer?.isRetiredLegend == true {
+                                // Retired greats: honor the career, never "Unranked".
+                                Text("Legend")
+                                    .font(ThemeManager.roundedFont(size: 34, weight: .bold))
+                                    .foregroundStyle(ThemeManager.opticYellow)
+                                    .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
+                            } else if let rank = liveRank {
                                 Text("\(rank)")
                                     .font(WidgetTheme.displayFont(size: 92, weight: .heavy))
                                     .courtifyScoreboardNumber()
@@ -189,7 +195,15 @@ struct HomeDashboardView: View {
                                     .shadow(color: .black.opacity(0.45), radius: 12, y: 4)
                             }
 
-                            if let record = favoritePlayer?.displaySeasonRecord {
+                            if let career = favoritePlayer?.careerRecord {
+                                let total = career.wins + career.losses
+                                let winRate = total > 0
+                                    ? Int((Double(career.wins) / Double(total) * 100).rounded())
+                                    : 0
+                                Text(verbatim: "\(career.wins)–\(career.losses) career  ·  \(winRate)%")
+                                    .font(ThemeManager.roundedFont(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.58))
+                            } else if let record = favoritePlayer?.displaySeasonRecord {
                                 let total = record.wins + record.losses
                                 let winRate = total > 0
                                     ? Int((Double(record.wins) / Double(total) * 100).rounded())
@@ -275,6 +289,12 @@ struct HomeDashboardView: View {
             .frame(height: 120)
             .allowsHitTesting(false)
         }
+    }
+
+    /// "ATP RANKING" reads wrong over a retired great — label the legend instead.
+    private func heroEyebrowText(for player: TennisPlayer) -> String {
+        let tour = player.tour == .wta ? "WTA" : "ATP"
+        return player.isRetiredLegend ? "\(tour) LEGEND" : "\(tour) RANKING"
     }
 
     /// When the player's API id is known the record fills in on pull-to-refresh;

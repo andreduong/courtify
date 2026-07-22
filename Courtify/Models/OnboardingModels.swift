@@ -101,9 +101,36 @@ struct TennisPlayer: Identifiable, Hashable {
     }
 
     /// Prefer bundled featured W/L; custom favorites use Worker-backed `PlayerSeasonRecordCache`.
+    /// Retired legends never have a season record — surfaces show `careerRecord` instead.
     var displaySeasonRecord: (wins: Int, losses: Int)? {
+        if isRetiredLegend { return nil }
         if let bundled = bundledSeasonRecord { return bundled }
         return PlayerSeasonRecordCache.record(for: id)
+    }
+
+    /// Retired all-time greats — career singles W/L verified against ATP/WTA
+    /// records at retirement (Jul 2026). Current-season rank / W-L never applies:
+    /// surfaces show a "Legend" label + career record, and enrichment skips the
+    /// season-record fetch. Keyed by hero slug so `custom:` IDs and payload
+    /// spellings resolve without a second dictionary.
+    private static let retiredLegendCareerRecords: [String: (wins: Int, losses: Int)] = [
+        "roger-federer": (1251, 275),
+        "rafael-nadal": (1080, 227),
+        "andy-murray": (739, 262),
+        "lleyton-hewitt": (616, 262),
+        "andy-roddick": (612, 213),
+        "serena-williams": (858, 156),
+        "maria-sharapova": (645, 171),
+        "ashleigh-barty": (305, 102),
+    ]
+
+    var isRetiredLegend: Bool {
+        TennisPlayer.retiredLegendCareerRecords[TennisPlayer.heroSlug(for: name)] != nil
+    }
+
+    /// Career singles W/L for retired legends (bundled; `nil` for active players).
+    var careerRecord: (wins: Int, losses: Int)? {
+        TennisPlayer.retiredLegendCareerRecords[TennisPlayer.heroSlug(for: name)]
     }
 
     /// Bundled 2026 season W/L through current tour stop (featured catalog only).

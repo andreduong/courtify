@@ -379,37 +379,8 @@ private struct FavoriteSlamLogoBadge: View {
     let slam: GrandSlam
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(badgeBackground)
-
-            AssetCatalogImage(
-                name: slam.logoImageName,
-                contentMode: usesFill ? .fill : .fit
-            )
-            .padding(logoInset)
-        }
-        .frame(width: FavoriteCardMetrics.slamLogoSize, height: FavoriteCardMetrics.slamLogoSize)
-        .clipShape(Circle())
-        .overlay {
-            Circle()
-                .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
-        }
-        .opacity(0.95)
-    }
-
-    /// Fill for all marks so rectangular assets (US Open) become round badges.
-    private var usesFill: Bool { true }
-
-    private var logoInset: CGFloat { 0 }
-
-    private var badgeBackground: Color {
-        switch slam {
-        case .australianOpen: Color(hex: 0x0085CA).opacity(0.35)
-        case .frenchOpen: Color(hex: 0xE35205).opacity(0.25)
-        case .wimbledon: Color(hex: 0x006633).opacity(0.3)
-        case .usOpen: Color(hex: 0x0C2340)
-        }
+        SlamLogoBadge(slam: slam, size: FavoriteCardMetrics.slamLogoSize)
+            .opacity(0.95)
     }
 }
 
@@ -701,9 +672,7 @@ private struct FavoriteSlamPickerSheet: View {
                     dismiss()
                 } label: {
                     HStack(spacing: 14) {
-                        AssetCatalogImage(name: slam.logoImageName, contentMode: .fit)
-                            .frame(width: 44, height: 44)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        SlamLogoBadge(slam: slam, size: 44)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(slam.rawValue)
