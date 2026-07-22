@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 enum TourPreference: String, CaseIterable, Identifiable, Codable {
     case atp = "ATP"
@@ -52,6 +53,43 @@ struct TennisPlayer: Identifiable, Hashable {
         if isCustom { return placeholderImageName }
         guard let imageName else { return placeholderImageName }
         return "\(imageName)-hero"
+    }
+
+    /// Bundled transparent cutout for this player when one shipped in the asset
+    /// catalog. Featured players use `player-{id}-hero`; search-catalog and top-10
+    /// payload names resolve `player-{name-slug}-hero` (downloaded once at dev time
+    /// from the tour CDNs — zero runtime API cost). `nil` when no cutout exists.
+    var bundledHeroCutoutName: String? {
+        if let imageName { return "\(imageName)-hero" }
+        return TennisPlayer.sluggedHeroAsset(for: name)
+    }
+
+    private static var heroAssetLookupCache: [String: String?] = [:]
+    private static let heroAssetLookupLock = NSLock()
+
+    static func sluggedHeroAsset(for name: String) -> String? {
+        let slug = heroSlug(for: name)
+        guard !slug.isEmpty else { return nil }
+        let asset = "player-\(slug)-hero"
+        heroAssetLookupLock.lock()
+        defer { heroAssetLookupLock.unlock() }
+        if let cached = heroAssetLookupCache[asset] { return cached }
+        let resolved: String? = UIImage(named: asset) != nil ? asset : nil
+        heroAssetLookupCache[asset] = resolved
+        return resolved
+    }
+
+    /// Diacritic-insensitive, lowercase, hyphen-separated ("Félix Auger Aliassime"
+    /// and "Felix Auger-Aliassime" both → "felix-auger-aliassime").
+    static func heroSlug(for name: String) -> String {
+        let folded = name.folding(
+            options: [.diacriticInsensitive, .caseInsensitive],
+            locale: Locale(identifier: "en_US")
+        ).lowercased()
+        let mapped = folded.map { $0.isLetter || $0.isNumber ? $0 : "-" }
+        return String(mapped)
+            .split(separator: "-")
+            .joined(separator: "-")
     }
 
     /// Bundled 2026 season W/L — only for the featured top-10 catalog (not custom/API picks).
@@ -161,19 +199,19 @@ enum PlayerSearchCatalog {
         "Taylor Fritz": "fb98",
         "Ben Shelton": "s0n0",
         "Hubert Hurkacz": "hb64",
-        "Casper Ruud": "r0dg",
+        "Casper Ruud": "rh16", // r0dg is Holger Rune — verified via atptour.com profile URLs Jul 2026
         "Andrey Rublev": "re44",
         "Stefanos Tsitsipas": "te51",
         "Tommy Paul": "pl56",
         "Grigor Dimitrov": "d875",
         "Frances Tiafoe": "td51",
-        "Holger Rune": "r0la",
+        "Holger Rune": "r0dg",
         "Sebastian Korda": "kb05",
         "Alex de Minaur": "dh58",
         "Felix Auger-Aliassime": "ag37",
         "Felix Auger Aliassime": "ag37",
         "Lorenzo Musetti": "m0ej",
-        "Matteo Berrettini": "bh60",
+        "Matteo Berrettini": "bk40",
         // Inactive / unranked fan favorites — Worker tries name-slug photo + CDN.
         "Nick Kyrgios": "ke17",
         "Rafael Nadal": "n409",

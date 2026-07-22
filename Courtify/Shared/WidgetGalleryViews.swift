@@ -234,8 +234,8 @@ private struct MediumFavoriteHeroCutout: View {
 
     var body: some View {
         Group {
-            if let bundled = player.imageName {
-                Image("\(bundled)-hero")
+            if let bundled = player.bundledHeroCutoutName {
+                Image(bundled)
                     .resizable()
                     .scaledToFit()
                     .courtifyHeroFadeMask()
@@ -267,8 +267,8 @@ struct FavoritePlayerHeroImage: View {
 
     var body: some View {
         Group {
-            if let bundled = player.imageName {
-                Image("\(bundled)-hero")
+            if let bundled = player.bundledHeroCutoutName {
+                Image(bundled)
                     .resizable()
                     .scaledToFit()
                     .frame(

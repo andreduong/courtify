@@ -23,7 +23,7 @@ This repo has two parts:
 | Full-bleed layouts | `Courtify/Shared/CourtifyLayout.swift` | Hand-roll `ignoresSafeArea` on a `GeometryReader`; offset hero backgrounds inside a `ScrollView` |
 | Live tennis data | `WidgetDataStore` + Worker KV cache | Add on-appear `refresh()`, timers, or per-screen fetch logic |
 | Tournament calendar | `TournamentCalendar` (bundled 2026) | Hit RapidAPI for schedule / slam dates |
-| Player photos (in-app) | `player-{id}-hero` assets + `PlayerTorsoPhotoView` / `TennisPlayerPhotoView` | Use `placeholder-male` / `placeholder-female` letter assets for custom players |
+| Player photos (in-app) | `TennisPlayer.bundledHeroCutoutName` (`player-{id}-hero` featured + `player-{name-slug}-hero` catalog/top-10) via `PlayerTorsoPhotoView` / `TennisPlayerPhotoView` | Use `placeholder-male` / `placeholder-female` letter assets for custom players; hand-build hero asset names |
 | Custom favorite rank/photo/W/L | `FavoritePlayerCatalog` + `PlayerRankCache` + `PlayerRemoteLookup` + `PlayerSeasonRecordCache` | Expand `/api/widget-data` to top 100 on every refresh; show unverified cache; fetch W/L inside shared refresh |
 | Paywall / splash backdrop | `CourtifyMarqueeBackground` | Per-player paywall photos or silhouettes on paywall |
 | Grand Slam logos | `AssetCatalogImage` in pickers | `CachedBundledImage` for slam assets (in-memory cache goes stale) |
@@ -295,11 +295,11 @@ If a new screen needs a full-bleed top, **extend one of these** — do not hand-
 - Uses `CourtifyFullBleedScreen` — never the old `GeometryReader` + `.ignoresSafeArea(.top)` pattern.
 - **Layout:** hero flexes (`maxHeight: .infinity`); Grand Slam countdown is `fixedSize` at the bottom — no fixed 48/52 split (that caused the gap under the player name).
 - **Favorite resolve:** `FavoritePlayerCatalog.resolvedPlayer(id:payload:)` — supports `custom:` IDs and `PlayerRankCache` when photos verified.
-- **Hero image:** bundled `player-{id}-hero` for featured players; `PlayerTorsoPhotoView` for custom picks (verified API cache) or `PlayerSilhouetteView` (ATP/WTA) — **never** letter placeholders.
+- **Hero image:** `TennisPlayer.bundledHeroCutoutName` (featured `player-{id}-hero` or catalog `player-{name-slug}-hero`) gets the full-bleed bodyshot layout; only cutout-less customs fall back to `CustomFavoriteHeroPortrait` (circular API headshot) or `PlayerSilhouetteView` — **never** letter placeholders.
 - **Rank:** `FavoritePlayerCatalog.displayRank` — widget payload top 20 first, then `PlayerRankCache` only when `photosVerified`.
 - **Get Premium:** single pill beside "Next Grand Slam" only (not in the status-bar toolbar).
 - **Data:** `loadCachedPayload()` on appear; pull-to-refresh via viewport-tall `ScrollView` + `.refreshable { await dataStore.refresh() }` (same quota alert as Rankings). Hero shows `LastUpdatedLabel` + "· Pull down to refresh".
-- **Grand Slam countdown bg:** `AssetCatalogImage` for slam logos (not `CachedBundledImage`).
+- **Grand Slam countdown card:** slam-branded `SlamCardTheme` (USO night blue + yellow, AO sky blue + white, RG clay + green, Wimbledon green + lavender) — deep brand gradient over OLED black, single 1pt accent hairline, 10pt bottom margin above the tab bar. Countdown digits and the Get Premium pill are `.fixedSize()` (they must never wrap); the eyebrow scales down instead. Slam logos elsewhere use `AssetCatalogImage` (not `CachedBundledImage`).
 
 ### Schedule tab (`ScheduleView`)
 
@@ -407,7 +407,7 @@ record). Never expand this into a mass fetch.
 | `PlayerPhotoFetcher` / `PlayerPhotoStore` | Download + cache head/hero JPEGs under `player-images/` |
 | `PlayerSeasonRecordFetcher` / `PlayerSeasonRecordCache` | One `/api/player-season-record` on pick (always, even if photo fails); optional one-player heal on `WidgetDataStore.refresh()` when cache nil |
 | `PlayerTorsoPhotoView` | Home hero; bundled `-hero` or verified cache or silhouette |
-| `PlayerSilhouetteView` | ATP `figure.tennis` / WTA `figure.dress.line.vertical.figure` fallback |
+| `PlayerSilhouetteView` | `figure.tennis` fallback for **both** tours (the old WTA `figure.dress.line.vertical.figure` read as a restroom sign — banned) |
 | `TennisPlayerPhotoView` | Circular headshots in lists |
 
 **Pick flow:** clear stale photos / rank / season cache → lookup → store rank (unverified) → fetch photos **and** season W/L concurrently (season is never gated on photo success). Lookup HTTP 404 / empty photo → `mediaFailureReason = .notFound` (silent silhouette). True photo 429/503 → `.quota` helper only. On photo failure show silhouette; season still stores when `apiId` is known.
@@ -458,17 +458,37 @@ and never reads live rankings.
 
 ### Player hero images (zero API cost)
 
-Home uses transparent full-torso cutouts bundled in `Assets.xcassets` as
-`player-{id}-hero` imagesets (`TennisPlayer.heroImageName`). They were downloaded
-**once at development time** from the tours' free public media CDNs — do NOT fetch
-them at runtime and do NOT use the paid RapidAPI for images:
+Transparent full-torso cutouts are bundled in `Assets.xcassets` in **two naming tiers**
+(all resolved by `TennisPlayer.bundledHeroCutoutName` — use that, never build asset names by hand):
+
+1. `player-{id}-hero` — the 10 featured players (`TennisPlayer.heroImageName`).
+2. `player-{name-slug}-hero` — the whole `PlayerSearchCatalog` (Dimitrov, Ruud, Rune,
+   FAA, Kyrgios, Nadal, Federer, … 22 ATP) **plus** live top-10 names outside the catalog
+   (Cobolli, Muchova, Noskova, Anisimova, Svitolina, Andreeva, … 19 WTA), added Jul 2026.
+   Slug = `TennisPlayer.heroSlug(for:)` — diacritic-folded, lowercase, hyphenated
+   ("Félix Auger Aliassime" and "Felix Auger-Aliassime" → `felix-auger-aliassime`),
+   so custom `custom:` favorites and payload names resolve without a dictionary.
+
+`PlayerTorsoPhotoView`, `FavoritePlayerHeroImage`, `MediumFavoriteHeroCutout`, and the
+Home hero all check `bundledHeroCutoutName` first — a custom pick with a bundled cutout
+gets the same full-bleed bodyshot layout as featured players. Circular API headshot /
+silhouette fallbacks remain only for names with no bundled cutout.
+
+Cutouts were downloaded **once at development time** from the tours' free public media
+CDNs — do NOT fetch them at runtime and do NOT use the paid RapidAPI for images:
 
 - **ATP**: `https://www.atptour.com/-/media/alias/player-gladiator-headshot/{playerCode}`
   (e.g. Djokovic `d643`, Sinner `s0ag`, Alcaraz `a0e2`, Medvedev `mm58`, Zverev `z355`).
-  Cloudflare blocks curl/scripts — fetch through a real browser session.
-- **WTA**: torso PNG URLs on `photoresources.wtatennis.com` (curl-friendly); find the
-  exact UUID URL by grepping the player page (`https://www.wtatennis.com/players/{id}/{slug}`)
-  for `Torso`. Supports `?width=&height=` resizing.
+  Cloudflare blocks curl/scripts **and Worker-side fetches** (verified Jul 2026 — proxying
+  the CDN through the Worker 403s) — fetch through a real browser session
+  (`fetch → blob → dataURL` in page context works).
+- **WTA**: torso PNG URLs on `photoresources.wtatennis.com` (curl-friendly); resolve the
+  player id via the open search API `https://api.wtatennis.com/tennis/players/?name={q}`,
+  then grep the player page (`https://www.wtatennis.com/players/{id}/{slug}`)
+  for `Torso`. Supports `?width=&height=` resizing (bundle at ≤600px).
+- **ATP player codes must be verified** against the atptour.com profile URL — wrong codes
+  silently return a generic 300×300 placeholder (Ruud is `rh16`, Rune is `r0dg`,
+  Berrettini is `bk40`; earlier guesses shipped wrong).
 
 The old `player-{id}` imagesets are small circular avatar cutouts still used by
 onboarding/rankings; `player-{id}-paywall` are pre-blurred paywall backgrounds for **bundled** players only.

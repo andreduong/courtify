@@ -42,21 +42,6 @@ struct HomeDashboardView: View {
         grandSlamMatching(nextGrandSlam)
     }
 
-    private var slamHighlight: Color {
-        guard let slam = nextSlam else { return ThemeManager.opticYellow }
-        return Color(hex: slam.highlightColor)
-    }
-
-    private var slamGlow: Color {
-        guard let slam = nextSlam else { return appearance.liftColor }
-        switch slam {
-        case .australianOpen: return Color(hex: 0x0085CA)
-        case .frenchOpen: return Color(hex: 0xE35205)
-        case .wimbledon: return Color(hex: 0x006633)
-        case .usOpen: return Color(hex: 0x4A90D9)
-        }
-    }
-
     private var liveRank: Int? {
         FavoritePlayerCatalog.displayRank(for: favoritePlayerID, payload: dataStore.payload)
     }
@@ -75,6 +60,9 @@ struct HomeDashboardView: View {
                     grandSlamCountdownSection
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 16)
+                        // Breathing room above the floating tab bar (card used to
+                        // sit flush against the capsule chrome).
+                        .padding(.bottom, 10)
                 }
                 .frame(width: size.width, height: size.height, alignment: .top)
             }
@@ -251,7 +239,7 @@ struct HomeDashboardView: View {
             )
 
             if let player = favoritePlayer {
-                if player.imageName != nil {
+                if player.bundledHeroCutoutName != nil {
                     // Bundled transparent torso cutout — full-bleed rectangular layout.
                     PlayerTorsoPhotoView(
                         player: player,
@@ -360,112 +348,148 @@ struct HomeDashboardView: View {
 
     // MARK: - Grand Slam countdown
 
+    /// Brand palette for the countdown card — each major reads as its own event
+    /// (USO night blue + yellow, AO sky blue + white, RG clay + green, Wimbledon
+    /// green + lavender) instead of a generic glass tile.
+    private var slamCardTheme: SlamCardTheme {
+        switch nextSlam {
+        case .usOpen:
+            return SlamCardTheme(
+                backdropTop: Color(hex: 0x17396A),
+                backdropBottom: Color(hex: 0x081A33),
+                accent: Color(hex: 0xFFD200),
+                secondary: Color(hex: 0x8FB8E8)
+            )
+        case .australianOpen:
+            return SlamCardTheme(
+                backdropTop: Color(hex: 0x1273B0),
+                backdropBottom: Color(hex: 0x0A3A5C),
+                accent: Color(hex: 0xF5FBFF),
+                secondary: Color(hex: 0x9AD1F5)
+            )
+        case .frenchOpen:
+            return SlamCardTheme(
+                backdropTop: Color(hex: 0xA6440F),
+                backdropBottom: Color(hex: 0x5D2607),
+                accent: Color(hex: 0x59B26A),
+                secondary: Color(hex: 0xFFB27A)
+            )
+        case .wimbledon:
+            return SlamCardTheme(
+                backdropTop: Color(hex: 0x1E5B34),
+                backdropBottom: Color(hex: 0x0F3520),
+                accent: Color(hex: 0xC7A6F2),
+                secondary: Color(hex: 0xA8D5B5)
+            )
+        case nil:
+            return SlamCardTheme(
+                backdropTop: ThemeManager.emeraldGreen.opacity(0.6),
+                backdropBottom: ThemeManager.oledBlack,
+                accent: ThemeManager.opticYellow,
+                secondary: .white.opacity(0.5)
+            )
+        }
+    }
+
     private var grandSlamCountdownSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            slamHighlight.opacity(0.9),
-                            slamHighlight.opacity(0.3),
-                            .white.opacity(0.06),
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1.5)
-
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        Capsule()
-                            .fill(slamHighlight)
-                            .frame(width: 18, height: 3)
-                        Text("NEXT GRAND SLAM")
-                            .font(ThemeManager.roundedFont(size: 11, weight: .bold))
-                            .foregroundStyle(slamHighlight.opacity(0.95))
-                            .tracking(1.5)
-                    }
-
-                    if let slam = nextGrandSlam {
-                        Text(slam.name)
-                            .font(ThemeManager.roundedFont(size: 28, weight: .bold))
-                            .foregroundStyle(.white)
-
-                        Text("\(slam.location.uppercased())  ·  \(slam.surface.uppercased())")
-                            .font(ThemeManager.roundedFont(size: 11, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.42))
-                            .tracking(1)
-
-                        let countdown = TournamentCalendar.countdown(to: slam)
-                        HStack(spacing: 18) {
-                            countdownUnit(value: countdown.days, label: "DAYS")
-                            countdownUnit(value: countdown.hours, label: "HRS")
-                            countdownUnit(value: countdown.minutes, label: "MIN")
-                        }
-                        .padding(.top, 4)
-                    }
+        let theme = slamCardTheme
+        return HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Capsule()
+                        .fill(theme.accent)
+                        .frame(width: 18, height: 3)
+                    Text("NEXT GRAND SLAM")
+                        .font(ThemeManager.roundedFont(size: 11, weight: .bold))
+                        .foregroundStyle(theme.accent.opacity(0.95))
+                        .tracking(1.5)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
 
-                Spacer(minLength: 0)
+                if let slam = nextGrandSlam {
+                    Text(slam.name)
+                        .font(ThemeManager.roundedFont(size: 28, weight: .bold))
+                        .foregroundStyle(.white)
 
-                if !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
-                    GetPremiumPill(action: { showPaywall = true })
+                    Text("\(slam.location.uppercased())  ·  \(slam.surface.uppercased())")
+                        .font(ThemeManager.roundedFont(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.secondary.opacity(0.85))
+                        .tracking(1)
+
+                    let countdown = TournamentCalendar.countdown(to: slam)
+                    HStack(spacing: 18) {
+                        countdownUnit(value: countdown.days, label: "DAYS", theme: theme)
+                        countdownUnit(value: countdown.hours, label: "HRS", theme: theme)
+                        countdownUnit(value: countdown.minutes, label: "MIN", theme: theme)
+                    }
+                    .padding(.top, 4)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 18)
-            .padding(.bottom, 22)
+
+            Spacer(minLength: 0)
+
+            if !revenueCat.isProUser, !AppGroupConstants.referralBypassActive {
+                GetPremiumPill(action: { showPaywall = true })
+                    // Never let the pill wrap "Get / Premium" — the leading copy
+                    // scales down instead.
+                    .fixedSize()
+            }
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 22)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background {
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(.ultraThinMaterial)
-
-                // Transparent wash only — CourtifyAmbientGlow fills OLED black and kills glass.
-                RadialGradient(
-                    colors: [
-                        slamHighlight.opacity(0.22),
-                        slamGlow.opacity(0.12),
-                        .clear,
-                    ],
-                    center: .leading,
-                    startRadius: 4,
-                    endRadius: 220
+            ZStack {
+                // Deep slam-brand wash over OLED black — one surface, one border.
+                LinearGradient(
+                    colors: [theme.backdropTop, theme.backdropBottom],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-                .blur(radius: 36)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .allowsHitTesting(false)
 
-                Capsule()
-                    .fill(slamHighlight)
-                    .frame(width: 3)
-                    .padding(.vertical, 16)
-                    .opacity(0.95)
+                RadialGradient(
+                    colors: [theme.accent.opacity(0.14), .clear],
+                    center: .topLeading,
+                    startRadius: 8,
+                    endRadius: 260
+                )
 
                 CourtifyTennisBallWatermark()
                     .allowsHitTesting(false)
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(ThemeManager.glassEdge, lineWidth: ThemeManager.glassEdgeWidth)
+                .strokeBorder(theme.accent.opacity(0.28), lineWidth: 1)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
-    private func countdownUnit(value: Int, label: String) -> some View {
+    private func countdownUnit(value: Int, label: String, theme: SlamCardTheme) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(String(format: "%02d", value))
                 .font(WidgetTheme.displayFont(size: 36, weight: .heavy))
                 .courtifyScoreboardNumber()
                 .foregroundStyle(.white)
+                // The trailing Premium pill compresses this column — never let
+                // a two-digit countdown wrap into a vertical stack.
+                .fixedSize()
             Text(label)
-                .courtifyMicroLabel()
+                .font(WidgetTheme.microLabelFont(size: 10, weight: .semibold))
+                .textCase(.uppercase)
+                .kerning(WidgetTheme.microLabelKerning)
+                .foregroundStyle(theme.secondary.opacity(0.75))
         }
     }
+}
+
+private struct SlamCardTheme {
+    let backdropTop: Color
+    let backdropBottom: Color
+    let accent: Color
+    let secondary: Color
 }
 
 /// Hero treatment for custom favorites — a large circular studio headshot (or

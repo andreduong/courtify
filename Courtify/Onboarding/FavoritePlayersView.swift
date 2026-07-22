@@ -93,9 +93,13 @@ struct FavoritePlayersView: View {
                         showCustomPlayerSheet = true
                     }
                 }
-                .padding(.horizontal, 24)
                 .padding(.vertical, 12)
+                .scrollTargetLayout()
             }
+            .contentMargins(.horizontal, 24, for: .scrollContent)
+            // Cards snap to alignment so a poster never rests half-cropped
+            // with its name clipped at the screen edge.
+            .scrollTargetBehavior(.viewAligned)
             // Lock row height so posters stay true 3:4 (ScrollView otherwise proposes full flex height).
             .frame(height: OnboardingPosterMetrics.height + 28)
 
@@ -269,8 +273,10 @@ private struct PlayerPosterCard: View {
                     player: player,
                     contentMode: .fill,
                     fadePortion: 0.40,
-                    circularHeadshotSize: 110,
-                    circularHeadshotAlignment: .bottom
+                    circularHeadshotSize: 104,
+                    // Rare no-cutout fallback: center the circle so it reads as a
+                    // deliberate portrait, not artwork sunk to the card's floor.
+                    circularHeadshotAlignment: .center
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .clipped()

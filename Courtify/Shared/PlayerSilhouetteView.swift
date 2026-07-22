@@ -5,8 +5,9 @@ enum PlayerSilhouetteStyle {
     case torso
 }
 
-/// Neutral ATP/WTA fallback when bundled or API player photos are unavailable.
-/// Strict SF Symbols only — ATP `figure.tennis`, WTA `figure.dress.line.vertical.figure`.
+/// Neutral fallback when bundled or API player photos are unavailable.
+/// One symbol for both tours: `figure.tennis` (a player mid-serve).
+/// `figure.dress.line.vertical.figure` is a restroom-pair glyph — never use it.
 /// Monochrome glyph; no LinearGradient / grey fill boxes behind the symbol.
 struct PlayerSilhouetteView: View {
     let tour: TourPreference
@@ -52,13 +53,9 @@ struct PlayerSilhouetteView: View {
             .allowsHitTesting(false)
     }
 
-    /// Exact symbols required by AGENTS.md — do not substitute restroom / person glyphs.
+    /// `figure.tennis` for every tour — the old WTA restroom-pair glyph read as
+    /// a bathroom sign next to real cutouts (user-reported, Jul 2026).
     private var symbolName: String {
-        switch tour {
-        case .wta:
-            return "figure.dress.line.vertical.figure"
-        case .atp, .both:
-            return "figure.tennis"
-        }
+        "figure.tennis"
     }
 }

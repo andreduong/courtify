@@ -90,9 +90,9 @@ struct PlayerTorsoPhotoView: View {
     bundledHeroName != nil
   }
 
+  /// Featured `player-{id}-hero` or catalog `player-{name-slug}-hero` cutouts.
   private var bundledHeroName: String? {
-    guard let imageName = player.imageName else { return nil }
-    return "\(imageName)-hero"
+    player.bundledHeroCutoutName
   }
 
   /// Any cached API JPEG is a studio plate (head preferred; leftover `-hero.jpg` is the same bytes).
