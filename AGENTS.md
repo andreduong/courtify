@@ -327,7 +327,7 @@ Every tab shows `ProfileIconButton` (top-right) → `SettingsView` sheet via
 - **Favorite cards layout:** equal-width `FavoriteCard`s with overlay artwork (`PlayerTorsoPhotoView` / silhouette / `FavoriteSlamLogoBadge`) — do **not** reuse `FavoritePlayerHeroImage`. Artwork must not drive intrinsic height or Change gets clipped.
 - **Slam picker logos:** `AssetCatalogImage` (fresh from asset catalog). Settings cards use circular `FavoriteSlamLogoBadge`.
 - **Personal** — time zone (display only), 24h format toggle, Premium activate
-  (paywall), Restore purchase (RevenueCat).
+  (paywall), Restore purchase (RevenueCat), Enter referral code (`SettingsReferralCodeSheet` → `andreduong2026` unlocks free users via `activateReferralBypass`; already-entitled users see red “already a Premium user”).
 - **Appearance (Premium)** — `AppAppearanceStore`: **App theme** (canvas color; default **Courtify** = midnight green) and **Logo ball** (splash/logo tennis-ball color; default **Courtify** green). Free users see a Premium badge and open the paywall on tap.
 - **Help** — `mailto:support@courtify.xyz`, How to add widgets (in-app guide),
   Rate us (`SKStoreReviewController`).

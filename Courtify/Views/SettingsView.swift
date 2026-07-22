@@ -44,6 +44,9 @@ struct SettingsView: View {
     @AppStorage("use24HourFormat", store: AppGroupConstants.appGroupStorage)
     private var use24HourFormat = false
 
+    @AppStorage(AppGroupConstants.Keys.referralBypassActive, store: AppGroupConstants.appGroupStorage)
+    private var referralBypassActive = false
+
     @StateObject private var revenueCat = RevenueCatManager.shared
     @ObservedObject private var dataStore = WidgetDataStore.shared
     @ObservedObject private var appearance = AppAppearanceStore.shared
@@ -53,6 +56,7 @@ struct SettingsView: View {
     @State private var showPaywall = false
     @State private var showThemePicker = false
     @State private var showBallPicker = false
+    @State private var showReferralSheet = false
     @State private var isRestoring = false
     @State private var restoreMessage: String?
 
@@ -65,7 +69,7 @@ struct SettingsView: View {
     }
 
     private var isEntitled: Bool {
-        revenueCat.isProUser || AppGroupConstants.referralBypassActive
+        revenueCat.isProUser || referralBypassActive
     }
 
     private var appVersion: String {
@@ -144,6 +148,9 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showBallPicker) {
             LogoBallPickerSheet()
+        }
+        .sheet(isPresented: $showReferralSheet) {
+            SettingsReferralCodeSheet()
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(
@@ -240,9 +247,9 @@ struct SettingsView: View {
                 SettingsButtonRow(
                     icon: "crown.fill",
                     title: "Premium subscription",
-                    value: revenueCat.isProUser ? "Active" : "Activate"
+                    value: isEntitled ? "Active" : "Activate"
                 ) {
-                    if !revenueCat.isProUser {
+                    if !isEntitled {
                         showPaywall = true
                     }
                 }
@@ -261,6 +268,14 @@ struct SettingsView: View {
                             ? "Your purchases have been restored."
                             : "No previous purchases found."
                     }
+                }
+
+                SettingsButtonRow(
+                    icon: "ticket.fill",
+                    title: "Enter referral code",
+                    value: nil
+                ) {
+                    showReferralSheet = true
                 }
             }
         }
@@ -730,6 +745,222 @@ private struct PickerSheetShell<Content: View>: View {
         }
         .preferredColorScheme(.dark)
         .presentationDetents([.medium, .large])
+    }
+}
+
+// MARK: - Referral code (Settings)
+
+private struct SettingsReferralCodeSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var revenueCat = RevenueCatManager.shared
+
+    @AppStorage(AppGroupConstants.Keys.referralBypassActive, store: AppGroupConstants.appGroupStorage)
+    private var referralBypassActive = false
+
+    @State private var referralCode = ""
+    @State private var feedback: Feedback = .none
+    @State private var shakeInvalid = false
+    @State private var successPulse = false
+    @State private var errorPulse = 0
+    @FocusState private var isFieldFocused: Bool
+
+    private enum Feedback: Equatable {
+        case none
+        case invalid
+        case alreadyPremium
+        case unlocked
+    }
+
+    private var isEntitled: Bool {
+        revenueCat.isProUser || referralBypassActive
+    }
+
+    private var canSubmit: Bool {
+        !referralCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && feedback != .unlocked
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Enter referral code")
+                            .font(ThemeManager.roundedFont(.title2, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        Text("Have a Courtify invite? Unlock Premium instantly.")
+                            .font(ThemeManager.roundedFont(.subheadline))
+                            .foregroundStyle(.white.opacity(0.65))
+                    }
+
+                    TextField("Referral code", text: $referralCode)
+                        .font(ThemeManager.roundedFont(.body, weight: .medium))
+                        .foregroundStyle(.white)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.asciiCapable)
+                        .textContentType(.none)
+                        .focused($isFieldFocused)
+                        .submitLabel(.go)
+                        .onSubmit(submitCode)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(fieldBorderColor, lineWidth: fieldBorderWidth)
+                        }
+                        .offset(x: shakeInvalid ? -6 : 0)
+                        .animation(
+                            shakeInvalid
+                                ? .default.repeatCount(3, autoreverses: true).speed(4)
+                                : CourtifyMotion.selection,
+                            value: shakeInvalid
+                        )
+                        .disabled(feedback == .unlocked)
+                        .onChange(of: referralCode) { _, _ in
+                            guard feedback == .invalid || feedback == .alreadyPremium else { return }
+                            CourtifyMotion.animateSelection {
+                                feedback = .none
+                                shakeInvalid = false
+                            }
+                        }
+
+                    feedbackLabel
+
+                    Button(action: submitCode) {
+                        Text(feedback == .unlocked ? "UNLOCKED" : "SUBMIT")
+                            .courtifyPrimaryButtonLabel(cornerRadius: 16)
+                    }
+                    .courtifyButton(.primary, enabled: canSubmit)
+                    .sensoryFeedback(.success, trigger: successPulse)
+                    .sensoryFeedback(.error, trigger: errorPulse)
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background {
+                ZStack {
+                    ThemeManager.oledBlack
+                    CourtifyListAmbientBloom()
+                }
+                .ignoresSafeArea()
+            }
+            .navigationTitle("Referral code")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        isFieldFocused = false
+                        dismiss()
+                    }
+                    .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
+                    .tint(ThemeManager.opticYellow)
+                    .courtifyButton(.ghost)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Go") {
+                        submitCode()
+                    }
+                    .font(ThemeManager.roundedFont(.body, weight: .semibold))
+                    .foregroundStyle(ThemeManager.opticYellow)
+                    .disabled(!canSubmit)
+                }
+            }
+            .toolbarBackground(ThemeManager.oledBlack, for: .navigationBar)
+        }
+        .preferredColorScheme(.dark)
+        .presentationDetents([.medium, .large])
+        .animation(CourtifyMotion.selection, value: feedback)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                isFieldFocused = true
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var feedbackLabel: some View {
+        switch feedback {
+        case .none:
+            EmptyView()
+        case .invalid:
+            Text("That code isn't recognized. Try again.")
+                .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                .foregroundStyle(.red.opacity(0.85))
+                .transition(CourtifyMotion.crossfade)
+        case .alreadyPremium:
+            Text("You're already a Premium user")
+                .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                .foregroundStyle(.red.opacity(0.85))
+                .transition(CourtifyMotion.crossfade)
+        case .unlocked:
+            Text("Premium unlocked — enjoy Courtify.")
+                .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                .foregroundStyle(ThemeManager.opticYellow)
+                .transition(CourtifyMotion.crossfade)
+        }
+    }
+
+    private var fieldBorderColor: Color {
+        switch feedback {
+        case .invalid, .alreadyPremium:
+            return Color.red.opacity(0.7)
+        case .unlocked:
+            return ThemeManager.opticYellow.opacity(0.7)
+        case .none:
+            return ThemeManager.glassEdge
+        }
+    }
+
+    private var fieldBorderWidth: CGFloat {
+        feedback == .none ? ThemeManager.glassEdgeWidth : 1.5
+    }
+
+    private func submitCode() {
+        let trimmed = referralCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, feedback != .unlocked else { return }
+
+        isFieldFocused = false
+
+        guard ReferralAccess.isValid(trimmed) else {
+            errorPulse += 1
+            CourtifyMotion.animateSelection {
+                feedback = .invalid
+                shakeInvalid = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                shakeInvalid = false
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                guard feedback == .invalid else { return }
+                CourtifyMotion.animateSelection {
+                    feedback = .none
+                }
+            }
+            return
+        }
+
+        if isEntitled {
+            errorPulse += 1
+            CourtifyMotion.animateSelection {
+                feedback = .alreadyPremium
+            }
+            return
+        }
+
+        AppGroupConstants.activateReferralBypass()
+        referralBypassActive = true
+        successPulse.toggle()
+        CourtifyMotion.animateSelection {
+            feedback = .unlocked
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+            dismiss()
+        }
     }
 }
 

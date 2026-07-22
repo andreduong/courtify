@@ -63,7 +63,6 @@ struct OrderOfPlayWidget: Widget {
                     OrderOfPlayListView(matches: entry.matches)
                 }
             }
-            .courtifyHomeWidgetStampEnabled()
         }
         .configurationDisplayName("Order of play")
         .description("Upcoming matches across all courts.")

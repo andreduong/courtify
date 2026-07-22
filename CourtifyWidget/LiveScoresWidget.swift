@@ -57,7 +57,6 @@ struct LiveScoresWidget: Widget {
                     LiveScoresWidgetView(match: entry.match)
                 }
             }
-            .courtifyHomeWidgetStampEnabled()
         }
         .configurationDisplayName("Live scores")
         .description("Live match scores from the tour.")

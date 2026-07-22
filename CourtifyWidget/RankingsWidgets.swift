@@ -108,7 +108,6 @@ private struct RankingsWidgetContainer: View {
                 RankingsWidgetView(tour: entry.tour, entries: entry.entries, limit: 5, widgetID: mediumID)
             }
         }
-        .courtifyHomeWidgetStampEnabled()
     }
 }
 

@@ -60,7 +60,6 @@ struct NextTournamentWidget: Widget {
                     NextTournamentWidgetContent(tour: entry.tour)
                 }
             }
-            .courtifyHomeWidgetStampEnabled()
         }
         .configurationDisplayName("Next tournament")
         .description("The next major on your tour.")
@@ -82,7 +81,6 @@ struct TournamentCountdownWidget: Widget {
                     TournamentCountdownView(tour: entry.tour, widgetID: "countdown")
                 }
             }
-            .courtifyHomeWidgetStampEnabled()
         }
         .configurationDisplayName("Tournament countdown")
         .description("Days, hours, and minutes until the next major.")
@@ -117,7 +115,6 @@ struct SeasonCalendarWidget: Widget {
                     SeasonCalendarView(tour: entry.tour, widgetID: "calendar")
                 }
             }
-            .courtifyHomeWidgetStampEnabled()
         }
         .configurationDisplayName("Season calendar")
         .description("Full 2026 tournament schedule for your tour.")

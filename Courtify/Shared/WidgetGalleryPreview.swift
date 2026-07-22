@@ -10,7 +10,6 @@ struct WidgetGalleryPreview: View {
 
     var body: some View {
         previewContent
-            // Quiet in-app previews — home-screen WidgetKit still shows the stamp by default.
             .environment(\.showsWidgetMadeByStamp, false)
     }
 

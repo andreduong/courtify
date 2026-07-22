@@ -83,7 +83,6 @@ private struct FavoritePlayerWidgetContainer: View {
                 FavoritePlayerWidgetView(player: entry.player, widgetID: "favorite")
             }
         }
-        .courtifyHomeWidgetStampEnabled()
     }
 }
 
