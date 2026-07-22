@@ -345,8 +345,22 @@ enum WidgetColorStyle {
         config(for: widgetID).resolvedTexture
     }
 
+    /// Premium OLED default for the flagship favorite widgets — pure-black canvas
+    /// with the neon LED signature drawn by the views themselves. The old
+    /// Courtify-green gradient read cheap on the most-added widget (user
+    /// feedback, Jul 2026); green stays available as a preset.
+    static let favoriteOLEDDefault = WidgetColorConfig(
+        presetID: WidgetColorConfig.customPresetID,
+        gradientLevel: 0.4,
+        customAccentHex: 0x0B0B0D,
+        textureID: WidgetTexturePreset.carbon.rawValue
+    )
+
     private static func favoriteConfigFromAppTheme() -> WidgetColorConfig {
         let preset = widgetColorPresetMatchingAppTheme()
+        // Default app theme → the OLED look; users who picked another app theme
+        // (Premium) keep their matching widget accent.
+        guard preset != .courtify else { return favoriteOLEDDefault }
         return WidgetColorConfig(
             presetID: preset.rawValue,
             gradientLevel: 0.72,

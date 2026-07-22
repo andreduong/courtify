@@ -4,6 +4,20 @@ import WidgetKit
 
 // MARK: - Favorite player (free, bundled)
 
+/// Neon LED tick — the favorite widgets' premium signature over the OLED-black
+/// default. Doubles as the data anchor when rank/record are still syncing.
+private struct WidgetLEDAccent: View {
+    var width: CGFloat = 26
+
+    var body: some View {
+        Capsule()
+            .fill(WidgetTheme.opticYellow)
+            .frame(width: width, height: 3)
+            .shadow(color: WidgetTheme.opticYellow.opacity(0.85), radius: 4)
+            .shadow(color: WidgetTheme.opticYellow.opacity(0.4), radius: 9)
+    }
+}
+
 struct FavoritePlayerWidgetView: View {
     let player: TennisPlayer?
     var widgetID: String = "favorite"
@@ -56,6 +70,11 @@ struct FavoritePlayerWidgetView: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: 0)
+
+                if player != nil {
+                    WidgetLEDAccent()
+                        .padding(.bottom, 4)
+                }
 
                 if let record = player?.displaySeasonRecord {
                     Text("\(record.wins)–\(record.losses)")
@@ -168,6 +187,11 @@ struct FavoritePlayerMediumWidgetView: View {
                     }
 
                     Spacer(minLength: 0)
+
+                    if player != nil {
+                        WidgetLEDAccent(width: 32)
+                            .padding(.bottom, 5)
+                    }
 
                     if let career = player?.careerRecord {
                         // Retired legends: career W/L anchors the big display slot

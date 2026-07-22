@@ -31,7 +31,7 @@ This repo has two parts:
 | Widget content inset | `WidgetTheme.contentInsets` (16pt + stamp clearance) on home widget copy | Per-widget ad-hoc `.padding(14)`; bare `contentInset` that crowds the stamp |
 | Widget “made by” stamp | `.courtifyWidgetCanvas()` (default stamp) / `WidgetMadeByStamp` | Home widgets without stamp; Lock Screen with stamp (use `stamp: .none`) |
 | Widget atmosphere | `WidgetAtmosphere` + hatch + surface accent bars (no muddy slam logos as bg) | Flat single-color fills; faded tournament logos behind copy |
-| Widget colors (Premium) | `WidgetColorStyle` + `WidgetColorPickerSheet` (app group) | Skipping Tournament theme default on `next-*` / `countdown` / `calendar` |
+| Widget colors (Premium) | `WidgetColorStyle` + `WidgetColorPickerSheet` (app group) | Skipping Tournament theme default on `next-*` / `countdown` / `calendar`; reverting favorite widgets to the green-gradient default (OLED black + `WidgetLEDAccent` is canonical, Jul 2026) |
 | Widgets gallery catalog | `CourtifyWidgetCatalog` (+ `WidgetsCollectionView`) | Duplicate gallery lists that drift from WidgetKit kinds |
 | Home-screen + Lock Screen widgets | `CourtifyWidget/` + `CourtifyWidgetBundle` (`OtherBundle().body` when >10) | Leave gallery-only widgets unregistered; nest `WidgetBundle()` as a `Widget` |
 | Tab chrome | `ProfileIconButton`, `TourPillToggle`, `LastUpdatedLabel`, `CourtifyTileDivider` | Duplicate profile/settings entry points or introduce new haptic/animation curves |
