@@ -172,10 +172,8 @@ struct WidgetsCollectionView: View {
             if let shareID = UITestLaunchArgs.widgetShareItemID {
                 Task { @MainActor in
                     try? await Task.sleep(for: .seconds(1.5))
-                    if let item = galleryItem(id: shareID), !isLocked(item) {
-                        CourtifyMotion.animateModal { shareItem = item }
-                    } else if let item = galleryItem(id: shareID), isLocked(item) {
-                        showPaywall = true
+                    if let item = galleryItem(id: shareID) {
+                        openWidgetCustomization(for: item)
                     }
                 }
             }
@@ -365,8 +363,18 @@ struct WidgetsCollectionView: View {
 
     // MARK: Card chrome
 
-    private func isLocked(_ item: CourtifyWidgetCatalog.Item) -> Bool {
+    /// Premium widgets stay fully previewed in the gallery; paywall only on customize tap
+    /// or when the user adds the widget on Home / Lock Screen (WidgetKit).
+    private func requiresPremium(_ item: CourtifyWidgetCatalog.Item) -> Bool {
         !item.isFree && !isEntitled
+    }
+
+    private func openWidgetCustomization(for item: CourtifyWidgetCatalog.Item) {
+        if requiresPremium(item) {
+            showPaywall = true
+        } else {
+            CourtifyMotion.animateModal { shareItem = item }
+        }
     }
 
     private func galleryItem(id: String) -> CourtifyWidgetCatalog.Item? {
@@ -376,30 +384,18 @@ struct WidgetsCollectionView: View {
     /// Lock Screen cards — accessory-sized widgets only (no purple container).
     @ViewBuilder
     private func lockWidgetCard(for item: CourtifyWidgetCatalog.Item) -> some View {
-        let locked = isLocked(item)
-
         VStack(alignment: .leading, spacing: 8) {
             Button {
-                if locked {
-                    showPaywall = true
-                } else {
-                    CourtifyMotion.animateModal { shareItem = item }
-                }
+                openWidgetCustomization(for: item)
             } label: {
-                Group {
-                    if locked {
-                        lockScreenLockedPreview(for: item)
-                    } else {
-                        WidgetGalleryPreview(
-                            item: item,
-                            favoritePlayer: favoritePlayer,
-                            favoritePlayerID: favoritePlayerID,
-                            tour: preferredTour,
-                            payload: dataStore.payload
-                        )
-                        .id("\(item.id)-\(colorRefreshTick)")
-                    }
-                }
+                WidgetGalleryPreview(
+                    item: item,
+                    favoritePlayer: favoritePlayer,
+                    favoritePlayerID: favoritePlayerID,
+                    tour: preferredTour,
+                    payload: dataStore.payload
+                )
+                .id("\(item.id)-\(colorRefreshTick)")
             }
             .courtifyButton(.card)
 
@@ -410,26 +406,7 @@ struct WidgetsCollectionView: View {
     }
 
     @ViewBuilder
-    private func lockScreenLockedPreview(for item: CourtifyWidgetCatalog.Item) -> some View {
-        switch item.size {
-        case .small:
-            ZStack {
-                LockScreenPreviewPlate(style: .circular)
-                LockScreenLockedCircular()
-            }
-            .frame(width: 72, height: 72)
-        case .medium, .large:
-            ZStack {
-                LockScreenPreviewPlate(style: .rectangular)
-                LockScreenLockedRectangular()
-            }
-            .frame(width: 158, height: 68)
-        }
-    }
-
-    @ViewBuilder
     private func widgetCard(for item: CourtifyWidgetCatalog.Item) -> some View {
-        let locked = isLocked(item)
         let isSquareSmall = item.size == .small
         let canRecolor = WidgetColorStyle.isCustomizable(item.id)
         let previewWidth: CGFloat? = isSquareSmall ? item.size.previewHeight : nil
@@ -438,26 +415,16 @@ struct WidgetsCollectionView: View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topTrailing) {
                 Button {
-                    if isLocked(item) {
-                        showPaywall = true
-                    } else {
-                        CourtifyMotion.animateModal { shareItem = item }
-                    }
+                    openWidgetCustomization(for: item)
                 } label: {
-                    Group {
-                        if locked {
-                            WidgetLockedSurface(layout: .from(catalogSize: item.size))
-                        } else {
-                            WidgetGalleryPreview(
-                                item: item,
-                                favoritePlayer: favoritePlayer,
-                                favoritePlayerID: favoritePlayerID,
-                                tour: preferredTour,
-                                payload: dataStore.payload
-                            )
-                            .id("\(item.id)-\(colorRefreshTick)")
-                        }
-                    }
+                    WidgetGalleryPreview(
+                        item: item,
+                        favoritePlayer: favoritePlayer,
+                        favoritePlayerID: favoritePlayerID,
+                        tour: preferredTour,
+                        payload: dataStore.payload
+                    )
+                    .id("\(item.id)-\(colorRefreshTick)")
                     .frame(width: previewWidth)
                     .frame(maxWidth: isSquareSmall ? nil : .infinity)
                     .frame(height: previewHeight)
@@ -465,7 +432,7 @@ struct WidgetsCollectionView: View {
                 }
                 .courtifyButton(.card)
 
-                if canRecolor, !locked {
+                if canRecolor {
                     Button {
                         if isEntitled {
                             colorPickerItem = item
@@ -495,7 +462,7 @@ struct WidgetsCollectionView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
 
-                if !locked, item.id == "favorite" || item.id == "favorite-medium" {
+                if item.id == "favorite" || item.id == "favorite-medium" {
                     Button {
                         showPlayerPicker = true
                     } label: {
