@@ -97,7 +97,7 @@ struct WidgetsCollectionView: View {
                 id: section.id,
                 title: section.title,
                 subtitle: section.subtitle,
-                accessLabel: section.accessLabel,
+                accessLabel: isEntitled ? nil : section.accessLabel,
                 items: items
             )
         }
@@ -386,20 +386,44 @@ struct WidgetsCollectionView: View {
                     CourtifyMotion.animateModal { shareItem = item }
                 }
             } label: {
-                WidgetGalleryPreview(
-                    item: item,
-                    favoritePlayer: favoritePlayer,
-                    favoritePlayerID: favoritePlayerID,
-                    tour: preferredTour,
-                    payload: dataStore.payload
-                )
-                .id("\(item.id)-\(colorRefreshTick)")
+                Group {
+                    if locked {
+                        lockScreenLockedPreview(for: item)
+                    } else {
+                        WidgetGalleryPreview(
+                            item: item,
+                            favoritePlayer: favoritePlayer,
+                            favoritePlayerID: favoritePlayerID,
+                            tour: preferredTour,
+                            payload: dataStore.payload
+                        )
+                        .id("\(item.id)-\(colorRefreshTick)")
+                    }
+                }
             }
             .courtifyButton(.card)
 
             Text(item.title)
                 .font(ThemeManager.roundedFont(.caption, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
+        }
+    }
+
+    @ViewBuilder
+    private func lockScreenLockedPreview(for item: CourtifyWidgetCatalog.Item) -> some View {
+        switch item.size {
+        case .small:
+            ZStack {
+                LockScreenPreviewPlate(style: .circular)
+                LockScreenLockedCircular()
+            }
+            .frame(width: 72, height: 72)
+        case .medium, .large:
+            ZStack {
+                LockScreenPreviewPlate(style: .rectangular)
+                LockScreenLockedRectangular()
+            }
+            .frame(width: 158, height: 68)
         }
     }
 
@@ -420,14 +444,20 @@ struct WidgetsCollectionView: View {
                         CourtifyMotion.animateModal { shareItem = item }
                     }
                 } label: {
-                    WidgetGalleryPreview(
-                        item: item,
-                        favoritePlayer: favoritePlayer,
-                        favoritePlayerID: favoritePlayerID,
-                        tour: preferredTour,
-                        payload: dataStore.payload
-                    )
-                    .id("\(item.id)-\(colorRefreshTick)")
+                    Group {
+                        if locked {
+                            WidgetLockedSurface(layout: .from(catalogSize: item.size))
+                        } else {
+                            WidgetGalleryPreview(
+                                item: item,
+                                favoritePlayer: favoritePlayer,
+                                favoritePlayerID: favoritePlayerID,
+                                tour: preferredTour,
+                                payload: dataStore.payload
+                            )
+                            .id("\(item.id)-\(colorRefreshTick)")
+                        }
+                    }
                     .frame(width: previewWidth)
                     .frame(maxWidth: isSquareSmall ? nil : .infinity)
                     .frame(height: previewHeight)
@@ -435,7 +465,7 @@ struct WidgetsCollectionView: View {
                 }
                 .courtifyButton(.card)
 
-                if canRecolor {
+                if canRecolor, !locked {
                     Button {
                         if isEntitled {
                             colorPickerItem = item
@@ -463,10 +493,6 @@ struct WidgetsCollectionView: View {
                     .courtifyButton(.icon)
                     .padding(10)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                } else if locked {
-                    CourtifyGlassLockBadge()
-                        .padding(10)
-                        .allowsHitTesting(false)
                 }
 
                 if !locked, item.id == "favorite" || item.id == "favorite-medium" {

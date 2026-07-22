@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		90EDFB7886EE4264851C4B74 /* LockScreenLockedViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F711C920AD64314B2AA86DC /* LockScreenLockedViews.swift */; };
+		80D136020BD140A1A4CF494B /* LockScreenLockedViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F711C920AD64314B2AA86DC /* LockScreenLockedViews.swift */; };
+		38FBA313D1664048B51F9F32 /* WidgetLockedSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436EF466AEFE404CBAF8B9A2 /* WidgetLockedSurface.swift */; };
+		50D1BBF14CDC4BEFAA4780B5 /* WidgetLockedSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436EF466AEFE404CBAF8B9A2 /* WidgetLockedSurface.swift */; };
 		01D693D58FAB405596E73D9B /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46D986A2E91404A881B39EC /* ThemeManager.swift */; };
 		C1D2E3F4056677F8193A4B5E /* CourtifyMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E3F4056677F8193A4B5C6F /* CourtifyMotion.swift */; };
 		036479E2F64D48149B7BA9DA /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDA4924FD9E485EA96190E2 /* SplashScreenView.swift */; };
@@ -39,6 +43,7 @@
 		9FB4D1CE237D4B8BBC8990CD /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC2498726254A049F313895 /* OnboardingFlowView.swift */; };
 		C1D2E3F4056677F8193A4B5F /* OnboardingChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */; };
 		D2E3F4056677F8193A4B5D0 /* ReferralCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */; };
+		OCV1A2B3C4D5E6478890A1B001 /* OnboardingCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = OCV1A2B3C4D5E6478890A1B000 /* OnboardingCompleteView.swift */; };
 		E3F4056677F8193A4B5C6D8 /* NotificationPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F4056677F8193A4B5C6D7 /* NotificationPermissionView.swift */; };
 		F2A3B4C5D6E7589901B2C3D4 /* AppGroupConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6478890A1B2C3 /* AppGroupConstants.swift */; };
 		F3A4B5C6D7E8690012C3D4E5 /* WidgetDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B3C4D5E6F7589901A2B3C4 /* WidgetDataModels.swift */; };
@@ -148,6 +153,7 @@
 		5AC2498726254A049F313895 /* OnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlowView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChrome.swift; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferralCodeView.swift; sourceTree = "<group>"; };
+		OCV1A2B3C4D5E6478890A1B000 /* OnboardingCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCompleteView.swift; sourceTree = "<group>"; };
 		E3F4056677F8193A4B5C6D7 /* NotificationPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionView.swift; sourceTree = "<group>"; };
 		5B90A18254E0401DA5526364 /* RevenueCatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatManager.swift; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5C6D /* OfferNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferNotificationManager.swift; sourceTree = "<group>"; };
@@ -208,6 +214,8 @@
 		L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSilhouetteView.swift; sourceTree = "<group>"; };
 		M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourtifyMarqueeBackground.swift; sourceTree = "<group>"; };
 		M2A2B3C4D5E6478890A1B2D9 /* MarqueeShowcaseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeShowcaseData.swift; sourceTree = "<group>"; };
+		436EF466AEFE404CBAF8B9A2 /* WidgetLockedSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetLockedSurface.swift; sourceTree = "<group>"; };
+		6F711C920AD64314B2AA86DC /* LockScreenLockedViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenLockedViews.swift; sourceTree = "<group>"; };
 		K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisPlayerPhotoView.swift; sourceTree = "<group>"; };
 		J3A2B3C4D5E6478890A1B2CE /* FavoritePlayerPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerPickerSheet.swift; sourceTree = "<group>"; };
 		J4A2B3C4D5E6478890A1B2CF /* FavoritePlayerWidgetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritePlayerWidgetIntent.swift; sourceTree = "<group>"; };
@@ -300,6 +308,7 @@
 		5AC2498726254A049F313895 /* OnboardingFlowView.swift */,
 		A1B2C3D4E5F60718293A4B5D /* OnboardingChrome.swift */,
 		B2C3D4E5F60718293A4B5C6 /* ReferralCodeView.swift */,
+		OCV1A2B3C4D5E6478890A1B000 /* OnboardingCompleteView.swift */,
 		E3F4056677F8193A4B5C6D7 /* NotificationPermissionView.swift */,
 			);
 			path = Onboarding;
@@ -392,6 +401,8 @@
 				L2A2B3C4D5E6478890A1B2D7 /* PlayerSilhouetteView.swift */,
 				M1A2B3C4D5E6478890A1B2D8 /* CourtifyMarqueeBackground.swift */,
 				M2A2B3C4D5E6478890A1B2D9 /* MarqueeShowcaseData.swift */,
+				436EF466AEFE404CBAF8B9A2 /* WidgetLockedSurface.swift */,
+				6F711C920AD64314B2AA86DC /* LockScreenLockedViews.swift */,
 				K3A2B3C4D5E6478890A1B2D3 /* TennisPlayerPhotoView.swift */,
 				J3A2B3C4D5E6478890A1B2CE /* FavoritePlayerPickerSheet.swift */,
 			);
@@ -538,6 +549,7 @@
 				9FB4D1CE237D4B8BBC8990CD /* OnboardingFlowView.swift in Sources */,
 		C1D2E3F4056677F8193A4B5F /* OnboardingChrome.swift in Sources */,
 		D2E3F4056677F8193A4B5D0 /* ReferralCodeView.swift in Sources */,
+		OCV1A2B3C4D5E6478890A1B001 /* OnboardingCompleteView.swift in Sources */,
 				E3F4056677F8193A4B5C6D8 /* NotificationPermissionView.swift in Sources */,
 				CLS1A2B3C4D5E6478890A1B001 /* CourtifyLoadingScreen.swift in Sources */,
 				5D0F22A6A4714F61A53F732E /* PaywallView.swift in Sources */,
@@ -566,6 +578,8 @@
 				F6A7B8C9D0E1923345F60718 /* WidgetTheme.swift in Sources */,
 				WCS1A2B3C4D5E6478890A1B002 /* WidgetColorStyle.swift in Sources */,
 				WCS1A2B3C4D5E6478890A1B012 /* WidgetColorPickerSheet.swift in Sources */,
+				38FBA313D1664048B51F9F32 /* WidgetLockedSurface.swift in Sources */,
+				90EDFB7886EE4264851C4B74 /* LockScreenLockedViews.swift in Sources */,
 				G1B2C3D4E5F60718293A4B62 /* WidgetGalleryViews.swift in Sources */,
 				G2B2C3D4E5F60718293A4B63 /* WidgetPayloadReader.swift in Sources */,
 				G7B2C3D4E5F60718293A4B65 /* WidgetPreviewSamples.swift in Sources */,
@@ -618,6 +632,8 @@
 				W2TOUR7890123456ABCDEF /* TournamentCalendar.swift in Sources */,
 				W3C4D5E6F7A8690012B3C4D5 /* WidgetAPIService.swift in Sources */,
 				W4D5E6F7A8B9701123C4D5E6 /* WidgetImageCache.swift in Sources */,
+				50D1BBF14CDC4BEFAA4780B5 /* WidgetLockedSurface.swift in Sources */,
+				80D136020BD140A1A4CF494B /* LockScreenLockedViews.swift in Sources */,
 				W5E6F7A8B9C0812234D5E6F7 /* WidgetTheme.swift in Sources */,
 				WCS1A2B3C4D5E6478890A1B003 /* WidgetColorStyle.swift in Sources */,
 				G1W2B3C4D5E6478890A1B2C3 /* WidgetGalleryViews.swift in Sources */,
@@ -772,7 +788,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -806,7 +822,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Courtify/Courtify.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_PREVIEWS = YES;
@@ -838,7 +854,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -865,7 +881,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = CourtifyWidget/CourtifyWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 43;
+				CURRENT_PROJECT_VERSION = 44;
 				DEVELOPMENT_TEAM = B2P86X9N67;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = NO;

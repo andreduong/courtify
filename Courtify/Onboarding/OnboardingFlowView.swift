@@ -25,6 +25,7 @@ struct OnboardingFlowView: View {
     @State private var path: [OnboardingStep] = []
     @State private var navigationDirection: CourtifyMotion.Direction = .forward
     @State private var showSpecialOfferOnPaywall = false
+    @State private var referralUnlockedDuringOnboarding = false
 
     private var draftTourPreference: TourPreference {
         get { TourPreference(rawValue: draftTourPreferenceRaw) ?? .both }
@@ -156,19 +157,24 @@ struct OnboardingFlowView: View {
             .padding(.top, onboardingContentTopInset)
         case .referralCode:
             ReferralCodeView(
-                onSubmit: completeOnboardingViaReferral,
-                onSkip: { navigateForward(.allSet) }
+                onSubmit: {
+                    referralUnlockedDuringOnboarding = true
+                    AppGroupConstants.activateReferralBypass()
+                    navigateForward(.allSet)
+                },
+                onSkip: {
+                    referralUnlockedDuringOnboarding = false
+                    navigateForward(.allSet)
+                }
             )
             .courtifyScreenContent()
             .padding(.top, onboardingContentTopInset)
         case .allSet:
-            CourtifyLoadingScreen()
-                .task {
-                    // Brief beat so the transition reads before paywall.
-                    try? await Task.sleep(for: .milliseconds(650))
-                    guard path.last == .allSet else { return }
-                    navigateForward(.paywall)
-                }
+            OnboardingCompleteView(
+                favoritePlayerName: TennisPlayer.displayName(for: draftFavoritePlayerID),
+                referralUnlocked: referralUnlockedDuringOnboarding,
+                onContinue: finishAllSetStep
+            )
         case .paywall:
             PaywallView(
                 favoritePlayerID: draftFavoritePlayerID,
@@ -252,9 +258,12 @@ struct OnboardingFlowView: View {
         commitOnboardingAndFinish(grantWidgetAccess: true)
     }
 
-    private func completeOnboardingViaReferral() {
-        AppGroupConstants.activateReferralBypass()
-        commitOnboardingAndFinish(grantWidgetAccess: true)
+    private func finishAllSetStep() {
+        if referralUnlockedDuringOnboarding {
+            commitOnboardingAndFinish(grantWidgetAccess: true)
+        } else {
+            navigateForward(.paywall)
+        }
     }
 
     private func completeOnboardingAsFreeUser() {

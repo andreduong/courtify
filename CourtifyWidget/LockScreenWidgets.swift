@@ -312,35 +312,4 @@ private struct LockScreenLockedContainer: View {
     }
 }
 
-struct LockScreenLockedCircular: View {
-    var body: some View {
-        ZStack {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.75))
-        }
-    }
-}
-
-struct LockScreenLockedRectangular: View {
-    var body: some View {
-        ZStack {
-            HStack(spacing: 10) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.75))
-
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Subscribe to")
-                        .font(WidgetTheme.roundedFont(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.7))
-                    CourtifyWordmark(size: 15)
-                }
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-        }
-    }
-}
+// Locked placeholders live in `Courtify/Shared/LockScreenLockedViews.swift`.
