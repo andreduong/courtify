@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum WidgetTheme {
     static let midnightGreen = Color(hex: 0x0A120D)
@@ -70,6 +71,15 @@ enum WidgetTheme {
         tour == .wta ? Color(hex: 0x7B3FA0) : Color(hex: 0x1A6B9A)
     }
 
+    /// Neon line color for light-grid textures — bright accents keep their hue,
+    /// near-black accents (the OLED defaults) glow brand yellow instead of vanishing.
+    static func neonLine(for accent: Color) -> Color {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(accent).getRed(&r, green: &g, blue: &b, alpha: &a)
+        let luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        return luminance < 0.16 ? opticYellow : accent
+    }
+
     static func ordinalRank(_ ranking: Int?) -> String {
         guard let ranking, ranking > 0 else { return "—" }
         switch ranking {
@@ -134,6 +144,22 @@ struct WidgetTextureOverlay: View {
 
     var body: some View {
         switch texture {
+        case .neonGrid:
+            // Tron on OLED black: perspective light-grid floor + glowing horizon,
+            // finished with a liquid-glass specular hairline along the top edge.
+            ZStack {
+                NeonGridOverlay(line: WidgetTheme.neonLine(for: accent))
+
+                LinearGradient(
+                    colors: [Color.white.opacity(0.20), .clear],
+                    startPoint: .top,
+                    endPoint: UnitPoint(x: 0.5, y: 0.16)
+                )
+                .blendMode(.plusLighter)
+                .opacity(0.55)
+            }
+            .allowsHitTesting(false)
+
         case .aurora:
             ZStack {
                 RadialGradient(
@@ -242,6 +268,55 @@ struct WidgetTextureOverlay: View {
             }
             .allowsHitTesting(false)
         }
+    }
+}
+
+/// Tron-style light grid — perspective floor lines rising to a glowing horizon.
+/// Drawn far below copy contrast thresholds so it reads as atmosphere, not noise.
+struct NeonGridOverlay: View {
+    var line: Color
+
+    var body: some View {
+        Canvas { ctx, size in
+            // Low horizon + muted bloom: the line must never read as a
+            // strikethrough when it crosses copy (live small shipped that).
+            let horizonY = size.height * 0.68
+
+            // Floor rows — spacing widens toward the viewer.
+            var y = horizonY + 4
+            var step: CGFloat = 5
+            while y < size.height + step {
+                var row = Path()
+                row.move(to: CGPoint(x: 0, y: y))
+                row.addLine(to: CGPoint(x: size.width, y: y))
+                let depth = (y - horizonY) / max(1, size.height - horizonY)
+                ctx.stroke(row, with: .color(line.opacity(0.05 + 0.09 * depth)), lineWidth: 0.7)
+                y += step
+                step *= 1.5
+            }
+
+            // Columns converging on a vanishing point above the horizon.
+            let vanish = CGPoint(x: size.width * 0.5, y: horizonY - size.height * 0.9)
+            let columns = 10
+            for i in 0...columns {
+                let x = size.width * CGFloat(i) / CGFloat(columns)
+                let towardVanish = (horizonY - size.height) / (vanish.y - size.height)
+                var column = Path()
+                column.move(to: CGPoint(x: x, y: size.height))
+                column.addLine(to: CGPoint(x: x + (vanish.x - x) * towardVanish, y: horizonY))
+                ctx.stroke(column, with: .color(line.opacity(0.08)), lineWidth: 0.7)
+            }
+
+            // Glowing horizon — layered strokes fake an LED bloom.
+            var horizon = Path()
+            horizon.move(to: CGPoint(x: 0, y: horizonY))
+            horizon.addLine(to: CGPoint(x: size.width, y: horizonY))
+            ctx.stroke(horizon, with: .color(line.opacity(0.06)), lineWidth: 4)
+            ctx.stroke(horizon, with: .color(line.opacity(0.14)), lineWidth: 1.6)
+            ctx.stroke(horizon, with: .color(line.opacity(0.30)), lineWidth: 0.7)
+        }
+        .blendMode(.plusLighter)
+        .allowsHitTesting(false)
     }
 }
 

@@ -83,8 +83,9 @@ struct WidgetColorConfig: Codable, Equatable {
     }
 }
 
-/// Atmospheric surface treatment — carbon fiber is one option, not the default.
+/// Atmospheric surface treatment — neon grid is the OLED family default.
 enum WidgetTexturePreset: String, CaseIterable, Identifiable {
+    case neonGrid
     case aurora
     case spotlight
     case carbon
@@ -95,6 +96,7 @@ enum WidgetTexturePreset: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .neonGrid: "Neon grid"
         case .aurora: "Aurora"
         case .spotlight: "Spotlight"
         case .carbon: "Carbon"
@@ -105,6 +107,7 @@ enum WidgetTexturePreset: String, CaseIterable, Identifiable {
 
     var subtitle: String {
         switch self {
+        case .neonGrid: "Light lines"
         case .aurora: "Soft glow"
         case .spotlight: "Stadium light"
         case .carbon: "Fiber hatch"
@@ -192,36 +195,14 @@ enum WidgetColorStyle {
         switch widgetID {
         case "favorite", "favorite-medium":
             return favoriteConfigFromAppTheme()
-        case "atp-medium", "atp-large":
-            return WidgetColorConfig(
-                presetID: WidgetColorPreset.hardcourt.rawValue,
-                gradientLevel: 0.72,
-                customAccentHex: nil,
-                textureID: WidgetTexturePreset.aurora.rawValue
-            )
-        case "wta-medium", "wta-large":
-            return WidgetColorConfig(
-                presetID: WidgetColorPreset.berry.rawValue,
-                gradientLevel: 0.72,
-                customAccentHex: nil,
-                textureID: WidgetTexturePreset.aurora.rawValue
-            )
-        case "live":
-            // Sleek near-black gradient for live scores (gallery + home widget default).
-            return WidgetColorConfig(
-                presetID: WidgetColorConfig.customPresetID,
-                gradientLevel: 0.42,
-                customAccentHex: 0x121212,
-                textureID: WidgetTexturePreset.spotlight.rawValue
-            )
-        case "order":
-            // Australian Open sky blue as the Order of Play default.
-            return WidgetColorConfig(
-                presetID: WidgetColorConfig.customPresetID,
-                gradientLevel: 0.68,
-                customAccentHex: GrandSlam.australianOpen.accentColor,
-                textureID: WidgetTexturePreset.aurora.rawValue
-            )
+        case "atp-medium", "atp-large",
+             "wta-medium", "wta-large",
+             "live", "order":
+            // Unified OLED product family (Jul 2026): standings / live / order share
+            // the favorite widgets' black + neon-grid look. Category identity comes
+            // from content (headers, tour accent bars, live dot) — hardcourt blue /
+            // berry / AO sky stay one tap away as presets.
+            return favoriteOLEDDefault
         default:
             return .default
         }
@@ -345,15 +326,16 @@ enum WidgetColorStyle {
         config(for: widgetID).resolvedTexture
     }
 
-    /// Premium OLED default for the flagship favorite widgets — pure-black canvas
-    /// with the neon LED signature drawn by the views themselves. The old
+    /// Premium OLED default — pure-black canvas + Tron neon-grid texture, with
+    /// the LED signature drawn by the favorite views themselves. The old
     /// Courtify-green gradient read cheap on the most-added widget (user
-    /// feedback, Jul 2026); green stays available as a preset.
+    /// feedback, Jul 2026); green stays available as a preset. Carbon hatch was
+    /// rejected as "Android-looking" — neon grid is the canonical OLED texture.
     static let favoriteOLEDDefault = WidgetColorConfig(
         presetID: WidgetColorConfig.customPresetID,
         gradientLevel: 0.4,
         customAccentHex: 0x0B0B0D,
-        textureID: WidgetTexturePreset.carbon.rawValue
+        textureID: WidgetTexturePreset.neonGrid.rawValue
     )
 
     private static func favoriteConfigFromAppTheme() -> WidgetColorConfig {
