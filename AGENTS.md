@@ -350,11 +350,15 @@ Do not introduce other animation curves or haptic APIs.
 
 `WidgetsCollectionView` is an F1-app-style gallery: filter pills
 (All / Small / Medium / Large / **Free**), sections with captions under each
-card. Catalog: Favorite player (small + medium, **free**), Next tournament
-(small + large), Tournament countdown (medium), Season calendar (large),
-ATP/WTA standings (medium top-5 + large top-10), Live scores (small),
-Order of play (large), Lock Screen (circular rank **free**, circular countdown,
-rectangular next / live preview).
+card. **Section order (product-ranked, Jul 2026):** Favorite player (home) →
+**Lock Screen chapter** (favorite → badges → season → countdown → live; expected
+second-most-popular category, led by the free lock favorite so the frosted-plate
+shift from colorful home cards reads as a deliberate chapter) → Tournaments →
+ATP/WTA standings → Live widgets. Catalog: Favorite player (small + medium,
+**free**), Next tournament (small + large), Tournament countdown (medium),
+Season calendar (large), ATP/WTA standings (medium top-5 + large top-10),
+Live scores (small), Order of play (large), Lock Screen (circular rank **free**,
+circular countdown, rectangular next / live preview).
 
 Gating rules:
 
@@ -414,7 +418,7 @@ record). Never expand this into a mass fetch.
 
 **Display:** `TennisPlayer.displaySeasonRecord` prefers bundled featured W/L, else `PlayerSeasonRecordCache` (always `nil` for retired legends).
 
-**Retired legends (zero API cost):** `TennisPlayer.retiredLegendCareerRecords` (in `OnboardingModels.swift`, keyed by hero slug) bundles verified career singles W/L for Federer 1251–275, Nadal 1080–227, Murray 739–262, Hewitt 616–262, Roddick 612–213, Serena 858–156, Sharapova 645–171, Barty 305–102. `isRetiredLegend` / `careerRecord` drive display: Home hero shows the "\(tour) LEGEND" eyebrow + "Legend" (opticYellow) + "W–L career · pct%", widgets show `LEGEND` + career stats, onboarding posters show "ATP Legend". Enrichment **skips** lookup + season-record for legends (`FavoritePlayerEnricher.enrich` + `healSeasonRecordIfNeeded` guard) — without the heal guard every pull-to-refresh would re-fire a doomed lookup. Active-but-unranked players (Kyrgios-type, no bundled apiId) show name + hero only — never dash placeholders. Verify career numbers against ATP/WTA records before adding a legend; do not add active players.
+**Retired legends (zero API cost):** `TennisPlayer.retiredLegendCareerRecords` (in `OnboardingModels.swift`, keyed by hero slug) bundles verified career singles W/L for Federer 1251–275, Nadal 1080–227, Murray 739–262, Hewitt 616–262, Roddick 612–213, Serena 858–156, Sharapova 645–171, Barty 305–102. `isRetiredLegend` / `careerRecord` drive display: Home hero shows the "\(tour) LEGEND" eyebrow + "Legend" (opticYellow) + "W–L career · pct%"; widgets put the career W/L in the big rank slot (no LEGEND wordmark — too loud at widget scale) with a CAREER / "Career W–L" caption; onboarding posters show "ATP Legend". Enrichment **skips** lookup + season-record for legends (`FavoritePlayerEnricher.enrich` + `healSeasonRecordIfNeeded` guard) — without the heal guard every pull-to-refresh would re-fire a doomed lookup. Active-but-unranked players (Kyrgios-type, no bundled apiId) show name + hero only — never dash placeholders. Verify career numbers against ATP/WTA records before adding a legend; do not add active players.
 
 **Cache migration:** `AppGroupConstants.migratePlayerCachesIfNeeded()` (schema v2) wipes stale `playerRankCache` + `player-images/` once on upgrade.
 
@@ -746,7 +750,7 @@ after TestFlight install.
 - **WidgetKit catalog:** `CourtifyWidgetCatalog` is the single source of truth for gallery cards and WidgetKit kinds. Exceed the 10-kind builder limit with `OtherBundle().body` (not `OtherBundle()` as a `Widget`). Lock Screen kinds live in `LockScreenWidgets.swift`.
 - **Slam logos anywhere in rows/cards:** use shared `SlamLogoBadge` (`AssetCatalogImage.swift`) — `scaledToFill` + `clipShape(Circle())` + brand-tinted circle so AO / RG / Wimbledon / US Open all read as round badges (wide US Open wordmark fills then clips). Onboarding slam list, Settings picker sheet, and Settings favorite card all use it — never raw `.fit` logos in mixed-shape lists.
 - **`.fill` cutouts inside fixed-size cards:** a `scaledToFill` image taller than its card reports its overflow height through a flexible (`maxWidth/maxHeight: .infinity`) frame, inflating the enclosing ZStack past the card clip — content gets vertically centered and cropped (onboarding posters shipped with cropped heads + rank labels cut below the card edge, Jul 2026). Give the image a **fixed** `.frame(width:height:alignment: .top)` + `.clipped()` instead so overflow crops into the bottom fade, not the face.
-- **Never render "—" in a widget:** missing rank/season data omits the element entirely (name + hero carry the layout). Retired legends show `LEGEND` (opticYellow display font) + bundled career W/L instead of season stats.
+- **Never render "—" in a widget:** missing rank/season data omits the element entirely (name + hero carry the layout). Retired legends put career W/L (verbatim, no locale comma) in the big display slot the rank normally anchors — no `LEGEND` wordmark on widgets (too loud at widget scale; "Legend" copy is Home-hero only).
 - **Small favorite widget name:** two-line "First\nLAST" text needs `.fixedSize(horizontal: false, vertical: true)` + `minimumScaleFactor(0.6)` — without reserved line height the Spacer compresses it to one truncated line ("Casper…").
 - **Ambient glow in scroll headers:** attach `CourtifyAmbientGlow` as `.background` of the header HStack, never as a ZStack sibling — its fixed 140pt frame drives layout height and opens a dead gap below the header (Widgets collection shipped this).
 - **Quota UX:** when custom favorite photos fail with **true quota (429/503)**, show a short helper + one-shot alert. Inactive/unranked / not-found fails **silently** with `PlayerSilhouetteView` (or circular studio headshot when a head JPEG exists) — never blame “API limit” for Kyrgios-style misses.

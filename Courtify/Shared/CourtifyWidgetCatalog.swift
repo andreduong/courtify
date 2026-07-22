@@ -89,25 +89,20 @@ enum CourtifyWidgetCatalog {
             Item(id: "favorite", title: "Favorite player", size: .small, kind: favoritePlayerKind, placement: .homeScreen, isFree: true),
             Item(id: "favorite-medium", title: "Favorite player", size: .medium, kind: favoritePlayerKind, placement: .homeScreen, isFree: true),
         ]),
-        Section(id: "tournaments", title: "Tournament widgets", accessLabel: .premium, items: [
-            Item(id: "next-small", title: "Next tournament", size: .small, kind: nextTournamentKind, placement: .homeScreen),
-            Item(id: "countdown", title: "Tournament countdown", size: .medium, kind: tournamentCountdownKind, placement: .homeScreen),
-            Item(id: "next-large", title: "Next tournament", size: .large, kind: nextTournamentKind, placement: .homeScreen),
-            Item(id: "calendar", title: "Season calendar", size: .large, kind: seasonCalendarKind, placement: .homeScreen),
-        ]),
-        Section(id: "atp", title: "ATP widgets", accessLabel: .premium, items: [
-            Item(id: "atp-medium", title: "ATP standings", size: .medium, kind: atpStandingsKind, placement: .homeScreen),
-            Item(id: "atp-large", title: "ATP standings", size: .large, kind: atpStandingsKind, placement: .homeScreen),
-        ]),
-        Section(id: "wta", title: "WTA widgets", accessLabel: .premium, items: [
-            Item(id: "wta-medium", title: "WTA standings", size: .medium, kind: wtaStandingsKind, placement: .homeScreen),
-            Item(id: "wta-large", title: "WTA standings", size: .large, kind: wtaStandingsKind, placement: .homeScreen),
-        ]),
-        Section(id: "live", title: "Live widgets", accessLabel: .premium, items: [
-            Item(id: "live", title: "Live scores", size: .small, kind: liveScoresKind, placement: .homeScreen),
-            Item(id: "order", title: "Order of play", size: .large, kind: orderOfPlayKind, placement: .homeScreen),
-        ]),
-        // Lock Screen — hardcore-fan order (badges → favorite → season → countdown → live)
+        // Lock Screen chapter sits right after the home favorite: it is expected to
+        // be the second-most-popular category, and leading it with the (free)
+        // lock-screen Favorite player keeps a thematic bridge across the visual
+        // shift from colorful home cards to frosted accessory plates.
+        Section(
+            id: "lock-favorite",
+            title: "Favorite player",
+            subtitle: "Rank and season stats on your Lock Screen.",
+            accessLabel: .free,
+            items: [
+                Item(id: "lock-rank", title: "Rank", size: .small, kind: lockScreenRankKind, placement: .lockScreen, isFree: true),
+                Item(id: "lock-player", title: "Stats", size: .medium, kind: lockScreenFavoriteKind, placement: .lockScreen, isFree: true),
+            ]
+        ),
         Section(
             id: "lock-badges",
             title: "Lockscreen Badges",
@@ -116,16 +111,6 @@ enum CourtifyWidgetCatalog {
             items: [
                 Item(id: "lock-badge", title: "Circular", size: .small, kind: lockScreenBadgeKind, placement: .lockScreen),
                 Item(id: "lock-badge-rect", title: "Rectangular", size: .medium, kind: lockScreenBadgeKind, placement: .lockScreen),
-            ]
-        ),
-        Section(
-            id: "lock-favorite",
-            title: "Favorite player",
-            subtitle: "Rank and season stats for your player.",
-            accessLabel: .free,
-            items: [
-                Item(id: "lock-rank", title: "Rank", size: .small, kind: lockScreenRankKind, placement: .lockScreen, isFree: true),
-                Item(id: "lock-player", title: "Stats", size: .medium, kind: lockScreenFavoriteKind, placement: .lockScreen, isFree: true),
             ]
         ),
         Section(
@@ -157,6 +142,24 @@ enum CourtifyWidgetCatalog {
                 Item(id: "lock-live", title: "Rectangular", size: .medium, kind: lockScreenLiveKind, placement: .lockScreen),
             ]
         ),
+        Section(id: "tournaments", title: "Tournament widgets", accessLabel: .premium, items: [
+            Item(id: "next-small", title: "Next tournament", size: .small, kind: nextTournamentKind, placement: .homeScreen),
+            Item(id: "countdown", title: "Tournament countdown", size: .medium, kind: tournamentCountdownKind, placement: .homeScreen),
+            Item(id: "next-large", title: "Next tournament", size: .large, kind: nextTournamentKind, placement: .homeScreen),
+            Item(id: "calendar", title: "Season calendar", size: .large, kind: seasonCalendarKind, placement: .homeScreen),
+        ]),
+        Section(id: "atp", title: "ATP widgets", accessLabel: .premium, items: [
+            Item(id: "atp-medium", title: "ATP standings", size: .medium, kind: atpStandingsKind, placement: .homeScreen),
+            Item(id: "atp-large", title: "ATP standings", size: .large, kind: atpStandingsKind, placement: .homeScreen),
+        ]),
+        Section(id: "wta", title: "WTA widgets", accessLabel: .premium, items: [
+            Item(id: "wta-medium", title: "WTA standings", size: .medium, kind: wtaStandingsKind, placement: .homeScreen),
+            Item(id: "wta-large", title: "WTA standings", size: .large, kind: wtaStandingsKind, placement: .homeScreen),
+        ]),
+        Section(id: "live", title: "Live widgets", accessLabel: .premium, items: [
+            Item(id: "live", title: "Live scores", size: .small, kind: liveScoresKind, placement: .homeScreen),
+            Item(id: "order", title: "Order of play", size: .large, kind: orderOfPlayKind, placement: .homeScreen),
+        ]),
     ]
 
     static var allItems: [Item] {
