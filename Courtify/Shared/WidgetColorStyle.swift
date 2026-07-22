@@ -195,14 +195,37 @@ enum WidgetColorStyle {
         switch widgetID {
         case "favorite", "favorite-medium":
             return favoriteConfigFromAppTheme()
-        case "atp-medium", "atp-large",
-             "wta-medium", "wta-large",
-             "live", "order":
-            // Unified OLED product family (Jul 2026): standings / live / order share
-            // the favorite widgets' black + neon-grid look. Category identity comes
-            // from content (headers, tour accent bars, live dot) — hardcourt blue /
-            // berry / AO sky stay one tap away as presets.
-            return favoriteOLEDDefault
+        case "atp-medium", "atp-large":
+            // Content-based color, family texture: hardcourt navy under the neon grid.
+            return WidgetColorConfig(
+                presetID: WidgetColorPreset.hardcourt.rawValue,
+                gradientLevel: 0.72,
+                customAccentHex: nil,
+                textureID: WidgetTexturePreset.neonGrid.rawValue
+            )
+        case "wta-medium", "wta-large":
+            return WidgetColorConfig(
+                presetID: WidgetColorPreset.berry.rawValue,
+                gradientLevel: 0.72,
+                customAccentHex: nil,
+                textureID: WidgetTexturePreset.neonGrid.rawValue
+            )
+        case "live":
+            // Near-black stays — broadcast-dark suits live scores.
+            return WidgetColorConfig(
+                presetID: WidgetColorConfig.customPresetID,
+                gradientLevel: 0.42,
+                customAccentHex: 0x121212,
+                textureID: WidgetTexturePreset.neonGrid.rawValue
+            )
+        case "order":
+            // Australian Open sky blue — order of play reads like a stadium board.
+            return WidgetColorConfig(
+                presetID: WidgetColorConfig.customPresetID,
+                gradientLevel: 0.68,
+                customAccentHex: GrandSlam.australianOpen.accentColor,
+                textureID: WidgetTexturePreset.neonGrid.rawValue
+            )
         default:
             return .default
         }

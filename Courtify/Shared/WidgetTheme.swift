@@ -71,13 +71,14 @@ enum WidgetTheme {
         tour == .wta ? Color(hex: 0x7B3FA0) : Color(hex: 0x1A6B9A)
     }
 
-    /// Neon line color for light-grid textures — bright accents keep their hue,
-    /// near-black accents (the OLED defaults) glow brand yellow instead of vanishing.
+    /// Neon line color for light-grid textures. Colored accents (ATP navy, WTA
+    /// berry) glow as neon versions of their own hue; neutral near-black accents
+    /// (the OLED favorite default) glow brand yellow instead of vanishing.
     static func neonLine(for accent: Color) -> Color {
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        UIColor(accent).getRed(&r, green: &g, blue: &b, alpha: &a)
-        let luminance = 0.299 * r + 0.587 * g + 0.114 * b
-        return luminance < 0.16 ? opticYellow : accent
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(accent).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        if s < 0.2 && b < 0.3 { return opticYellow }
+        return Color(hue: h, saturation: max(s, 0.55), brightness: max(b, 0.8))
     }
 
     static func ordinalRank(_ ranking: Int?) -> String {
@@ -278,8 +279,8 @@ struct NeonGridOverlay: View {
 
     var body: some View {
         Canvas { ctx, size in
-            // Low horizon + muted bloom: the line must never read as a
-            // strikethrough when it crosses copy (live small shipped that).
+            // Floor grid only — no glowing horizon stroke. A bright line across
+            // the card read as a green glitch / strikethrough (user, Jul 2026).
             let horizonY = size.height * 0.68
 
             // Floor rows — spacing widens toward the viewer.
@@ -307,13 +308,6 @@ struct NeonGridOverlay: View {
                 ctx.stroke(column, with: .color(line.opacity(0.08)), lineWidth: 0.7)
             }
 
-            // Glowing horizon — layered strokes fake an LED bloom.
-            var horizon = Path()
-            horizon.move(to: CGPoint(x: 0, y: horizonY))
-            horizon.addLine(to: CGPoint(x: size.width, y: horizonY))
-            ctx.stroke(horizon, with: .color(line.opacity(0.06)), lineWidth: 4)
-            ctx.stroke(horizon, with: .color(line.opacity(0.14)), lineWidth: 1.6)
-            ctx.stroke(horizon, with: .color(line.opacity(0.30)), lineWidth: 0.7)
         }
         .blendMode(.plusLighter)
         .allowsHitTesting(false)
