@@ -108,29 +108,80 @@ struct TennisPlayer: Identifiable, Hashable {
         return PlayerSeasonRecordCache.record(for: id)
     }
 
-    /// Retired all-time greats — career singles W/L verified against ATP/WTA
-    /// records at retirement (Jul 2026). Current-season rank / W-L never applies:
-    /// surfaces show a "Legend" label + career record, and enrichment skips the
-    /// season-record fetch. Keyed by hero slug so `custom:` IDs and payload
-    /// spellings resolve without a second dictionary.
-    private static let retiredLegendCareerRecords: [String: (wins: Int, losses: Int)] = [
-        "roger-federer": (1251, 275),
-        "rafael-nadal": (1080, 227),
-        "andy-murray": (739, 262),
-        "lleyton-hewitt": (616, 262),
-        "andy-roddick": (612, 213),
-        "serena-williams": (858, 156),
-        "maria-sharapova": (645, 171),
-        "ashleigh-barty": (305, 102),
+    /// Bundled career facts for retired legends (zero API cost — Matchstat
+    /// surface-summary is season-only and has no slam-title breakdown).
+    /// Verified against ATP/WTA records at retirement (Jul 2026). Keyed by hero
+    /// slug so `custom:` IDs and payload spellings resolve without a second map.
+    struct LegendCareerStats: Equatable {
+        let wins: Int
+        let losses: Int
+        /// Singles majors: AO, RG, Wimbledon, US Open.
+        let australianOpen: Int
+        let frenchOpen: Int
+        let wimbledon: Int
+        let usOpen: Int
+
+        var totalSlams: Int { australianOpen + frenchOpen + wimbledon + usOpen }
+
+        var winPercentage: Int {
+            let total = wins + losses
+            guard total > 0 else { return 0 }
+            return Int((Double(wins) / Double(total) * 100).rounded())
+        }
+
+        /// Verbatim career W/L (no locale commas) + win %.
+        var recordLine: String {
+            "\(wins)-\(losses) · \(winPercentage)%"
+        }
+
+        /// Compact slam titles for Lock Screen Stats (AO/RG/WIM/USO order).
+        var slamLine: String {
+            slamBreakdown
+                .map { "\($0.slam.shortCode)\($0.count)" }
+                .joined(separator: "  ")
+        }
+
+        /// W/L · % · slam split on one line (total GS lives in the leading tile).
+        var statsLine: String {
+            "\(recordLine) · \(slamLine)"
+        }
+
+        var slamBreakdown: [(slam: GrandSlam, count: Int)] {
+            [
+                (.australianOpen, australianOpen),
+                (.frenchOpen, frenchOpen),
+                (.wimbledon, wimbledon),
+                (.usOpen, usOpen),
+            ]
+        }
+    }
+
+    private static let retiredLegendCareers: [String: LegendCareerStats] = [
+        "roger-federer": .init(wins: 1251, losses: 275, australianOpen: 6, frenchOpen: 1, wimbledon: 8, usOpen: 5),
+        "rafael-nadal": .init(wins: 1080, losses: 227, australianOpen: 2, frenchOpen: 14, wimbledon: 2, usOpen: 4),
+        "pete-sampras": .init(wins: 762, losses: 222, australianOpen: 2, frenchOpen: 0, wimbledon: 7, usOpen: 5),
+        "andre-agassi": .init(wins: 870, losses: 274, australianOpen: 4, frenchOpen: 1, wimbledon: 1, usOpen: 2),
+        "andy-murray": .init(wins: 739, losses: 262, australianOpen: 0, frenchOpen: 0, wimbledon: 2, usOpen: 1),
+        "lleyton-hewitt": .init(wins: 616, losses: 262, australianOpen: 0, frenchOpen: 0, wimbledon: 1, usOpen: 1),
+        "andy-roddick": .init(wins: 612, losses: 213, australianOpen: 0, frenchOpen: 0, wimbledon: 0, usOpen: 1),
+        "serena-williams": .init(wins: 858, losses: 156, australianOpen: 7, frenchOpen: 3, wimbledon: 7, usOpen: 6),
+        "maria-sharapova": .init(wins: 645, losses: 171, australianOpen: 1, frenchOpen: 2, wimbledon: 1, usOpen: 1),
+        "ashleigh-barty": .init(wins: 305, losses: 102, australianOpen: 1, frenchOpen: 1, wimbledon: 1, usOpen: 0),
     ]
 
     var isRetiredLegend: Bool {
-        TennisPlayer.retiredLegendCareerRecords[TennisPlayer.heroSlug(for: name)] != nil
+        TennisPlayer.retiredLegendCareers[TennisPlayer.heroSlug(for: name)] != nil
+    }
+
+    /// Full bundled legend career (W/L + slam titles); `nil` for active players.
+    var legendCareer: LegendCareerStats? {
+        TennisPlayer.retiredLegendCareers[TennisPlayer.heroSlug(for: name)]
     }
 
     /// Career singles W/L for retired legends (bundled; `nil` for active players).
     var careerRecord: (wins: Int, losses: Int)? {
-        TennisPlayer.retiredLegendCareerRecords[TennisPlayer.heroSlug(for: name)]
+        guard let legend = legendCareer else { return nil }
+        return (legend.wins, legend.losses)
     }
 
     /// Bundled 2026 season W/L through current tour stop (featured catalog only).

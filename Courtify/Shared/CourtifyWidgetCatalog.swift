@@ -148,6 +148,9 @@ enum CourtifyWidgetCatalog {
             Item(id: "next-large", title: "Next tournament", size: .large, kind: nextTournamentKind, placement: .homeScreen),
             Item(id: "calendar", title: "Season calendar", size: .large, kind: seasonCalendarKind, placement: .homeScreen),
         ]),
+        Section(id: "rankings", title: "Rankings", accessLabel: .premium, items: [
+            Item(id: "rankings-small", title: "Rankings", size: .small, kind: atpStandingsKind, placement: .homeScreen),
+        ]),
         Section(id: "atp", title: "ATP widgets", accessLabel: .premium, items: [
             Item(id: "atp-medium", title: "ATP standings", size: .medium, kind: atpStandingsKind, placement: .homeScreen),
             Item(id: "atp-large", title: "ATP standings", size: .large, kind: atpStandingsKind, placement: .homeScreen),

@@ -401,6 +401,8 @@ struct NextTournamentSmallView: View {
             )
             .id(colorTick)
 
+            CourtifyTennisBallWatermark()
+
             VStack(alignment: .leading, spacing: 4) {
                 if let event {
                     Text("\(event.shortName) · \(event.location.uppercased())")
@@ -681,6 +683,100 @@ struct SeasonCalendarView: View {
 
 // MARK: - Rankings widgets
 
+/// Compact square standings — top 3 fills the All-tab 2×2 without duplicating tournament cards.
+struct RankingsSmallView: View {
+    let tour: TourPreference
+    let entries: [WidgetRankingEntry]
+    var showsRefreshHint = false
+    var widgetID: String = "rankings-small"
+    var forceAccent: Color? = nil
+    @State private var colorTick = 0
+
+    private var resolvedAccent: Color {
+        forceAccent
+            ?? WidgetColorStyle.config(for: widgetID).resolvedAccent
+    }
+
+    private var fallbackAccent: Color {
+        tour == .atp ? Color(hex: WidgetColorStyle.atpTourBlueHex) : Color(hex: 0x5A2D78)
+    }
+
+    var body: some View {
+        ZStack {
+            Group {
+                if let forceAccent {
+                    WidgetColorStyle.gradient(
+                        accent: forceAccent,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                } else {
+                    WidgetColorStyle.gradient(
+                        for: widgetID,
+                        fallbackAccent: fallbackAccent,
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            }
+            .id(colorTick)
+            WidgetTextureOverlay(
+                texture: WidgetColorStyle.texture(for: widgetID),
+                accent: resolvedAccent
+            )
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(tour.rawValue)
+                    .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                    .foregroundStyle(WidgetTheme.opticYellow)
+
+                if entries.isEmpty {
+                    Spacer(minLength: 0)
+                    widgetEmptyStateLabel(showsRefreshHint: showsRefreshHint, fallback: "Open Courtify to load rankings")
+                    Spacer(minLength: 0)
+                } else {
+                    ForEach(Array(entries.prefix(3).enumerated()), id: \.element.id) { index, entry in
+                        smallRankingRow(entry, isLeader: index == 0)
+                        if index < min(2, entries.prefix(3).count - 1) {
+                            Spacer(minLength: 2)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(WidgetTheme.contentInsets)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .courtifyWidgetCanvas()
+        .onReceive(NotificationCenter.default.publisher(for: AppGroupConstants.widgetColorDidChange)) { note in
+            guard (note.object as? String) == widgetID || note.object == nil else { return }
+            colorTick += 1
+        }
+    }
+
+    private func smallRankingRow(_ entry: WidgetRankingEntry, isLeader: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(WidgetTheme.ordinalRank(entry.rank))
+                .font(WidgetTheme.displayFont(size: isLeader ? 22 : 13, weight: .heavy))
+                .foregroundStyle(isLeader ? .white : .white.opacity(0.55))
+                .frame(width: isLeader ? 36 : 28, alignment: .leading)
+
+            Text(shortName(entry.player.name))
+                .font(WidgetTheme.roundedFont(size: isLeader ? 13 : 11, weight: .bold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func shortName(_ name: String) -> String {
+        let last = name.split(separator: " ").last.map(String.init) ?? name
+        return last.uppercased()
+    }
+}
+
 struct RankingsWidgetView: View {
     let tour: TourPreference
     let entries: [WidgetRankingEntry]
@@ -906,7 +1002,7 @@ struct LiveScoresWidgetView: View {
                 } else {
                     WidgetColorStyle.gradient(
                         for: widgetID,
-                        fallbackAccent: Color(hex: 0x121212),
+                        fallbackAccent: Color(hex: GrandSlam.wimbledon.accentColor),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -1156,6 +1252,7 @@ struct LockScreenPreviewPlate: View {
                     .fill(Color.white.opacity(0.14))
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -1163,6 +1260,17 @@ struct LockScreenPreviewPlate: View {
 enum LockScreenGallerySamples {
     static var player: TennisPlayer {
         WidgetPreviewSamples.favoritePlayer
+    }
+
+    /// Gallery showcase for Lock Screen Stats — career legend, not a live ranking.
+    static var legendFederer: TennisPlayer {
+        TennisPlayer(
+            id: "custom:atp:Roger Federer",
+            name: "Roger Federer",
+            tour: .atp,
+            imageName: nil,
+            ranking: 0
+        )
     }
 
     static var slam: GrandSlam { .wimbledon }
@@ -1496,65 +1604,97 @@ struct LockScreenRectangularFavoriteView: View {
     let player: TennisPlayer?
     var showsPreviewPlate: Bool = false
 
+    private var isLegend: Bool { player?.isRetiredLegend == true }
+    private var legend: TennisPlayer.LegendCareerStats? { player?.legendCareer }
+
+    private let chromeInset: CGFloat = 8
+    private let tileSize: CGFloat = 40
+
     var body: some View {
         ZStack {
             if showsPreviewPlate {
                 LockScreenPreviewPlate(style: .rectangular)
             }
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(shortName)
-                        .font(WidgetTheme.displayFont(size: 14, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
 
-                    HStack(spacing: 6) {
-                        Image(systemName: "trophy.fill")
-                            .font(.system(size: 8, weight: .semibold))
-                        Text(WidgetTheme.ordinalRank(player?.ranking))
-                            .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
-                            .lineLimit(1)
-                            .fixedSize(horizontal: true, vertical: false)
-                        if let record = player?.displaySeasonRecord {
-                            Image(systemName: "chart.bar.fill")
-                                .font(.system(size: 8, weight: .semibold))
-                            Text("\(record.wins)-\(record.losses)")
-                                .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                        }
-                    }
-                    .foregroundStyle(.white.opacity(0.55))
-                }
+    @ViewBuilder
+    private var content: some View {
+        if isLegend, let legend {
+            statsRow(
+                badge: "\(legend.totalSlams)",
+                name: displayName,
+                detail: legend.statsLine
+            )
+        } else {
+            statsRow(
+                badge: activeRankBadge,
+                name: displayName,
+                detail: activeStatsLine
+            )
+        }
+    }
 
-                Spacer(minLength: 4)
-
-                Text(rankNumber)
-                    .font(WidgetTheme.displayFont(size: 26, weight: .heavy))
+    /// One leading number tile + two text lines. Equal inset on all sides.
+    private func statsRow(badge: String?, name: String, detail: String?) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            if let badge, !badge.isEmpty {
+                Text(badge)
+                    .font(WidgetTheme.displayFont(size: badge.count > 2 ? 16 : 20, weight: .heavy))
                     .foregroundStyle(.white)
-                    .minimumScaleFactor(0.6)
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.55)
                     .lineLimit(1)
-                    .frame(width: 42, height: 42)
+                    .frame(width: tileSize, height: tileSize)
                     .background(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color.white.opacity(0.12))
                     )
+                    .widgetAccentable()
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name)
+                    .font(WidgetTheme.displayFont(size: 13, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.55)
+
+                if let detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(WidgetTheme.roundedFont(size: 10, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                        .monospacedDigit()
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(chromeInset)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
-    private var shortName: String {
+    private var displayName: String {
         guard let player else { return "PLAYER" }
-        let last = player.name.split(separator: " ").last.map(String.init) ?? player.name
-        return last.uppercased()
+        return player.name.uppercased()
     }
 
-    private var rankNumber: String {
-        guard let ranking = player?.ranking, ranking > 0 else { return "—" }
-        return String(format: "%02d", min(ranking, 99))
+    /// Active players: season W/L · win % only (no slam titles).
+    private var activeStatsLine: String? {
+        guard let record = player?.displaySeasonRecord else { return nil }
+        let total = record.wins + record.losses
+        let pct = total > 0
+            ? Int((Double(record.wins) / Double(total) * 100).rounded())
+            : 0
+        return "\(record.wins)-\(record.losses) · \(pct)%"
+    }
+
+    private var activeRankBadge: String? {
+        guard let ranking = player?.ranking, ranking > 0 else { return nil }
+        return "\(min(ranking, 99))"
     }
 }
 

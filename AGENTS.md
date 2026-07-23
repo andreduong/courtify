@@ -40,7 +40,7 @@ This repo has two parts:
 
 **UI language:** OLED black canvas + ambient brand glow (`CourtifyAmbientGlow` / `CourtifyListAmbientBloom` on list screens), frosted glass cards (`.courtifyGlassSurface` / `.glassCard` — pure `.ultraThinMaterial` + white @ 15% hairline), floating capsule tab bar with neon `#ccff00` active tint + glow dot. White rounded type, `opticYellow` highlights, `courtGreen` tile subtitles. Motion/haptics only via `CourtifyMotion` + `.courtifyButton(...)` — root `.courtifyInteractiveChrome()` gives every `Button` soft press-down `sensoryFeedback` + scale, **and** a universal surface press (subtle scale + dim + soft haptic) on any non-button tap so Home / Schedule / Rankings feel responsive without per-screen wiring. Override buttons with `.courtifyButton(.primary/.card/.icon/.row/…)`. Selection (tabs, tour, toggles) uses `.courtifySelectionFeedback`; onboarding grids/lists use `.courtifySelectableCard`.
 
-**API cost rule:** RapidAPI Matchstat **Pro ($29/mo)** is required — Basic 50/day is insufficient. Worker data refreshes on **user pull-to-refresh** (Home, Rankings, Widgets) or the **one-time onboarding exception**. Custom lookup / photo / season-record only on favorite **pick**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
+**API cost rule:** RapidAPI Matchstat **Pro ($29/mo)** is required — Basic 50/day is insufficient. Worker data refreshes on **user pull-to-refresh** (Home, Rankings) or the **one-time onboarding exception**. Widgets collection is preview-only (dummy/bundled samples — no Last updated, no pull-to-refresh). Custom lookup / photo / season-record only on favorite **pick**. Everything else reads cache or bundled data. Deploy Worker after `index.js` changes: `npx wrangler deploy`.
 
 **Verify your work:** build → `simctl install` → `simctl launch … -UITestHome [-UITestTab …]` → wait ~7s (bootstrap spinner) → screenshot. See [Simulator testing](#simulator-testing-for-agents) below.
 
@@ -349,36 +349,35 @@ Do not introduce other animation curves or haptic APIs.
 ### Widgets tab (gallery)
 
 `WidgetsCollectionView` is an F1-app-style gallery: filter pills
-(All / Small / Medium / Large / **Free**), sections with captions under each
-card. **Section order (product-ranked, Jul 2026):** Favorite player (home) →
-**Lock Screen chapter** (favorite → badges → season → countdown → live; expected
-second-most-popular category, led by the free lock favorite so the frosted-plate
-shift from colorful home cards reads as a deliberate chapter) → Tournaments →
-ATP/WTA standings → Live widgets. Catalog: Favorite player (small + medium,
-**free**), Next tournament (small + large), Tournament countdown (medium),
-Season calendar (large), ATP/WTA standings (medium top-5 + large top-10),
+(All / Lockscreen / Small / Medium / Large / **Free**). **All-tab order:** home
+smalls 2×2 (favorite → next → live → **Rankings**) → **Lock Screen** chapter
+(favorite Rank + Stats first, then other badges) → mediums → larges. Catalog:
+Favorite player (small + medium, **free**), Next tournament (small + large),
+Tournament countdown (medium), Season calendar (large), **Rankings** small
+(ATP/WTA via Customize) + ATP/WTA standings (medium top-5 + large top-10),
 Live scores (small), Order of play (large), Lock Screen (circular rank **free**,
-circular countdown, rectangular next / live preview).
+Stats rectangular **free** with Federer legend showcase in gallery, plus Premium
+badges / season / countdown / live).
 
 Gating rules:
 
-- **Pro-gated except:** Favorite player (small + medium) and Lock Screen favorite rank.
+- **Pro-gated except:** Favorite player (small + medium) and Lock Screen favorite Rank + Stats.
   Entitled means `RevenueCatManager.isProUser || AppGroupConstants.referralBypassActive`.
-- Locked cards show a `Premium 🎾` badge and the whole card opens the paywall.
+- Locked cards show a `Premium` badge and the whole card opens the paywall.
 - The Favorite player widget uses **bundled season record** + `FavoritePlayerCatalog.resolvedPlayer` for rank when available; bundled `-hero` for featured players. Custom picks show verified API photos or empty hero (no letter placeholders).
-- **Gallery small widgets** are **165×165 pt squares** (`previewHeight` width = height); lone small cards align leading, not full-width.
+- **Gallery home widgets** use a Formulify-style density grid: **Small** = 2-column equal flexible squares (fill half-row each); **Medium / Large** = full-width stack. Size filters (Small/Medium/Large) flatten home-screen items into one continuous grid (Lock Screen accessories stay on All / Lockscreen / Free only).
 - **Unlocked card tap** → `WidgetShareView` (`.courtifyButton(.card)` haptic + modal) with Share → system share sheet. Shared image includes **Made by Courtify on App Store** stamp.
-- Person control on favorite opens `FavoritePlayerPickerSheet`; color control on home-screen cards opens `WidgetColorPickerSheet` (or paywall when free). Tournament cards default to Tournament theme.
-- Rankings / live / order-of-play cards read `WidgetDataStore` (cached payload;
-  pull-to-refresh only). Tournament cards read the bundled
-  `TournamentCalendar` (zero API cost).
+- Single **Customize** icon on home-screen gallery cards opens `WidgetColorPickerSheet` (favorite widgets include player Change; Rankings includes ATP/WTA tour pick; color actions stay Premium-gated). Tournament cards default to Tournament theme.
+- **Preview-only:** gallery cards use `WidgetPreviewSamples` / bundled calendar (no `WidgetDataStore` pull, no Last updated, no pull-to-refresh).
 
 ### Data refresh policy (API cost control)
 
 **Default rule:** live Worker data refreshes **only when the user pulls to refresh**
-(Home, Rankings, and Widgets tabs). On appear, screens call `dataStore.loadCachedPayload()`
-only, and show `LastUpdatedLabel` plus a pull-to-refresh hint. Do not add
-auto-refresh timers or on-appear `refresh()` without an explicit product request.
+(Home and Rankings tabs). Widgets collection is **preview-only** — never call
+`refresh()` or show Last updated there. On appear, Home/Rankings call
+`dataStore.loadCachedPayload()` only, and show `LastUpdatedLabel` plus a
+pull-to-refresh hint. Do not add auto-refresh timers or on-appear `refresh()`
+without an explicit product request.
 
 **"Last updated" label semantics:** `WidgetDataStore.lastUpdated` prefers `lastSyncedAt`
 (device-local timestamp set on every successful Worker fetch, persisted in the app group
@@ -396,9 +395,7 @@ record). Never expand this into a mass fetch.
 |---------|-------------|----------|
 | Home tab (favorite rank) | Cached Worker payload | Pull-to-refresh only |
 | Rankings tab (20 rows/tour) | Cached Worker payload | Pull-to-refresh only |
-| Widgets gallery — rankings / live / order of play | Same cache | Pull-to-refresh only |
-| Widgets gallery — tournaments | `TournamentCalendar` (bundled 2026) | Never |
-| Widgets gallery — favorite player | Bundled season record **or** `PlayerSeasonRecordCache` + optional verified rank/photo cache | Picker select (lookup + photo + season-record in parallel); missing custom W/L also heals on pull-to-refresh |
+| Widgets gallery — all cards | `WidgetPreviewSamples` / bundled calendar | Never (preview-only) |
 
 ### Custom favorite players (outside top 20)
 
@@ -418,7 +415,19 @@ record). Never expand this into a mass fetch.
 
 **Display:** `TennisPlayer.displaySeasonRecord` prefers bundled featured W/L, else `PlayerSeasonRecordCache` (always `nil` for retired legends).
 
-**Retired legends (zero API cost):** `TennisPlayer.retiredLegendCareerRecords` (in `OnboardingModels.swift`, keyed by hero slug) bundles verified career singles W/L for Federer 1251–275, Nadal 1080–227, Murray 739–262, Hewitt 616–262, Roddick 612–213, Serena 858–156, Sharapova 645–171, Barty 305–102. `isRetiredLegend` / `careerRecord` drive display: Home hero shows the "\(tour) LEGEND" eyebrow + "Legend" (opticYellow) + "W–L career · pct%"; widgets put the career W/L in the big rank slot (no LEGEND wordmark — too loud at widget scale) with a CAREER / "Career W–L" caption; onboarding posters show "ATP Legend". Enrichment **skips** lookup + season-record for legends (`FavoritePlayerEnricher.enrich` + `healSeasonRecordIfNeeded` guard) — without the heal guard every pull-to-refresh would re-fire a doomed lookup. Active-but-unranked players (Kyrgios-type, no bundled apiId) show name + hero only — never dash placeholders. Verify career numbers against ATP/WTA records before adding a legend; do not add active players.
+**Retired legends (zero API cost):** `TennisPlayer.retiredLegendCareers` /
+`LegendCareerStats` (in `OnboardingModels.swift`, keyed by hero slug) bundles
+verified career singles W/L **and** slam titles (AO/RG/WIM/USO) for Federer,
+Nadal, Sampras, Agassi, Murray, Hewitt, Roddick, Serena, Sharapova, Barty.
+RapidAPI surface-summary is season-only — do **not** fetch career majors.
+`isRetiredLegend` / `careerRecord` / `legendCareer` drive display: Home hero
+shows the "\(tour) LEGEND" eyebrow + "Legend" + career W/L; home widgets put
+career W/L in the big rank slot; **Lock Screen Stats** uses favorite player
+(live) — legend → leading total-GS tile + full name + `W/L · % · AO# RG# WIM# USO#`;
+active → leading rank tile + full name + season `W/L · %` (gallery preview
+showcases Federer). Enrichment **skips** lookup + season-record for legends.
+Verify numbers against ATP/WTA records before adding a legend; do not add
+active players.
 
 **Cache migration:** `AppGroupConstants.migratePlayerCachesIfNeeded()` (schema v2) wipes stale `playerRankCache` + `player-images/` once on upgrade.
 
@@ -602,7 +611,7 @@ Use this loop every session — do not rediscover setup:
 
 7. **Widget gallery item IDs** for `-UITestWidgetOnly`:
    `favorite`, `favorite-medium`, `next-small`, `countdown`, `next-large`, `calendar`,
-   `atp-medium`, `atp-large`, `wta-medium`, `wta-large`, `live`, `order`,
+   `rankings-small`, `atp-medium`, `atp-large`, `wta-medium`, `wta-large`, `live`, `order`,
    `lock-badge`, `lock-badge-rect`, `lock-rank`, `lock-player`, `lock-season`,
    `lock-season-rect`, `lock-countdown`, `lock-next`, `lock-live`
 
@@ -735,11 +744,11 @@ after TestFlight install.
 - `placeholder-male` / `placeholder-female` for custom favorites (use `PlayerSilhouetteView`).
 - `FavoritePlayerHeroImage` inside Settings `FavoriteCard` (widget padding breaks layout).
 - `CachedBundledImage` for Grand Slam logos after asset updates (use `AssetCatalogImage`).
-- Full-width small widget gallery cards (small = 165×165 square, leading-aligned).
+- Lone small gallery cards left half-blank without a 2-col grid (small = **2-column** flexible squares; medium/large = full-width stack).
 - Per-player photo/silhouette on paywall (use `CourtifyMarqueeBackground`).
 - **Settings `FavoriteCard` taller than `Change`:** oversized torso/silhouette intrinsic size + `.frame(height:)` centers content → title and Change get clipped. Keep artwork overlay-only (no huge intrinsic size); pad Change above the 20pt corner radius; both cards `minWidth: 0` + equal `maxWidth: .infinity`.
 - **Silhouette “half white gradient” on widgets:** never put a `LinearGradient` / fill behind `PlayerSilhouetteView` torso — when the hero is leading-padded, the wash only covers the trailing half and looks broken. Use monochrome SF Symbol only.
-- **Gallery chrome expanding small cards:** palette/person overlays must live *inside* a ZStack framed to the preview size (165×165). `frame(maxWidth: .infinity)` on overlay buttons pushes a lone small card to the trailing edge.
+- **Gallery chrome expanding small cards:** palette/person overlays must live *inside* the preview ZStack (never a sibling `frame(maxWidth: .infinity)` outside the card). Small cells size via `aspectRatio(1)` in the 2-col grid.
 - **Ad-hoc widget padding:** always use `WidgetTheme.contentInsets` on home-screen widget copy (16pt + stamp clearance). Favorite may add trailing air for silhouette, but leading/top stay on the shared inset. Do not use bare `contentInset` alone — it crowds the stamp.
 - **Made by Courtify stamp:** every home-screen widget ends with `.courtifyWidgetCanvas()` which overlays a bright `WidgetMadeByStamp` (white on dark capsule; default `.bottomTrailing`; use `.bottomCenter` / `.bottomLeading` when content crowds a corner). Lock Screen accessories must pass `stamp: .none`. Do not hand-roll a second watermark.
 - **Widget backgrounds:** prefer `WidgetAtmosphere` / hatch texture and surface-color accent bars; do not fade Grand Slam logos into the background.
@@ -750,7 +759,7 @@ after TestFlight install.
 - **WidgetKit catalog:** `CourtifyWidgetCatalog` is the single source of truth for gallery cards and WidgetKit kinds. Exceed the 10-kind builder limit with `OtherBundle().body` (not `OtherBundle()` as a `Widget`). Lock Screen kinds live in `LockScreenWidgets.swift`.
 - **Slam logos anywhere in rows/cards:** use shared `SlamLogoBadge` (`AssetCatalogImage.swift`) — `scaledToFill` + `clipShape(Circle())` + brand-tinted circle so AO / RG / Wimbledon / US Open all read as round badges (wide US Open wordmark fills then clips). Onboarding slam list, Settings picker sheet, and Settings favorite card all use it — never raw `.fit` logos in mixed-shape lists.
 - **`.fill` cutouts inside fixed-size cards:** a `scaledToFill` image taller than its card reports its overflow height through a flexible (`maxWidth/maxHeight: .infinity`) frame, inflating the enclosing ZStack past the card clip — content gets vertically centered and cropped (onboarding posters shipped with cropped heads + rank labels cut below the card edge, Jul 2026). Give the image a **fixed** `.frame(width:height:alignment: .top)` + `.clipped()` instead so overflow crops into the bottom fade, not the face.
-- **Never render "—" in a widget:** missing rank/season data omits the element entirely (name + hero carry the layout). Retired legends put career W/L (verbatim, no locale comma) in the big display slot the rank normally anchors — no `LEGEND` wordmark on widgets (too loud at widget scale; "Legend" copy is Home-hero only).
+- **Never render "—" in a widget:** missing rank/season data omits the element entirely (name + hero carry the layout). Retired legends put career W/L (verbatim, no locale comma) in the big display slot the rank normally anchors on home widgets; Lock Screen Stats uses full name + AO/RG/WIM/USO count strip (bundled `LegendCareerStats` — no LEGEND chip, no API). "Legend" copy is Home-hero only.
 - **Small favorite widget name:** two-line "First\nLAST" text needs `.fixedSize(horizontal: false, vertical: true)` + `minimumScaleFactor(0.6)` — without reserved line height the Spacer compresses it to one truncated line ("Casper…").
 - **Ambient glow in scroll headers:** attach `CourtifyAmbientGlow` as `.background` of the header HStack, never as a ZStack sibling — its fixed 140pt frame drives layout height and opens a dead gap below the header (Widgets collection shipped this).
 - **Quota UX:** when custom favorite photos fail with **true quota (429/503)**, show a short helper + one-shot alert. Inactive/unranked / not-found fails **silently** with `PlayerSilhouetteView` (or circular studio headshot when a head JPEG exists) — never blame “API limit” for Kyrgios-style misses.
@@ -791,17 +800,19 @@ after TestFlight install.
 - **Home-screen + Lock Screen widgets** (`CourtifyWidget/`): favorite (S+M), tournaments, standings,
   live, order of play, plus accessory circular/rectangular kinds in `LockScreenWidgets.swift`.
   Reload via `WidgetTimelineRefresher` (includes lock-screen kinds).
-- **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Small/Medium/Large/Free;
-  sectioned catalog; **Favorite player** (S+M) + **Lock Screen rank** are free. Others Pro-gated
+- **Widgets gallery** (`WidgetsCollectionView`): filter pills All/Lockscreen/Small/Medium/Large/Free;
+  sectioned catalog on All; **Favorite player** (S+M) + **Lock Screen rank** are free. Others Pro-gated
   (`Premium 🎾` badge → paywall). Unlocked card tap → `WidgetShareView` + Share
   (system share sheet) with `MadeByCourtifyAppStoreStamp` on the share asset.
-  Small = 165×165 leading-aligned. Overlay chrome:
-  color control (top-trailing, Premium) on all home-screen gallery cards; person control
-  (bottom-trailing) on favorite for player pick. Tournament ids default to **Tournament**
-  theme (live slam/surface brand); users can switch to fixed color presets.
+  **Home density:** Small = 2-col flexible squares; Medium/Large = full-width. **All tab**
+  order: home smalls (favorite / next / live / rankings) → Lock Screen (favorite
+  Rank+Stats first, then other badges) → mediums → larges. Rankings small picks
+  ATP/WTA inside Customize. Gallery is preview-only (no Last updated, no pull-to-refresh).
+  Customize = icon-only paintbrush. **Premium** text chip when free.
   Previews via `WidgetGalleryPreview` (shared with share screen).
 - **Widget color prefs:** app-group key `widgetColorStyles` via `WidgetColorStyle`;
-  Tournament theme + preset accents + gradient/texture; free users tapping color → paywall.
+  Tournament theme + preset accents + gradient/texture; free users can open Customize on
+  favorite to change player, but color picks open paywall from inside the sheet.
 - **Onboarding player cards:** horizontal **3:4 poster** scroll (`PlayerPosterCard`); star on #1; “More” poster + search sheet for out-of-top-10 names. QA: `-UITestOnboarding players`.
 
 ### API / backend

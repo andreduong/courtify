@@ -66,8 +66,8 @@ struct ATPStandingsWidget: Widget {
             RankingsWidgetContainer(entry: entry)
         }
         .configurationDisplayName("ATP standings")
-        .description("Live ATP top 5 or top 10 rankings.")
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .description("Live ATP top 3, top 5, or top 10 rankings.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
@@ -80,8 +80,8 @@ struct WTAStandingsWidget: Widget {
             RankingsWidgetContainer(entry: entry)
         }
         .configurationDisplayName("WTA standings")
-        .description("Live WTA top 5 or top 10 rankings.")
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .description("Live WTA top 3, top 5, or top 10 rankings.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
@@ -89,6 +89,8 @@ struct WTAStandingsWidget: Widget {
 private struct RankingsWidgetContainer: View {
     @Environment(\.widgetFamily) private var family
     let entry: RankingsEntry
+
+    private var smallID: String { "rankings-small" }
 
     private var mediumID: String {
         entry.tour == .wta ? "wta-medium" : "atp-medium"
@@ -104,6 +106,8 @@ private struct RankingsWidgetContainer: View {
                 WidgetLockedView()
             } else if family == .systemLarge {
                 RankingsLargeWidgetView(tour: entry.tour, entries: entry.entries, widgetID: largeID)
+            } else if family == .systemSmall {
+                RankingsSmallView(tour: entry.tour, entries: entry.entries, widgetID: smallID)
             } else {
                 RankingsWidgetView(tour: entry.tour, entries: entry.entries, limit: 5, widgetID: mediumID)
             }

@@ -158,6 +158,9 @@ enum WidgetColorPreset: String, CaseIterable, Identifiable {
 enum WidgetColorStyle {
     static let storeKey = AppGroupConstants.Keys.widgetColorStyles
 
+    /// ATP Tour brand blue — distinct from hardcourt navy on standings mediums.
+    static let atpTourBlueHex: UInt = 0x4A90D9
+
     /// Gallery ids whose default theme is live slam/surface branding.
     static let tournamentThemeDefaultIDs: Set<String> = [
         "next-small", "countdown", "next-large", "calendar",
@@ -167,12 +170,13 @@ enum WidgetColorStyle {
     static let customizableIDs: Set<String> = [
         "favorite", "favorite-medium",
         "next-small", "countdown", "next-large", "calendar",
+        "rankings-small",
         "atp-medium", "atp-large",
         "wta-medium", "wta-large",
         "live", "order",
     ]
 
-    /// Size pairs that share one saved style.
+    /// Size pairs that share one saved style (fully connected per tour family).
     private static let pairedIDs: [(String, String)] = [
         ("favorite", "favorite-medium"),
         ("next-small", "next-large"),
@@ -195,6 +199,20 @@ enum WidgetColorStyle {
         switch widgetID {
         case "favorite", "favorite-medium":
             return favoriteConfigFromAppTheme()
+        case "rankings-small":
+            return AppGroupConstants.rankingsSmallTour == .wta
+                ? WidgetColorConfig(
+                    presetID: WidgetColorPreset.berry.rawValue,
+                    gradientLevel: 0.72,
+                    customAccentHex: nil,
+                    textureID: WidgetTexturePreset.neonGrid.rawValue
+                )
+                : WidgetColorConfig(
+                    presetID: WidgetColorConfig.customPresetID,
+                    gradientLevel: 0.72,
+                    customAccentHex: atpTourBlueHex,
+                    textureID: WidgetTexturePreset.neonGrid.rawValue
+                )
         case "atp-medium", "atp-large":
             // Content-based color, family texture: hardcourt navy under the neon grid.
             return WidgetColorConfig(
@@ -211,11 +229,12 @@ enum WidgetColorStyle {
                 textureID: WidgetTexturePreset.neonGrid.rawValue
             )
         case "live":
-            // Near-black stays — broadcast-dark suits live scores.
+            // Gallery dummy match is Wimbledon Centre Court — purple/green
+            // brand separates the All 2×2 from the OLED favorite tile.
             return WidgetColorConfig(
                 presetID: WidgetColorConfig.customPresetID,
-                gradientLevel: 0.42,
-                customAccentHex: 0x121212,
+                gradientLevel: 0.68,
+                customAccentHex: GrandSlam.wimbledon.accentColor,
                 textureID: WidgetTexturePreset.neonGrid.rawValue
             )
         case "order":

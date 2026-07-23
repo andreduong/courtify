@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Premium sheet: pick Tournament theme / preset / custom accent + gradient for one gallery widget.
+/// Customize sheet: widget colors (Premium) + favorite player pick when relevant.
 struct WidgetColorPickerSheet: View {
     let widgetID: String
     let title: String
@@ -8,12 +8,18 @@ struct WidgetColorPickerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var appearance = AppAppearanceStore.shared
+    @ObservedObject private var dataStore = WidgetDataStore.shared
     @StateObject private var revenueCat = RevenueCatManager.shared
     @AppStorage(AppGroupConstants.Keys.tourPreference, store: AppGroupConstants.userDefaults)
     private var tourPreferenceRaw = TourPreference.atp.rawValue
+    @AppStorage(AppGroupConstants.Keys.favoritePlayerID, store: AppGroupConstants.userDefaults)
+    private var favoritePlayerID = ""
+    @AppStorage(AppGroupConstants.Keys.rankingsSmallTour, store: AppGroupConstants.userDefaults)
+    private var rankingsSmallTourRaw = TourPreference.atp.rawValue
     @State private var draft: WidgetColorConfig
     @State private var sheetDetent: PresentationDetent = .large
     @State private var customColor: Color
+    @State private var showPlayerPicker = false
     /// Avoid writing app-group + reloading widget timelines on every slider tick.
 
     private var isEntitled: Bool {
@@ -23,6 +29,23 @@ struct WidgetColorPickerSheet: View {
     private var preferredTour: TourPreference {
         let tour = TourPreference(rawValue: tourPreferenceRaw) ?? .atp
         return tour == .both ? .atp : tour
+    }
+
+    private var showsFavoritePlayerSection: Bool {
+        widgetID == "favorite" || widgetID == "favorite-medium"
+    }
+
+    private var showsRankingsTourSection: Bool {
+        widgetID == "rankings-small"
+    }
+
+    private var rankingsTour: TourPreference {
+        let tour = TourPreference(rawValue: rankingsSmallTourRaw) ?? .atp
+        return tour == .both ? .atp : tour
+    }
+
+    private var favoritePlayer: TennisPlayer? {
+        FavoritePlayerCatalog.resolvedPlayer(id: favoritePlayerID, payload: dataStore.payload)
     }
 
     init(widgetID: String, title: String, onRequestPaywall: (() -> Void)? = nil) {
@@ -40,6 +63,14 @@ struct WidgetColorPickerSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    if showsFavoritePlayerSection {
+                        favoritePlayerSection
+                    }
+
+                    if showsRankingsTourSection {
+                        rankingsTourSection
+                    }
+
                     previewCard
 
                     if !isEntitled {
@@ -99,6 +130,11 @@ struct WidgetColorPickerSheet: View {
         .presentationDragIndicator(.visible)
         .presentationContentInteraction(.scrolls)
         .interactiveDismissDisabled(false)
+        .sheet(isPresented: $showPlayerPicker) {
+            FavoritePlayerPickerSheet(favoritePlayerID: $favoritePlayerID)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .onDisappear {
             // Persist if the user flicked the sheet away without Done.
             guard isEntitled else { return }
@@ -106,9 +142,99 @@ struct WidgetColorPickerSheet: View {
         }
     }
 
+    private var favoritePlayerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("FAVORITE PLAYER")
+                .font(ThemeManager.roundedFont(.caption, weight: .bold))
+                .foregroundStyle(.white.opacity(0.5))
+
+            Button {
+                showPlayerPicker = true
+            } label: {
+                HStack(spacing: 12) {
+                    if let favoritePlayer {
+                        TennisPlayerPhotoView(player: favoritePlayer, style: .headshot, size: 44)
+                    } else {
+                        PlayerSilhouetteView(tour: preferredTour, style: .headshot, size: 44)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(favoritePlayer?.name ?? "Choose a player")
+                            .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text("Tap to change")
+                            .font(ThemeManager.roundedFont(.caption, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+
+                    Spacer(minLength: 0)
+
+                    Text("Change")
+                        .font(ThemeManager.roundedFont(.caption, weight: .bold))
+                        .foregroundStyle(ThemeManager.opticYellow)
+                }
+                .padding(12)
+                .background(.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
+                }
+            }
+            .courtifyButton(.card)
+        }
+    }
+
+    private var rankingsTourSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("TOUR")
+                .font(ThemeManager.roundedFont(.caption, weight: .bold))
+                .foregroundStyle(.white.opacity(0.5))
+
+            HStack(spacing: 8) {
+                rankingsTourPill(title: "ATP", tour: .atp)
+                rankingsTourPill(title: "WTA", tour: .wta)
+            }
+        }
+    }
+
+    private func rankingsTourPill(title: String, tour: TourPreference) -> some View {
+        let isSelected = rankingsTour == tour
+        return Button {
+            CourtifyMotion.animateSelection {
+                rankingsSmallTourRaw = tour.rawValue
+                AppGroupConstants.setRankingsSmallTour(tour)
+                // Adopt the tour's default accent when switching ATP ↔ WTA.
+                let next = WidgetColorStyle.defaultConfig(for: widgetID)
+                draft = next
+                customColor = next.resolvedAccent
+                if isEntitled {
+                    WidgetColorStyle.set(next, for: widgetID, reloadTimelines: false)
+                }
+            }
+        } label: {
+            Text(title)
+                .font(ThemeManager.roundedFont(.subheadline, weight: .bold))
+                .foregroundStyle(isSelected ? ThemeManager.midnightGreen : .white.opacity(0.7))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(isSelected ? ThemeManager.opticYellow : Color.white.opacity(0.08))
+                }
+                .overlay {
+                    Capsule(style: .continuous)
+                        .strokeBorder(Color.white.opacity(isSelected ? 0 : 0.12), lineWidth: 0.5)
+                }
+        }
+        .courtifyButton(.ghost)
+        .courtifySelectionFeedback(rankingsTour)
+    }
+
     private var previewCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
+            Text(showsFavoritePlayerSection ? "PREVIEW" : title.uppercased())
                 .font(ThemeManager.roundedFont(.caption, weight: .bold))
                 .foregroundStyle(.white.opacity(0.5))
 

@@ -30,6 +30,20 @@ struct WidgetGalleryPreview: View {
             NextTournamentLargeView(tour: tour, widgetID: "next-large")
         case "calendar":
             SeasonCalendarView(tour: tour, widgetID: "calendar")
+        case "atp-small":
+            RankingsSmallView(
+                tour: .atp,
+                entries: WidgetPreviewSamples.rankings(for: .atp),
+                showsRefreshHint: false,
+                widgetID: "rankings-small"
+            )
+        case "rankings-small":
+            RankingsSmallView(
+                tour: AppGroupConstants.rankingsSmallTour,
+                entries: WidgetPreviewSamples.rankings(for: AppGroupConstants.rankingsSmallTour),
+                showsRefreshHint: false,
+                widgetID: "rankings-small"
+            )
         case "atp-medium":
             RankingsWidgetView(
                 tour: .atp,
@@ -44,6 +58,13 @@ struct WidgetGalleryPreview: View {
                 entries: WidgetPreviewSamples.rankings(for: .atp),
                 showsRefreshHint: false,
                 widgetID: "atp-large"
+            )
+        case "wta-small":
+            RankingsSmallView(
+                tour: .wta,
+                entries: WidgetPreviewSamples.rankings(for: .wta),
+                showsRefreshHint: false,
+                widgetID: "rankings-small"
             )
         case "wta-medium":
             RankingsWidgetView(
@@ -77,13 +98,20 @@ struct WidgetGalleryPreview: View {
                 .frame(width: 72, height: 72)
         case "lock-badge-rect":
             LockScreenRectangularBadgeView(slam: LockScreenGallerySamples.slam, showsPreviewPlate: true)
-                .frame(width: 158, height: 68)
+                .frame(minWidth: 158, maxWidth: .infinity)
+                .frame(height: 68)
         case "lock-rank":
             LockScreenCircularRankView(player: LockScreenGallerySamples.player, showsPreviewPlate: true)
                 .frame(width: 72, height: 72)
         case "lock-player":
-            LockScreenRectangularFavoriteView(player: LockScreenGallerySamples.player, showsPreviewPlate: true)
-                .frame(width: 158, height: 68)
+            // Gallery showcase = Federer legend. Live Lock Screen widget uses the
+            // favorite (Alcaraz / active → rank tile + season W/L; legend → GS tile).
+            LockScreenRectangularFavoriteView(
+                player: LockScreenGallerySamples.legendFederer,
+                showsPreviewPlate: true
+            )
+                .frame(minWidth: 158, maxWidth: .infinity)
+                .frame(height: 68)
         case "lock-season":
             LockScreenCircularSeasonView(
                 player: LockScreenGallerySamples.player,
@@ -97,7 +125,8 @@ struct WidgetGalleryPreview: View {
                 tour: LockScreenGallerySamples.tour,
                 showsPreviewPlate: true
             )
-            .frame(width: 158, height: 68)
+            .frame(minWidth: 158, maxWidth: .infinity)
+            .frame(height: 68)
         case "lock-countdown":
             LockScreenCircularCountdownView(
                 tour: LockScreenGallerySamples.tour,
@@ -111,10 +140,12 @@ struct WidgetGalleryPreview: View {
                 forceSlam: LockScreenGallerySamples.slam,
                 showsPreviewPlate: true
             )
-            .frame(width: 158, height: 68)
+            .frame(minWidth: 158, maxWidth: .infinity)
+            .frame(height: 68)
         case "lock-live":
             LockScreenRectangularLiveView(match: LockScreenGallerySamples.liveMatch, showsPreviewPlate: true)
-                .frame(width: 158, height: 68)
+                .frame(minWidth: 158, maxWidth: .infinity)
+                .frame(height: 68)
         default:
             EmptyView()
         }

@@ -27,6 +27,7 @@ enum AppGroupConstants {
         static let favoritePlayerWidgetIntentID = "favoritePlayerWidgetIntentID"
         static let favoritePlayerWidgetRevision = "favoritePlayerWidgetRevision"
         static let tourPreference = "tourPreference"
+        static let rankingsSmallTour = "rankingsSmallTour"
         static let favoriteGrandSlam = "favoriteGrandSlam"
         static let useMockWidgetData = "useMockWidgetData"
         static let didFetchOnboardingRankings = "didFetchOnboardingRankings"
@@ -99,6 +100,20 @@ enum AppGroupConstants {
 
     static func setUseMockWidgetData(_ enabled: Bool) {
         userDefaults.set(enabled, forKey: Keys.useMockWidgetData)
+    }
+
+    /// Gallery Rankings small card + its Customize tour toggle (ATP / WTA).
+    static var rankingsSmallTour: TourPreference {
+        let raw = userDefaults.string(forKey: Keys.rankingsSmallTour) ?? TourPreference.atp.rawValue
+        let tour = TourPreference(rawValue: raw) ?? .atp
+        return tour == .both ? .atp : tour
+    }
+
+    static func setRankingsSmallTour(_ tour: TourPreference) {
+        let resolved = tour == .both ? .atp : tour
+        userDefaults.set(resolved.rawValue, forKey: Keys.rankingsSmallTour)
+        NotificationCenter.default.post(name: widgetColorDidChange, object: "rankings-small")
+        WidgetTimelineRefresher.reloadAll()
     }
 
     static func commitOnboarding(
