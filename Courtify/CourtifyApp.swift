@@ -65,6 +65,7 @@ private struct AppRootView: View {
                 isProUser: revenueCat.isProUser,
                 referralBypass: referralBypassActive
             )
+            OfferNotificationManager.cancelSubscriptionRemindersIfEntitled()
             if ProcessInfo.processInfo.arguments.contains("-UITestPaywall")
                 || ProcessInfo.processInfo.arguments.contains("-UITestOnboarding") {
                 hasCompletedOnboarding = false

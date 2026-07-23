@@ -46,10 +46,7 @@ final class RevenueCatManager: ObservableObject {
     private func applyCustomerInfo(_ info: CustomerInfo) {
         isProUser = info.entitlements["pro"]?.isActive == true
         AppGroupConstants.syncWidgetAccess(isProUser: isProUser)
-        if isProUser {
-            OfferNotificationManager.cancelOfferReminders()
-            OnboardingReminderManager.cancelAbandonmentReminders()
-        }
+        OfferNotificationManager.cancelSubscriptionRemindersIfEntitled()
     }
 
     func refreshCustomerInfo() async {

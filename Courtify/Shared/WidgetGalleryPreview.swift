@@ -131,6 +131,7 @@ struct WidgetGalleryPreview: View {
             LockScreenCircularCountdownView(
                 tour: LockScreenGallerySamples.tour,
                 forceSlam: LockScreenGallerySamples.slam,
+                forcedDayCount: 0,
                 showsPreviewPlate: true
             )
             .frame(width: 72, height: 72)
@@ -138,6 +139,7 @@ struct WidgetGalleryPreview: View {
             LockScreenRectangularNextView(
                 tour: LockScreenGallerySamples.tour,
                 forceSlam: LockScreenGallerySamples.slam,
+                forcedDayCount: 0,
                 showsPreviewPlate: true
             )
             .frame(minWidth: 158, maxWidth: .infinity)

@@ -27,7 +27,11 @@ enum OnboardingReminderManager {
 
     /// Schedule time-sensitive reminders from the moment the user backgrounds on the paywall.
     static func scheduleAbandonmentRemindersIfNeeded() {
-        guard AppGroupConstants.notificationsEnabled else { return }
+        guard AppGroupConstants.notificationsEnabled,
+              !AppGroupConstants.widgetAccessEnabled else {
+            OfferNotificationManager.cancelSubscriptionRemindersIfEntitled()
+            return
+        }
 
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: notificationIDs)

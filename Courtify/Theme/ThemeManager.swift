@@ -113,6 +113,14 @@ enum AppThemePreset: String, CaseIterable, Identifiable {
 
     var accentColor: Color { Color(hex: accentHex) }
     var liftColor: Color { Color(hex: liftHex) }
+
+    /// Settings picker swatch — Courtify reads as a green logo tile, not the dark canvas fill.
+    var pickerSwatchAccent: Color {
+        switch self {
+        case .courtify: ThemeManager.courtGreen
+        default: accentColor
+        }
+    }
 }
 
 enum LogoBallPreset: String, CaseIterable, Identifiable {

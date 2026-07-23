@@ -18,8 +18,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) async -> UNNotificationPresentationOptions {
         await RevenueCatManager.shared.refreshCustomerInfo()
         if RevenueCatManager.shared.isProUser || AppGroupConstants.referralBypassActive {
-            OfferNotificationManager.cancelOfferReminders()
-            OnboardingReminderManager.cancelAbandonmentReminders()
+            OfferNotificationManager.cancelSubscriptionRemindersIfEntitled()
             return []
         }
         return [.banner, .sound]
@@ -34,8 +33,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
         await RevenueCatManager.shared.refreshCustomerInfo()
         guard !RevenueCatManager.shared.isProUser, !AppGroupConstants.referralBypassActive else {
-            OfferNotificationManager.cancelOfferReminders()
-            OnboardingReminderManager.cancelAbandonmentReminders()
+            OfferNotificationManager.cancelSubscriptionRemindersIfEntitled()
             return
         }
 

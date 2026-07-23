@@ -64,24 +64,34 @@ struct ScheduleView: View {
             Spacer(minLength: 12)
 
             if let event = heroEvent {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(event.tier.rawValue)
-                        .font(ThemeManager.roundedFont(.caption, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(event.tier.rawValue)
+                            .font(ThemeManager.roundedFont(.caption, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
 
-                    Text(event.name)
-                        .font(ThemeManager.roundedFont(size: 32, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
+                        Text(event.name)
+                            .font(ThemeManager.roundedFont(size: 32, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
 
-                    Text(event.location)
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
-                        .foregroundStyle(ThemeManager.opticYellow)
+                        Text(event.location)
+                            .font(ThemeManager.roundedFont(.subheadline, weight: .semibold))
+                            .foregroundStyle(ThemeManager.opticYellow)
 
-                    Text(event.dateRangeLabel)
-                        .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.8))
+                        Text(event.dateRangeLabel)
+                            .font(ThemeManager.roundedFont(.subheadline, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    // Lives in the content row (below chrome) so it can never
+                    // sit under the tour pill / settings icon.
+                    if let slam = grandSlamMatching(event) {
+                        ScheduleHeroTournamentLogo(slam: slam)
+                            .padding(.top, 2)
+                    }
                 }
 
                 Spacer(minLength: 16)
@@ -153,6 +163,58 @@ struct ScheduleView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
             .padding(.bottom, 6)
+    }
+}
+
+/// Compact slam mark beside Schedule hero event copy (below header chrome).
+/// Circular brand treatment keeps AO / RG / WIM / USO consistent.
+private struct ScheduleHeroTournamentLogo: View {
+    let slam: GrandSlam
+
+    private var badgeSize: CGFloat { 88 }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color(hex: slam.accentColor).opacity(0.28),
+                            .clear,
+                        ],
+                        center: .center,
+                        startRadius: 10,
+                        endRadius: 56
+                    )
+                )
+                .frame(width: 112, height: 112)
+
+            ZStack {
+                Circle()
+                    .fill(badgeBackground)
+
+                AssetCatalogImage(name: slam.logoImageName, contentMode: .fill)
+                    .frame(width: badgeSize, height: badgeSize)
+                    .clipShape(Circle())
+            }
+            .frame(width: badgeSize, height: badgeSize)
+            .overlay {
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+            }
+            .shadow(color: Color(hex: slam.accentColor).opacity(0.3), radius: 12, y: 4)
+            .shadow(color: .black.opacity(0.28), radius: 8, y: 3)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var badgeBackground: Color {
+        switch slam {
+        case .australianOpen: Color(hex: 0x0085CA).opacity(0.45)
+        case .frenchOpen: Color(hex: 0xE35205).opacity(0.32)
+        case .wimbledon: Color(hex: 0x006633).opacity(0.4)
+        case .usOpen: Color(hex: 0x0C2340)
+        }
     }
 }
 

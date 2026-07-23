@@ -293,7 +293,7 @@ struct SettingsView: View {
                     title: "App theme",
                     value: appearance.theme.displayName,
                     showsPremiumBadge: !isEntitled,
-                    swatch: appearance.canvasColor
+                    swatch: appearance.theme.pickerSwatchAccent
                 ) {
                     if isEntitled {
                         showThemePicker = true
@@ -590,6 +590,27 @@ private struct SettingsPremiumRow: View {
 
 // MARK: - Appearance pickers
 
+/// Black tile + accent dot — mirrors **Logo ball** picker chrome.
+private struct AppThemePickerSwatch: View {
+    let preset: AppThemePreset
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(ThemeManager.oledBlack)
+            .frame(width: 44, height: 44)
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(preset.pickerSwatchAccent.opacity(0.9), lineWidth: 2)
+            }
+            .overlay {
+                Circle()
+                    .fill(preset.pickerSwatchAccent)
+                    .frame(width: 16, height: 16)
+                    .shadow(color: preset.pickerSwatchAccent.opacity(0.45), radius: 5)
+            }
+    }
+}
+
 private struct AppThemePickerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var appearance = AppAppearanceStore.shared
@@ -604,13 +625,7 @@ private struct AppThemePickerSheet: View {
                     dismiss()
                 } label: {
                     HStack(spacing: 14) {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(preset.color)
-                            .frame(width: 44, height: 44)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
-                            }
+                        AppThemePickerSwatch(preset: preset)
 
                         Text(preset.displayName)
                             .font(ThemeManager.roundedFont(.headline, weight: .semibold))
@@ -954,6 +969,7 @@ private struct SettingsReferralCodeSheet: View {
 
         AppGroupConstants.activateReferralBypass()
         referralBypassActive = true
+        OfferNotificationManager.cancelSubscriptionRemindersIfEntitled()
         successPulse.toggle()
         CourtifyMotion.animateSelection {
             feedback = .unlocked

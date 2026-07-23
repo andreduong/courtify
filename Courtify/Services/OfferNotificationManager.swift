@@ -86,12 +86,20 @@ enum OfferNotificationManager {
     }
 
     static func scheduleOfferRemindersIfNeeded() {
-        guard AppGroupConstants.notificationsEnabled else { return }
+        guard isEligibleForSubscriptionReminders else {
+            cancelSubscriptionRemindersIfEntitled()
+            return
+        }
         guard !UserDefaults.standard.bool(forKey: scheduledKey) else { return }
         scheduleOfferReminders()
     }
 
     static func scheduleOfferReminders() {
+        guard isEligibleForSubscriptionReminders else {
+            cancelSubscriptionRemindersIfEntitled()
+            return
+        }
+
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
             let existingIDs = Set(requests.map(\.identifier))
@@ -119,5 +127,17 @@ enum OfferNotificationManager {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: notificationIDs)
         UserDefaults.standard.set(false, forKey: scheduledKey)
+    }
+
+    /// Subscription nudges are for free users only — never schedule or keep for Pro / referral.
+    private static var isEligibleForSubscriptionReminders: Bool {
+        AppGroupConstants.notificationsEnabled && !AppGroupConstants.widgetAccessEnabled
+    }
+
+    /// Clears offer + onboarding abandonment reminders when the user is entitled.
+    static func cancelSubscriptionRemindersIfEntitled() {
+        guard AppGroupConstants.widgetAccessEnabled else { return }
+        cancelOfferReminders()
+        OnboardingReminderManager.cancelAbandonmentReminders()
     }
 }

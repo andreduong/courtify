@@ -1327,11 +1327,13 @@ struct LockScreenCircularRankView: View {
 struct LockScreenCircularCountdownView: View {
     let tour: TourPreference
     var forceSlam: GrandSlam? = nil
+    /// Gallery override — e.g. Wimbledon showcase at 0 days.
+    var forcedDayCount: Int? = nil
     var showsPreviewPlate: Bool = false
 
     var body: some View {
         let event = resolvedEvent
-        let days = event.map { TournamentCalendar.countdown(to: $0).days } ?? 0
+        let days = forcedDayCount ?? event.map { TournamentCalendar.countdown(to: $0).days } ?? 0
         let code = forceSlam?.lockDisplayName
             ?? grandSlamMatching(event)?.lockDisplayName
             ?? event?.shortName
@@ -1445,6 +1447,8 @@ struct LockScreenCircularSeasonView: View {
 struct LockScreenRectangularNextView: View {
     let tour: TourPreference
     var forceSlam: GrandSlam? = nil
+    /// Gallery override — e.g. Wimbledon showcase at 0 days.
+    var forcedDayCount: Int? = nil
     var showsPreviewPlate: Bool = false
 
     var body: some View {
@@ -1480,9 +1484,9 @@ struct LockScreenRectangularNextView: View {
                 Spacer(minLength: 4)
 
                 if let event {
-                    let countdown = TournamentCalendar.countdown(to: event)
+                    let days = forcedDayCount ?? TournamentCalendar.countdown(to: event).days
                     VStack(spacing: 1) {
-                        Text("\(countdown.days)")
+                        Text("\(days)")
                             .font(WidgetTheme.displayFont(size: 20, weight: .heavy))
                             .foregroundStyle(.white)
                             .minimumScaleFactor(0.7)
@@ -1528,11 +1532,11 @@ struct LockScreenRectangularLiveView: View {
 
                 VStack(alignment: .leading, spacing: 1) {
                     if let match {
-                        Text("\(shortCode(match.player1.name)) · \(shortCode(match.player2.name))")
+                        Text(liveMatchNames(match))
                             .font(WidgetTheme.roundedFont(size: 11, weight: .bold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.75)
+                            .minimumScaleFactor(0.65)
                         Text(match.score ?? "LIVE")
                             .font(WidgetTheme.displayFont(size: 14, weight: .heavy))
                             .foregroundStyle(.white.opacity(0.9))
@@ -1552,10 +1556,11 @@ struct LockScreenRectangularLiveView: View {
         }
     }
 
-    private func shortCode(_ name: String) -> String {
-        let last = name.split(separator: " ").last.map(String.init) ?? name
-        // Accessory rectangular is tight — keep abbreviated last names here.
-        return String(last.prefix(5)).uppercased()
+    private func liveMatchNames(_ match: WidgetLiveMatch) -> String {
+        let lastNames = [match.player1.name, match.player2.name].map { full in
+            full.split(separator: " ").last.map(String.init) ?? full
+        }
+        return lastNames.joined(separator: " · ")
     }
 }
 

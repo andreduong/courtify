@@ -160,6 +160,7 @@ struct OnboardingFlowView: View {
                 onSubmit: {
                     referralUnlockedDuringOnboarding = true
                     AppGroupConstants.activateReferralBypass()
+                    OfferNotificationManager.cancelSubscriptionRemindersIfEntitled()
                     navigateForward(.allSet)
                 },
                 onSkip: {

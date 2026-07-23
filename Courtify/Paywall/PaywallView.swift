@@ -245,7 +245,9 @@ struct PaywallView: View {
             showSpecialOffer = false
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-            OfferNotificationManager.scheduleOfferRemindersIfNeeded()
+            if !AppGroupConstants.widgetAccessEnabled {
+                OfferNotificationManager.scheduleOfferRemindersIfNeeded()
+            }
             onClose()
         }
     }

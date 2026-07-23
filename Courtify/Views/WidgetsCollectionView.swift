@@ -282,30 +282,22 @@ struct WidgetsCollectionView: View {
         let smalls = orderedHomeSmalls(homeItems.filter { $0.size == .small })
         let mediums = homeItems.filter { $0.size == .medium }
         let larges = homeItems.filter { $0.size == .large }
-        let favoriteLock = visibleSections
-            .first { $0.id == "lock-favorite" }?
-            .items ?? []
-        let premiumLock = visibleSections
-            .filter { $0.items.contains { $0.placement == .lockScreen } && $0.id != "lock-favorite" }
-            .flatMap(\.items)
+        let hasLockGallery = Self.lockGalleryRowIDs
+            .flatMap { $0 }
+            .contains { curatedLockItem(id: $0) != nil }
 
         return VStack(alignment: .leading, spacing: 22) {
             if !smalls.isEmpty {
                 homeSmallGrid(smalls)
             }
 
-            if !favoriteLock.isEmpty || !premiumLock.isEmpty {
+            if hasLockGallery {
                 VStack(alignment: .leading, spacing: 14) {
                     lockChapterHeader(
                         title: "Lock Screen",
                         access: isEntitled ? nil : .premium
                     )
-                    if !favoriteLock.isEmpty {
-                        lockItemsGrid(favoriteLock)
-                    }
-                    if !premiumLock.isEmpty {
-                        lockItemsGrid(premiumLock)
-                    }
+                    lockCuratedGallery()
                 }
             }
 
@@ -345,28 +337,14 @@ struct WidgetsCollectionView: View {
         }
     }
 
-    /// Lockscreen filter: keep Free / Premium chapter labels, but pack every
-    /// accessory in that chapter into a denser multi-column strip (3 circulars
-    /// or 2 rectangulars across) so badges aren't stranded with a blank half-row.
+    /// Lockscreen filter: curated rows (rank → badges → countdown → season).
     private var denseLockScreenGallery: some View {
-        let favoriteLock = visibleSections
-            .first { $0.id == "lock-favorite" }?
-            .items ?? []
-        let premiumLock = visibleSections
-            .filter { $0.items.contains { $0.placement == .lockScreen } && $0.id != "lock-favorite" }
-            .flatMap(\.items)
-
-        return VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 14) {
             lockChapterHeader(
                 title: "Lock Screen",
                 access: isEntitled ? nil : .premium
             )
-            if !favoriteLock.isEmpty {
-                lockItemsGrid(favoriteLock)
-            }
-            if !premiumLock.isEmpty {
-                lockItemsGrid(premiumLock)
-            }
+            lockCuratedGallery()
         }
     }
 
@@ -455,6 +433,50 @@ struct WidgetsCollectionView: View {
     }
 
     // MARK: Lock Screen grid (dense accessory packing)
+
+    /// Product row order for the combined Lock Screen chapter (All + Lockscreen filters).
+    private static let lockGalleryRowIDs: [[String]] = [
+        ["lock-rank", "lock-season", "lock-badge-rect"],
+        ["lock-badge", "lock-player"],
+        ["lock-next", "lock-live"],
+        ["lock-countdown", "lock-season-rect"],
+    ]
+
+    private func curatedLockItem(id: String) -> CourtifyWidgetCatalog.Item? {
+        guard let item = CourtifyWidgetCatalog.item(id: id) else { return nil }
+        if let onlyID = Self.debugOnlyItemID, item.id != onlyID { return nil }
+        switch selectedFilter {
+        case .all, .lockscreen:
+            return item
+        case .free:
+            return item.isFree ? item : nil
+        default:
+            return nil
+        }
+    }
+
+    private func lockCuratedGallery() -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(Array(Self.lockGalleryRowIDs.enumerated()), id: \.offset) { _, rowIDs in
+                let items = rowIDs.compactMap { curatedLockItem(id: $0) }
+                if !items.isEmpty {
+                    lockExplicitRow(items)
+                }
+            }
+        }
+    }
+
+    private func lockExplicitRow(_ items: [CourtifyWidgetCatalog.Item]) -> some View {
+        let circulars = items.filter { $0.size == .small }
+        let rectangulars = items.filter { $0.size != .small }
+        return lockMixedRow(
+            LockMixedRow(
+                id: items.map(\.id).joined(separator: "+"),
+                circulars: circulars,
+                rectangulars: rectangulars
+            )
+        )
+    }
 
     /// Circular accessories are compact enough for 3-across; rectangulars pair 2-across.
     /// Mixed rows pack circular + rectangular without a trailing blank Spacer.
